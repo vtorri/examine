@@ -102,7 +102,7 @@ _exm_symbol_get(const char *module, const char *symbol)
     mod = LoadLibrary(module);
     if (!mod)
     {
-        EXM_LOG_ERR("failed");
+        EXM_LOG_ERR("loading library %s failed", module);
         return NULL;
     }
 
@@ -110,7 +110,7 @@ _exm_symbol_get(const char *module, const char *symbol)
     proc = GetProcAddress(mod, symbol);
     if (!proc)
     {
-        EXM_LOG_ERR("failed");
+        EXM_LOG_ERR("retrieving symbol %s failed", symbol);
         goto free_library;
     }
 
@@ -336,22 +336,22 @@ exm_dll_inject(Exm *exm)
     if (!CreateProcess(NULL, exm->filename, NULL, NULL, TRUE,
                        CREATE_SUSPENDED, NULL, NULL, &si, &pi))
     {
-        EXM_LOG_ERR("failed");
+        EXM_LOG_ERR("creation of child process %s failed", exm->filename);
         return 0;
     }
 
-    EXM_LOG_DBG("waiting for the child process to initialize");
+    EXM_LOG_DBG("waiting for the child process %s to initialize", exm->filename);
     if (!WaitForInputIdle(pi.hProcess, INFINITE))
     {
-        EXM_LOG_ERR("failed");
+        EXM_LOG_ERR("wait for the child process %s failed", exm->filename);
         goto close_handles;
     }
 
-    EXM_LOG_DBG("opening child process");
+    EXM_LOG_DBG("opening child process %s", exm->filename);
     process = OpenProcess(CREATE_THREAD_ACCESS, FALSE, pi.dwProcessId);
     if (!process)
     {
-        EXM_LOG_ERR("failed");
+        EXM_LOG_ERR("opening child process %s failed", exm->filename);
         goto close_handles;
     }
 
@@ -361,7 +361,7 @@ exm_dll_inject(Exm *exm)
                                                 "shared_process_handle");
     if (!exm->map_process.handle)
     {
-        EXM_LOG_ERR("failed");
+        EXM_LOG_ERR("mapping process handle 0x%p failed", pi.hProcess);
         goto close_process;
     }
 
@@ -369,48 +369,48 @@ exm_dll_inject(Exm *exm)
                                           0, 0, sizeof(HANDLE));
     if (!exm->map_process.base)
     {
-        EXM_LOG_ERR("failed");
+        EXM_LOG_ERR("viewing map file handle 0x%p failed", exm->map_process.handle);
         goto close_process_handle;
     }
 
     CopyMemory(exm->map_process.base, &pi.hProcess, sizeof(HANDLE));
 
-    EXM_LOG_DBG("allocating virtual memory");
+    EXM_LOG_DBG("allocating virtual memory of process 0x%p (%d bytes)", process, exm->dll_length);
     remote_string = VirtualAllocEx(process, NULL, exm->dll_length, MEM_COMMIT, PAGE_READWRITE);
     if (!remote_string)
     {
-        EXM_LOG_ERR("failed");
+        EXM_LOG_ERR("allocating virtual memory of process 0x%p (%d bytes) failed", process, exm->dll_length);
         goto unmap_process_handle;
     }
 
-    EXM_LOG_DBG("writing process in virtual memory");
+    EXM_LOG_DBG("writing process %p in virtual memory", process);
     if (!WriteProcessMemory(process, remote_string, exm->dll_fullname, exm->dll_length, NULL))
     {
-        EXM_LOG_ERR("failed");
+        EXM_LOG_ERR("writing process %p in virtual memory failed", process);
         goto virtual_free;
     }
 
-    EXM_LOG_DBG("execute thread");
+    EXM_LOG_DBG("execute thread 0x%p", process);
     remote_thread = CreateRemoteThread(process, NULL, 0, (LPTHREAD_START_ROUTINE)exm->ll, remote_string, 0, NULL);
     if (!remote_thread)
     {
-        EXM_LOG_ERR("failed");
+        EXM_LOG_ERR("execute thread 0x%p failed", process);
         goto virtual_free;
     }
 
     WaitForSingleObject(remote_thread, INFINITE);
 
-    EXM_LOG_DBG("getting exit code");
+    EXM_LOG_DBG("getting exit code of thread 0x%p", remote_thread);
     if (!GetExitCodeThread(remote_thread, &exit_code))
     {
-        EXM_LOG_ERR("failed");
+        EXM_LOG_ERR("getting exit code of thread 0x%p failed", remote_thread);
         goto close_thread;
     }
 
     CloseHandle(remote_thread);
     VirtualFreeEx(process, remote_string, 0, MEM_RELEASE);
 
-    EXM_LOG_DBG("resume child process");
+    EXM_LOG_DBG("resume child process threas 0x%p", pi.hThread);
     ResumeThread(pi.hThread);
 
     exm->child.process1 = pi.hProcess;

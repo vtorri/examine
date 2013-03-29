@@ -5,7 +5,7 @@ lib_LTLIBRARIES = libexamine.la
 
 libexamine_la_SOURCES = \
 examine_log.c \
-examine_list.h
+examine_log.h
 
 libexamine_la_LDFLAGS = -no-undefined -version-info @version_info@
 
@@ -17,8 +17,10 @@ pkg_LTLIBRARIES = examine_dll.la
 examine_dll_la_SOURCES = \
 examine_dll.c \
 examine_list.c \
+examine_overloads.c \
 examine_stacktrace.c \
-examine_log.h \
+examine_list.h \
+examine_private.h \
 examine_stacktrace.h
 
 examine_dll_la_CPPFLAGS = \

@@ -36,289 +36,38 @@
 
 #include "examine_log.h"
 #include "examine_list.h"
+#include "examine_private.h"
 #include "examine_stacktrace.h"
 
 
 typedef struct
 {
-    char *func_name_old;
-    PROC  func_proc_old;
-    PROC  func_proc_new;
-} Exm_Hook_Overload;
-
-typedef enum
-{
-    EXM_HOOK_FCT_HEAPALLOC,
-    EXM_HOOK_FCT_HEAPFREE,
-    EXM_HOOK_FCT_MALLOC,
-    EXM_HOOK_FCT_FREE
-} Exm_Hook_Fct;
-
-typedef struct
-{
-    Exm_Hook_Fct fct;
-    size_t size;
-    void *data;  /* data returned by the allocator */
-    int nbr_free_to_do; /* number of free to do, < 0 means double-free */
-    Exm_List *stack;
-    Exm_List *stack_free; /* the stack of the double free */
-} Exm_Hook_Data_Alloc;
-
-typedef struct
-{
-    Exm_Hook_Fct fct;
-    size_t size;
-    Exm_List *stack;
-} Exm_Hook_Data_Free;
-
-typedef struct
-{
-    Exm_List *alloc;
-    Exm_List *free;
-} Exm_Hook_Data;
-
-Exm_Hook_Data_Alloc *
-exm_hook_data_alloc_new(Exm_Hook_Fct fct, size_t size, void *data, Exm_List *stack)
-{
-    Exm_Hook_Data_Alloc *da;
-
-    da = (Exm_Hook_Data_Alloc *)malloc(sizeof(Exm_Hook_Data_Alloc));
-    if (!da)
-      return NULL;
-
-    da->fct = fct;
-    da->size = size;
-    da->data = data;
-    da->nbr_free_to_do = 1;
-    da->stack = stack;
-    da->stack_free = NULL;
-
-    return da;
-}
-
-void
-exm_hook_data_alloc_free(void *ptr)
-{
-    Exm_Hook_Data_Alloc *da = ptr;
-
-    if (!da)
-        return;
-
-    exm_list_free(da->stack_free, free);
-    exm_list_free(da->stack, free);
-    free(da);
-}
-
-Exm_Hook_Data_Free *
-exm_hook_data_free_new(Exm_Hook_Fct fct, size_t size, Exm_List *stack)
-{
-    Exm_Hook_Data_Free *df;
-
-    df = (Exm_Hook_Data_Free *)malloc(sizeof(Exm_Hook_Data_Free));
-    if (!df)
-      return NULL;
-
-    df->fct = fct;
-    df->size = size;
-    df->stack = stack;
-
-    return df;
-}
-
-void
-exm_hook_data_free_free(void *ptr)
-{
-    Exm_Hook_Data_Free *df = ptr;
-
-    if (!df)
-        return;
-
-    exm_list_free(df->stack, free);
-    free(df);
-}
-
-
-/*
- * WARNING
- *
- * Mofidy the value of EXM_HOOK_OVERLOAD_COUNT and
- * EXM_HOOK_OVERLOAD_COUNT when adding other overloaded
- * functions in overloads_instance
- */
-#define EXM_HOOK_OVERLOAD_COUNT 2
-#define EXM_HOOK_OVERLOAD_COUNT_CRT 4
-
-LPVOID WINAPI EXM_HeapAlloc(HANDLE hHeap, DWORD dwFlags, SIZE_T dwBytes);
-BOOL WINAPI EXM_HeapFree(HANDLE hHeap, DWORD dwFlags, LPVOID lpMem);
-void *EXM_malloc(size_t size);
-void EXM_free(void *memblock);
-
-Exm_Hook_Overload overloads_instance[EXM_HOOK_OVERLOAD_COUNT_CRT] =
-{
-    {
-        "HeapAlloc",
-        NULL,
-        (PROC)EXM_HeapAlloc
-    },
-    {
-        "HeapFree",
-        NULL,
-        (PROC)EXM_HeapFree
-    },
-    {
-        "malloc",
-        NULL,
-        (PROC)EXM_malloc
-    },
-    {
-        "free",
-        NULL,
-        (PROC)EXM_free
-    }
-};
-
-typedef struct
-{
-    char             *filename;
-    Exm_List         *modules;
-    Exm_Hook_Overload overloads[EXM_HOOK_OVERLOAD_COUNT_CRT];
-    char             *crt_name;
-    Exm_Sw           *stacktrace;
+    char        *filename;
+    Exm_List    *modules;
+    Exm_Overload overloads[EXM_OVERLOAD_COUNT_CRT];
+    char        *crt_name;
+    Exm_Sw      *stacktrace;
 } Exm_Hook;
 
-typedef LPVOID (WINAPI *exm_heap_alloc_t) (HANDLE hHeap, DWORD dwFlags, SIZE_T dwBytes);
-typedef BOOL   (WINAPI *exm_heap_free_t)  (HANDLE hHeap, DWORD dwFlags, LPVOID lpMem);
-typedef void  *(*exm_malloc_t)            (size_t size);
-typedef void   (*exm_free_t)              (void *memblock);
-
-Exm_Hook exm_hook_instance;
-
-static Exm_Hook_Data _exm_hook_data = { NULL, NULL };
-
-LPVOID WINAPI EXM_HeapAlloc(HANDLE hHeap, DWORD dwFlags, SIZE_T dwBytes)
+static Exm_Hook _exm_hook_instance =
 {
-    exm_heap_alloc_t ha;
-    Exm_Hook_Data_Alloc *da;
-    LPVOID data;
-    Exm_List *stack;
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL
+};
 
-    ha = (exm_heap_alloc_t)exm_hook_instance.overloads[0].func_proc_old;
-    data = ha(hHeap, dwFlags, dwBytes);
-
-    printf("HeapAlloc !!! %p\n", data);
-
-    stack = exm_sw_frames_get(exm_hook_instance.stacktrace);
-    da = exm_hook_data_alloc_new(EXM_HOOK_FCT_HEAPALLOC, dwBytes, data, stack);
-    if (da)
-    {
-        _exm_hook_data.alloc = exm_list_append(_exm_hook_data.alloc, da);
-    }
-
-    return data;
+Exm_Overload *
+exm_hook_instance_overloads_get()
+{
+    return _exm_hook_instance.overloads;
 }
 
-BOOL WINAPI EXM_HeapFree(HANDLE hHeap, DWORD dwFlags, LPVOID lpMem)
+Exm_List *
+exm_hook_instance_stack_frames_get()
 {
-    exm_heap_free_t hf;
-    Exm_Hook_Data_Free *df;
-    BOOL res;
-    Exm_List *stack;
-    Exm_List *iter;
-    size_t size = 0;
-
-    printf("HeapFree !!! %p\n", lpMem);
-
-    stack = exm_sw_frames_get(exm_hook_instance.stacktrace);
-
-    iter = _exm_hook_data.alloc;
-    while (iter)
-    {
-        Exm_Hook_Data_Alloc *da;
-
-        da = (Exm_Hook_Data_Alloc *)iter->data;
-        if (lpMem == da->data)
-        {
-            da->nbr_free_to_do--;
-            size = da->size;
-            if (da->nbr_free_to_do < 0)
-                da->stack_free = stack;
-        }
-        iter = iter->next;
-    }
-
-    /* TODO : size == 0 : free sans malloc */
-
-    df = exm_hook_data_free_new(EXM_HOOK_FCT_HEAPFREE, size, stack);
-    if (df)
-    {
-        _exm_hook_data.free = exm_list_append(_exm_hook_data.free, df);
-    }
-
-    hf = (exm_heap_free_t)exm_hook_instance.overloads[1].func_proc_old;
-    res = hf(hHeap, dwFlags, lpMem);
-
-    return res;
-}
-
-void *EXM_malloc(size_t size)
-{
-    exm_malloc_t ma;
-    Exm_Hook_Data_Alloc *da;
-    void *data;
-    Exm_List *stack;
-
-    ma = (exm_malloc_t)exm_hook_instance.overloads[2].func_proc_old;
-    data = ma(size);
-
-    printf("malloc !!! %p\n", data);
-    stack = exm_sw_frames_get(exm_hook_instance.stacktrace);
-    da = exm_hook_data_alloc_new(EXM_HOOK_FCT_MALLOC, size, data, stack);
-    if (da)
-    {
-        _exm_hook_data.alloc = exm_list_append(_exm_hook_data.alloc, da);
-    }
-
-    return data;
-}
-
-void EXM_free(void *memblock)
-{
-    exm_free_t f;
-    Exm_Hook_Data_Free *df;
-    Exm_List *stack;
-    Exm_List *iter;
-    size_t size = 0;
-
-    printf("free !!! %p\n", memblock);
-
-    stack = exm_sw_frames_get(exm_hook_instance.stacktrace);
-
-    iter = _exm_hook_data.alloc;
-    while (iter)
-    {
-        Exm_Hook_Data_Alloc *da;
-
-        da = (Exm_Hook_Data_Alloc *)iter->data;
-        if (memblock == da->data)
-        {
-            da->nbr_free_to_do--;
-            size = da->size;
-            if (da->nbr_free_to_do < 0)
-                da->stack_free = stack;
-        }
-        iter = iter->next;
-    }
-
-    /* TODO : size == 0 : free sans malloc */
-
-    df = exm_hook_data_free_new(EXM_HOOK_FCT_FREE, size, stack);
-    if (df)
-    {
-        _exm_hook_data.free = exm_list_append(_exm_hook_data.free, df);
-    }
-
-    f = (exm_free_t)exm_hook_instance.overloads[3].func_proc_old;
-    f(memblock);
+    return exm_sw_frames_get(_exm_hook_instance.stacktrace);
 }
 
 static char *
@@ -332,7 +81,7 @@ _exm_hook_crt_name_get(void)
     IMAGE_IMPORT_DESCRIPTOR *import_desc;
     char                    *res = NULL;
 
-    hf = CreateFile(exm_hook_instance.filename, GENERIC_READ, FILE_SHARE_READ,
+    hf = CreateFile(_exm_hook_instance.filename, GENERIC_READ, FILE_SHARE_READ,
                     NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
     if (hf == INVALID_HANDLE_VALUE)
         return NULL;
@@ -394,8 +143,8 @@ _exm_hook_crt_name_get(void)
     return NULL;
 }
 
-int
-exm_modules_get(void)
+static int
+_exm_modules_get(void)
 {
     HMODULE      modules[1024];
     DWORD        modules_nbr;
@@ -417,7 +166,7 @@ exm_modules_get(void)
           return 0;
 
         /* we skip the filename of the process */
-        if (_stricmp(name, exm_hook_instance.filename) == 0)
+        if (_stricmp(name, _exm_hook_instance.filename) == 0)
             continue;
 
         /* we exit the loop if we find the injected DLL */
@@ -431,14 +180,14 @@ exm_modules_get(void)
         if (!tmp)
             continue;
         memcpy(tmp, name, l);
-        exm_hook_instance.modules = exm_list_append(exm_hook_instance.modules, tmp);
+        _exm_hook_instance.modules = exm_list_append(_exm_hook_instance.modules, tmp);
     }
-    /* exm_list_print(exm_hook_instance.modules); */
+    /* exm_list_print(_exm_hook_instance.modules); */
     return 1;
 }
 
-int
-exm_hook_init(void)
+static int
+_exm_hook_init(void)
 {
     HANDLE handle;
     void  *base;
@@ -470,41 +219,41 @@ exm_hook_init(void)
         return 0;
     }
 
-    exm_hook_instance.filename = malloc(length * sizeof(char));
-    if (!exm_hook_instance.filename)
+    _exm_hook_instance.filename = malloc(length * sizeof(char));
+    if (!_exm_hook_instance.filename)
     {
         UnmapViewOfFile(base);
         CloseHandle(handle);
         return 0;
     }
 
-    CopyMemory(exm_hook_instance.filename, base, length);
+    CopyMemory(_exm_hook_instance.filename, base, length);
     UnmapViewOfFile(base);
     CloseHandle(handle);
 
-    printf(" ** filename : %s\n", exm_hook_instance.filename);
+    printf(" ** filename : %s\n", _exm_hook_instance.filename);
 
-    exm_modules_get();
+    _exm_modules_get();
 
-    memcpy(exm_hook_instance.overloads, overloads_instance, sizeof(exm_hook_instance.overloads));
+    memcpy(_exm_hook_instance.overloads, exm_overloads_instance, sizeof(_exm_hook_instance.overloads));
 
-    exm_hook_instance.crt_name = _exm_hook_crt_name_get();
+    _exm_hook_instance.crt_name = _exm_hook_crt_name_get();
 
-    exm_hook_instance.stacktrace = exm_sw_init();
+    _exm_hook_instance.stacktrace = exm_sw_init();
 
     return 1;
 }
 
-void
-exm_hook_shutdown(void)
+static void
+_exm_hook_shutdown(void)
 {
-    if (exm_hook_instance.stacktrace)
-        free(exm_hook_instance.stacktrace);
-    if (exm_hook_instance.filename)
-        free(exm_hook_instance.filename);
+    if (_exm_hook_instance.stacktrace)
+        free(_exm_hook_instance.stacktrace);
+    if (_exm_hook_instance.filename)
+        free(_exm_hook_instance.filename);
 }
 
-void
+static void
 _exm_modules_hook_set(HMODULE module, const char *lib_name, PROC old_function_proc, PROC new_function_proc)
 {
     PIMAGE_IMPORT_DESCRIPTOR iid;
@@ -552,7 +301,7 @@ _exm_modules_hook_set(HMODULE module, const char *lib_name, PROC old_function_pr
     }
 }
 
-void
+static void
 _exm_hook_modules_hook(const char *lib_name, int crt)
 {
     HMODULE      mods[1024];
@@ -567,18 +316,18 @@ _exm_hook_modules_hook(const char *lib_name, int crt)
     if (!crt)
     {
         start = 0;
-        end = EXM_HOOK_OVERLOAD_COUNT;
+        end = EXM_OVERLOAD_COUNT;
     }
     else
     {
-        start = EXM_HOOK_OVERLOAD_COUNT;
-        end = EXM_HOOK_OVERLOAD_COUNT_CRT;
+        start = EXM_OVERLOAD_COUNT;
+        end = EXM_OVERLOAD_COUNT_CRT;
     }
 
     lib_module = LoadLibrary(lib_name);
 
     for (i = start; i < end; i++)
-        exm_hook_instance.overloads[i].func_proc_old = GetProcAddress(lib_module, exm_hook_instance.overloads[i].func_name_old);
+        _exm_hook_instance.overloads[i].func_proc_old = GetProcAddress(lib_module, _exm_hook_instance.overloads[i].func_name_old);
 
     if (!EnumProcessModules(GetCurrentProcess(), mods, sizeof(mods), &mods_nbr))
         return;
@@ -598,7 +347,7 @@ _exm_hook_modules_hook(const char *lib_name, int crt)
         /* if (strcmp(buf, name) > 0) */
             /* printf(" $$$$ %s\n", name); */
 
-        if (lstrcmp(name, exm_hook_instance.filename) != 0)
+        if (lstrcmp(name, _exm_hook_instance.filename) != 0)
             continue;
 
         /* printf(" $$$$ %s\n", name); */
@@ -609,14 +358,14 @@ _exm_hook_modules_hook(const char *lib_name, int crt)
     {
         for (i = start; i < end; i++)
             _exm_modules_hook_set(hook_module, lib_name,
-                                  exm_hook_instance.overloads[i].func_proc_old,
-                                  exm_hook_instance.overloads[i].func_proc_new);
+                                  _exm_hook_instance.overloads[i].func_proc_old,
+                                  _exm_hook_instance.overloads[i].func_proc_new);
     }
 
     FreeLibrary(lib_module);
 }
 
-void
+static void
 _exm_hook_modules_unhook(const char *lib_name, int crt)
 {
     HMODULE      mods[1024];
@@ -630,12 +379,12 @@ _exm_hook_modules_unhook(const char *lib_name, int crt)
     if (!crt)
     {
         start = 0;
-        end = EXM_HOOK_OVERLOAD_COUNT;
+        end = EXM_OVERLOAD_COUNT;
     }
     else
     {
-        start = EXM_HOOK_OVERLOAD_COUNT;
-        end = EXM_HOOK_OVERLOAD_COUNT_CRT;
+        start = EXM_OVERLOAD_COUNT;
+        end = EXM_OVERLOAD_COUNT_CRT;
     }
 
     if (!EnumProcessModules(GetCurrentProcess(), mods, sizeof(mods), &mods_nbr))
@@ -649,7 +398,7 @@ _exm_hook_modules_unhook(const char *lib_name, int crt)
         if (!res)
             continue;
 
-        if (lstrcmp(name, exm_hook_instance.filename) != 0)
+        if (lstrcmp(name, _exm_hook_instance.filename) != 0)
             continue;
 
         hook_module = mods[i];
@@ -659,8 +408,8 @@ _exm_hook_modules_unhook(const char *lib_name, int crt)
     {
         for (i = start; i < end; i++)
             _exm_modules_hook_set(hook_module, lib_name,
-                                  exm_hook_instance.overloads[i].func_proc_new,
-                                  exm_hook_instance.overloads[i].func_proc_old);
+                                  _exm_hook_instance.overloads[i].func_proc_new,
+                                  _exm_hook_instance.overloads[i].func_proc_old);
     }
 }
 
@@ -670,14 +419,14 @@ BOOL APIENTRY DllMain(HMODULE hModule EXM_UNUSED, DWORD ulReason, LPVOID lpReser
     {
      case DLL_PROCESS_ATTACH:
          EXM_LOG_DBG("process attach");
-         if (!exm_hook_init())
+         if (!_exm_hook_init())
              return FALSE;
          break;
      case DLL_THREAD_ATTACH:
          EXM_LOG_DBG("thread attach begin");
          _exm_hook_modules_hook("kernel32.dll", 0);
-         if (exm_hook_instance.crt_name)
-             _exm_hook_modules_hook(exm_hook_instance.crt_name, 1);
+         if (_exm_hook_instance.crt_name)
+             _exm_hook_modules_hook(_exm_hook_instance.crt_name, 1);
          EXM_LOG_DBG("thread attach end");
          break;
      case DLL_THREAD_DETACH:
@@ -692,20 +441,20 @@ BOOL APIENTRY DllMain(HMODULE hModule EXM_UNUSED, DWORD ulReason, LPVOID lpReser
          size_t bytes_freed;
 
          EXM_LOG_DBG("process detach");
-         nbr_alloc = exm_list_count(_exm_hook_data.alloc);
-         nbr_free = exm_list_count(_exm_hook_data.free);
+         nbr_alloc = exm_overload_data_alloc_list_count();
+         nbr_free = exm_overload_data_free_list_count();
          bytes_allocated = 0;
-         iter = _exm_hook_data.alloc;
+         iter = exm_overload_data_alloc_list();
          while (iter)
          {
-             bytes_allocated += ((Exm_Hook_Data_Alloc *)iter->data)->size;
+             bytes_allocated += exm_overload_data_alloc_size_get((Exm_Overload_Data_Alloc *)iter->data);
              iter = iter->next;
          }
          bytes_freed = 0;
-         iter = _exm_hook_data.free;
+         iter = exm_overload_data_free_list();
          while (iter)
          {
-             bytes_freed += ((Exm_Hook_Data_Free *)iter->data)->size;
+           bytes_freed += exm_overload_data_free_size_get((Exm_Overload_Data_Free *)iter->data);
              iter = iter->next;
          }
 
@@ -716,19 +465,19 @@ BOOL APIENTRY DllMain(HMODULE hModule EXM_UNUSED, DWORD ulReason, LPVOID lpReser
 
              records = nbr_alloc - nbr_free;
              record = 1;
-             iter = _exm_hook_data.alloc;
+             iter = exm_overload_data_alloc_list();
              while (iter)
              {
-                 Exm_Hook_Data_Alloc * da;
+                 Exm_Overload_Data_Alloc * da;
                  Exm_List *iter_stack;
 
-                 da = (Exm_Hook_Data_Alloc *)iter->data;
-                 if (da->nbr_free_to_do != 0)
+                 da = (Exm_Overload_Data_Alloc *)iter->data;
+                 if (exm_overload_data_alloc_nbr_free_get(da) != 0)
                  {
                      int at = 1;
                      EXM_LOG_INFO("%Iu bytes in 1 block(s) are definitely lost [%d/%d]",
-                                  da->size, record, records);
-                     iter_stack = da->stack;
+                                  exm_overload_data_alloc_size_get(da), record, records);
+                     iter_stack = exm_overload_data_alloc_stack_get(da);
                      while (iter_stack)
                      {
                          Exm_Sw_Data *frame;
@@ -768,9 +517,9 @@ BOOL APIENTRY DllMain(HMODULE hModule EXM_UNUSED, DWORD ulReason, LPVOID lpReser
                       bytes_allocated - bytes_freed,
                       nbr_alloc - nbr_free);
          _exm_hook_modules_unhook("kernel32.dll", 0);
-         if (exm_hook_instance.crt_name)
-             _exm_hook_modules_unhook(exm_hook_instance.crt_name, 1);
-         exm_hook_shutdown();
+         if (_exm_hook_instance.crt_name)
+             _exm_hook_modules_unhook(_exm_hook_instance.crt_name, 1);
+         _exm_hook_shutdown();
          break;
      }
     }
