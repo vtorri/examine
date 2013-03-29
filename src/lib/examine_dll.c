@@ -368,22 +368,22 @@ _exm_hook_crt_name_get(void)
             char *module_name;
 
             module_name = (char *)((BYTE *)dos_headers + import_desc->Name);
-            EXM_PRINT("Imports from %s\r",(BYTE *)dos_headers + import_desc->Name);
+            EXM_LOG_DBG("Imports from %s\r",(BYTE *)dos_headers + import_desc->Name);
             if (lstrcmpi("msvcrt.dll", module_name) == 0)
             {
-                EXM_PRINT("msvcrt.dll !!");
+                EXM_LOG_DBG("msvcrt.dll !!");
                 res = _strdup(module_name);
                 break;
             }
             if (lstrcmpi("msvcr90.dll", module_name) == 0)
             {
-                EXM_PRINT("msvcr90.dll !!");
+                EXM_LOG_DBG("msvcr90.dll !!");
                 res = _strdup(module_name);
                 break;
             }
             if (lstrcmpi("msvcr90d.dll", module_name) == 0)
             {
-                EXM_PRINT("msvcr90d.dll !!");
+                EXM_LOG_DBG("msvcr90d.dll !!");
                 res = _strdup(module_name);
                 break;
             }
@@ -681,19 +681,19 @@ BOOL APIENTRY DllMain(HMODULE hModule EXM_UNUSED, DWORD ulReason, LPVOID lpReser
     switch (ulReason)
     {
      case DLL_PROCESS_ATTACH:
-         EXM_PRINT ("process attach");
+         EXM_LOG_DBG("process attach");
          if (!exm_hook_init())
              return FALSE;
          break;
      case DLL_THREAD_ATTACH:
-         EXM_PRINT("thread attach begin");
+         EXM_LOG_DBG("thread attach begin");
          _exm_hook_modules_hook("kernel32.dll", 0);
          if (exm_hook_instance.crt_name)
              _exm_hook_modules_hook(exm_hook_instance.crt_name, 1);
-         EXM_PRINT("thread attach end");
+         EXM_LOG_DBG("thread attach end");
          break;
      case DLL_THREAD_DETACH:
-         EXM_PRINT("thread detach");
+         EXM_LOG_DBG("thread detach");
          break;
      case DLL_PROCESS_DETACH:
      {
@@ -703,7 +703,7 @@ BOOL APIENTRY DllMain(HMODULE hModule EXM_UNUSED, DWORD ulReason, LPVOID lpReser
          size_t bytes_allocated;
          size_t bytes_freed;
 
-         EXM_PRINT("process detach");
+         EXM_LOG_DBG("process detach");
          nbr_alloc = exm_list_count(_exm_hook_data.alloc);
          nbr_free = exm_list_count(_exm_hook_data.free);
          bytes_allocated = 0;
@@ -738,8 +738,8 @@ BOOL APIENTRY DllMain(HMODULE hModule EXM_UNUSED, DWORD ulReason, LPVOID lpReser
                  if (da->nbr_free_to_do != 0)
                  {
                      int at = 1;
-                     EXM_PRINT("%Iu bytes in 1 block(s) are definitely lost [%d/%d]",
-                               da->size, record, records);
+                     EXM_LOG_INFO("%Iu bytes in 1 block(s) are definitely lost [%d/%d]",
+                                  da->size, record, records);
                      iter_stack = da->stack;
                      while (iter_stack)
                      {
@@ -748,37 +748,37 @@ BOOL APIENTRY DllMain(HMODULE hModule EXM_UNUSED, DWORD ulReason, LPVOID lpReser
                          frame = (Exm_Sw_Data *)iter_stack->data;
                          if (at)
                          {
-                             EXM_PRINT("   at 0x00000000: %s (%s:%d)",
-                                       exm_sw_data_function_get(frame),
-                                       exm_sw_data_filename_get(frame),
-                                       exm_sw_data_line_get(frame));
+                             EXM_LOG_INFO("   at 0x00000000: %s (%s:%d)",
+                                          exm_sw_data_function_get(frame),
+                                          exm_sw_data_filename_get(frame),
+                                          exm_sw_data_line_get(frame));
                              at = 0;
                          }
                          else
-                             EXM_PRINT("   by 0x00000000: %s (%s:%d)",
-                                       exm_sw_data_function_get(frame),
-                                       exm_sw_data_filename_get(frame),
-                                       exm_sw_data_line_get(frame));
+                             EXM_LOG_INFO("   by 0x00000000: %s (%s:%d)",
+                                          exm_sw_data_function_get(frame),
+                                          exm_sw_data_filename_get(frame),
+                                          exm_sw_data_line_get(frame));
                          iter_stack = iter_stack->next;
                      }
-                     EXM_PRINT("");
+                     EXM_LOG_INFO("");
                      record++;
                  }
                  iter = iter->next;
              }
          }
 
-         EXM_PRINT("HEAP SUMMARY:");
-         EXM_PRINT("    in use at exit: %Iu bytes in %d blocks",
-                   bytes_allocated - bytes_freed,
-                   nbr_alloc - nbr_free);
-         EXM_PRINT("  total heap usage: %d allocs, %d frees, %Iu bytes allocated",
-                   nbr_alloc, nbr_free, bytes_allocated);
-         EXM_PRINT("");
-         EXM_PRINT("LEAK SUMMARY:");
-         EXM_PRINT("   definitely lost: %Iu bytes in %d blocks",
-                   bytes_allocated - bytes_freed,
-                   nbr_alloc - nbr_free);
+         EXM_LOG_INFO("HEAP SUMMARY:");
+         EXM_LOG_INFO("    in use at exit: %Iu bytes in %d blocks",
+                      bytes_allocated - bytes_freed,
+                      nbr_alloc - nbr_free);
+         EXM_LOG_INFO("  total heap usage: %d allocs, %d frees, %Iu bytes allocated",
+                      nbr_alloc, nbr_free, bytes_allocated);
+         EXM_LOG_INFO("");
+         EXM_LOG_INFO("LEAK SUMMARY:");
+         EXM_LOG_INFO("   definitely lost: %Iu bytes in %d blocks",
+                      bytes_allocated - bytes_freed,
+                      nbr_alloc - nbr_free);
          _exm_hook_modules_unhook("kernel32.dll", 0);
          if (exm_hook_instance.crt_name)
              _exm_hook_modules_unhook(exm_hook_instance.crt_name, 1);

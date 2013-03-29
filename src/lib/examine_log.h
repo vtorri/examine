@@ -32,22 +32,42 @@
 #ifndef EXAMINE_LOG_H
 #define EXAMINE_LOG_H
 
-#define EXM_PRINT(fmt, ...) \
-    printf("==%ld== " fmt "\n", GetCurrentProcessId(), ## __VA_ARGS__);
+#include <stdarg.h>
 
-#define EXM_PRINT_PUSH(fmt, ...) \
-    printf("==%ld== " fmt, GetCurrentProcessId(), ## __VA_ARGS__);
+typedef enum
+{
+    EXM_LOG_LEVEL_ERR,
+    EXM_LOG_LEVEL_WARN,
+    EXM_LOG_LEVEL_INFO,
+    EXM_LOG_LEVEL_DBG,
+    EXM_LOG_LEVEL_LAST
+} Exm_Log_Level;
 
-#define EXM_PRINT_POP(fmt) \
-    printf(fmt "\n");
+#define EXM_LOG(l, fmt, ...) \
+    exm_log_print(l, fmt, ## __VA_ARGS__)
 
-#define EXM_PRINT_POP_ERROR(fmt) \
-    printf(fmt "\n"); \
-    printf("==%ld== Exiting... \n", GetCurrentProcessId());
+#define EXM_LOG_ERR(fmt, ...) \
+    EXM_LOG(EXM_LOG_LEVEL_ERR, fmt, ## __VA_ARGS__)
 
-#define EXM_PRINT_ERROR(fmt, ...) \
-    printf("==%ld== ERROR: " fmt "\n", GetCurrentProcessId(), ## __VA_ARGS__); \
-    printf("==%ld== Exiting... \n", GetCurrentProcessId());
+#define EXM_LOG_WARN(fmt, ...) \
+    EXM_LOG(EXM_LOG_LEVEL_WARN, fmt, ## __VA_ARGS__)
 
+#define EXM_LOG_INFO(fmt, ...) \
+    EXM_LOG(EXM_LOG_LEVEL_INFO, fmt, ## __VA_ARGS__)
+
+#define EXM_LOG_DBG(fmt, ...) \
+    EXM_LOG(EXM_LOG_LEVEL_DBG, fmt, ## __VA_ARGS__)
+
+void exm_log_print_cb_stderr(Exm_Log_Level level,
+                             const char *fmt,
+                             void *data,
+                             va_list args);
+
+void exm_log_print_cb_stdout(Exm_Log_Level level,
+                             const char *fmt,
+                             void *data,
+                             va_list args);
+
+void exm_log_print(Exm_Log_Level level, const char *fmt, ...);
 
 #endif /* EXAMINE_LOG_H */

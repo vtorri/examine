@@ -110,23 +110,21 @@ _exm_symbol_get(const char *module, const char *symbol)
     HMODULE  mod;
     FARPROC  proc;
 
-    EXM_PRINT_PUSH("loading library %s... ", module);
+    EXM_LOG_DBG("loading library %s", module);
     mod = LoadLibrary(module);
     if (!mod)
     {
-        EXM_PRINT_POP_ERROR("failed");
+        EXM_LOG_ERR("failed");
         return NULL;
     }
-    EXM_PRINT_POP("done");
 
-    EXM_PRINT_PUSH("retrieving symbol %s... ", symbol);
+    EXM_LOG_DBG("retrieving symbol %s", symbol);
     proc = GetProcAddress(mod, symbol);
     if (!proc)
     {
-        EXM_PRINT_POP_ERROR("failed");
+        EXM_LOG_ERR("failed");
         goto free_library;
     }
-    EXM_PRINT_POP("done");
 
     FreeLibrary(mod);
 
@@ -157,13 +155,13 @@ exm_new(void)
     kernel32 = LoadLibrary("kernel32.dll");
     if (!kernel32)
     {
-        EXM_PRINT_ERROR("no kernel32.dll found");
+        EXM_LOG_ERR("no kernel32.dll found");
         return 0;
     }
 
     if (!GetProcAddress(kernel32, "CreateRemoteThread"))
     {
-        EXM_PRINT_ERROR("no CreateRemoteThread() found");
+        EXM_LOG_ERR("no CreateRemoteThread() found");
         goto free_kernel32;
     }
 
@@ -200,21 +198,21 @@ exm_new(void)
 
     if (GetBinaryType(exm->dll_fullname, &type))
     {
-        EXM_PRINT_ERROR("%s is not a valid DLL", exm->dll_fullname);
+        EXM_LOG_ERR("%s is not a valid DLL", exm->dll_fullname);
         goto free_exm;
     }
     else
     {
         if (GetLastError() != ERROR_BAD_EXE_FORMAT)
         {
-            EXM_PRINT_ERROR("%s is not a valid DLL", exm->dll_fullname);
+            EXM_LOG_ERR("%s is not a valid DLL", exm->dll_fullname);
             goto free_exm;
         }
     }
 
     exm->dll_length = l1 + l2 + 1;
 
-    EXM_PRINT("DLL to inject: %s", exm->dll_fullname);
+    EXM_LOG_DBG("DLL to inject: %s", exm->dll_fullname);
 
     FreeLibrary(kernel32);
 
@@ -259,7 +257,7 @@ exm_file_check(Exm *exm, const char *filename)
         ((ret != SCS_32BIT_BINARY) &&
          (ret != SCS_64BIT_BINARY)))
     {
-        EXM_PRINT_ERROR("file %s is not an executable program or its path is wrong (%ld)", filename, ret);
+        EXM_LOG_ERR("file %s is not an executable program or its path is wrong (%ld)", filename, ret);
         return 0;
     }
 
@@ -346,39 +344,36 @@ exm_dll_inject(Exm *exm)
     ZeroMemory(&si, sizeof(STARTUPINFO));
     si.cb = sizeof(STARTUPINFO);
 
-    EXM_PRINT_PUSH("creating child process %s... ", exm->filename);
+    EXM_LOG_DBG("creating child process %s", exm->filename);
     if (!CreateProcess(NULL, exm->filename, NULL, NULL, TRUE,
                        CREATE_SUSPENDED, NULL, NULL, &si, &pi))
     {
-        EXM_PRINT_POP_ERROR("failed");
+        EXM_LOG_ERR("failed");
         return 0;
     }
-    EXM_PRINT_POP("done");
 
-    EXM_PRINT_PUSH("waiting for the child process to initialize... ");
+    EXM_LOG_DBG("waiting for the child process to initialize");
     if (!WaitForInputIdle(pi.hProcess, INFINITE))
     {
-        EXM_PRINT_POP_ERROR("failed");
+        EXM_LOG_ERR("failed");
         goto close_handles;
     }
-    EXM_PRINT_POP("done");
 
-    EXM_PRINT_PUSH("opening child process... ");
+    EXM_LOG_DBG("opening child process");
     process = OpenProcess(CREATE_THREAD_ACCESS, FALSE, pi.dwProcessId);
     if (!process)
     {
-        EXM_PRINT_POP_ERROR("failed");
+        EXM_LOG_ERR("failed");
         goto close_handles;
     }
-    EXM_PRINT_POP("done");
 
-    EXM_PRINT_PUSH("mapping process handle 0x%p... ", pi.hProcess);
+    EXM_LOG_DBG("mapping process handle 0x%p", pi.hProcess);
     exm->map_process.handle = CreateFileMapping(INVALID_HANDLE_VALUE,
                                                 NULL, PAGE_READWRITE, 0, sizeof(HANDLE),
                                                 "shared_process_handle");
     if (!exm->map_process.handle)
     {
-        EXM_PRINT_POP_ERROR("failed");
+        EXM_LOG_ERR("failed");
         goto close_process;
     }
 
@@ -386,53 +381,48 @@ exm_dll_inject(Exm *exm)
                                           0, 0, sizeof(HANDLE));
     if (!exm->map_process.base)
     {
-        EXM_PRINT_POP_ERROR("failed");
+        EXM_LOG_ERR("failed");
         goto close_process_handle;
     }
 
     CopyMemory(exm->map_process.base, &pi.hProcess, sizeof(HANDLE));
-    EXM_PRINT_POP("done");
 
-    EXM_PRINT_PUSH("allocating virtual memory... ");
+    EXM_LOG_DBG("allocating virtual memory");
     remote_string = VirtualAllocEx(process, NULL, exm->dll_length, MEM_COMMIT, PAGE_READWRITE);
     if (!remote_string)
     {
-        EXM_PRINT_POP_ERROR("failed");
+        EXM_LOG_ERR("failed");
         goto unmap_process_handle;
     }
-    EXM_PRINT_POP("done");
 
-    EXM_PRINT_PUSH("writing process in virtual memory... ");
+    EXM_LOG_DBG("writing process in virtual memory");
     if (!WriteProcessMemory(process, remote_string, exm->dll_fullname, exm->dll_length, NULL))
     {
-        EXM_PRINT_POP_ERROR("failed");
+        EXM_LOG_ERR("failed");
         goto virtual_free;
     }
-    EXM_PRINT_POP("done");
 
-    EXM_PRINT_PUSH("execute thread... ");
+    EXM_LOG_DBG("execute thread");
     remote_thread = CreateRemoteThread(process, NULL, 0, (LPTHREAD_START_ROUTINE)exm->ll, remote_string, 0, NULL);
     if (!remote_thread)
     {
-        EXM_PRINT_POP_ERROR("failed");
+        EXM_LOG_ERR("failed");
         goto virtual_free;
     }
-    EXM_PRINT_POP("done");
 
     WaitForSingleObject(remote_thread, INFINITE);
 
-    EXM_PRINT_PUSH("getting exit code... ");
+    EXM_LOG_DBG("getting exit code");
     if (!GetExitCodeThread(remote_thread, &exit_code))
     {
-        EXM_PRINT_POP_ERROR("failed");
+        EXM_LOG_ERR("failed");
         goto close_thread;
     }
-    EXM_PRINT_POP("done");
 
     CloseHandle(remote_thread);
     VirtualFreeEx(process, remote_string, 0, MEM_RELEASE);
 
-    EXM_PRINT("resume child process");
+    EXM_LOG_DBG("resume child process");
     ResumeThread(pi.hThread);
 
     exm->child.process1 = pi.hProcess;
@@ -483,9 +473,9 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    EXM_PRINT("Examine, a memory leak detector");
-    EXM_PRINT("Copyright (c) 2013, and GNU GPL'd, by Vincent Torri");
-    EXM_PRINT("Options:");
+    EXM_LOG_INFO("Examine, a memory leak detector");
+    EXM_LOG_INFO("Copyright (c) 2013, and GNU GPL'd, by Vincent Torri");
+    EXM_LOG_INFO("Options:");
 
     exm = exm_new();
     if (!exm)
@@ -494,28 +484,28 @@ int main(int argc, char *argv[])
     if (!exm_file_check(exm, argv[1]))
         goto del_exm;
 
-    EXM_PRINT("Command: %s", argv[1]);
+    EXM_LOG_INFO("Command: %s", argv[1]);
 
     if (!exm_file_map(exm))
     {
-        EXM_PRINT_ERROR("impossible to map filename %s", argv[1]);
+        EXM_LOG_ERR("impossible to map filename %s", argv[1]);
         goto del_exm;
     }
 
     if (!exm_dll_inject(exm))
     {
-        EXM_PRINT_ERROR("injection failed");
+        EXM_LOG_ERR("injection failed");
         goto unmap_exm;
     }
 
     Sleep(2000);
-    EXM_PRINT("end of process");
+    EXM_LOG_DBG("end of process");
 
     exm_dll_eject(exm);
 
     exm_file_unmap(exm);
     exm_del(exm);
-    EXM_PRINT("resources freed");
+    EXM_LOG_DBG("resources freed");
 
     return 0;
 

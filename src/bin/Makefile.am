@@ -10,4 +10,7 @@ examine_CPPFLAGS = \
 -DPACKAGE_BIN_DIR=\"$(bindir)\" \
 @EXM_CFLAGS@
 
+examine_LDADD = \
+$(top_builddir)/src/lib/libexamine.la
+
 examine_test_SOURCES = examine_test.c
