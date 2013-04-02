@@ -17,46 +17,9 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <stdlib.h>
-#include <stdio.h>
+#ifndef EXAMINE_TEST_DLL_H
+#define EXAMINE_TEST_DLL_H
 
-#ifndef WIN32_LEAN_AND_MEAN
-# define WIN32_LEAN_AND_MEAN
-#endif
-#include <windows.h>
-#undef WIN32_LEAN_AND_MEAN
+__declspec(dllexport) void examine_test_dll();
 
-#include "examine_test_dll.h"
-
-int main(void)
-{
-    HANDLE hDefaultProcessHeap;
-    void *data;
-
-    printf ("process launched...\n");
-
-    hDefaultProcessHeap = GetProcessHeap();
-    data = HeapAlloc(hDefaultProcessHeap, 0, 10);
-    if (!data)
-    {
-        printf ("no heap alloc...\n");
-        return -1;
-    }
-    HeapFree(hDefaultProcessHeap, 0, data);
-
-    data = malloc(10);
-    if (!data)
-    {
-        printf ("no malloc...\n");
-        return -1;
-    }
-    /* free(data); */
-
-    /* test with a DLL dependency */
-
-    examine_test_dll();
-
-    printf ("process finished...\n");
-
-    return 0;
-}
+#endif /* EXAMINE_TEST_DLL_H */
