@@ -55,8 +55,34 @@ exm_list_append(Exm_List *l, void *data)
     return l;
 }
 
+Exm_List *
+exm_list_append_if_new(Exm_List *l, void *data, Exm_List_Cmp_Cb cmp_cb)
+{
+    Exm_List *iter;
+    int append = 1;
+
+    if (!data)
+        return l;
+
+    iter = l;
+    while (iter)
+    {
+        if (cmp_cb(iter->data, data) == 0)
+        {
+            append = 0;
+            break;
+        }
+        iter = iter->next;
+    }
+
+    if (append)
+        l = exm_list_append(l, data);
+
+    return l;
+}
+
 void
-exm_list_free(Exm_List *l, void (*free_cb)(void *ptr))
+exm_list_free(Exm_List *l, Exm_List_Free_Cb free_cb)
 {
     Exm_List *iter;
 
