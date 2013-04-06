@@ -51,16 +51,16 @@ int exm_overload_data_alloc_nbr_free_get(Exm_Overload_Data_Alloc *da);
 Exm_List *exm_overload_data_alloc_stack_get(Exm_Overload_Data_Alloc *da);
 size_t exm_overload_data_free_size_get(Exm_Overload_Data_Free *df);
 
-Exm_List *exm_overload_data_alloc_list();
-Exm_List *exm_overload_data_free_list();
-int exm_overload_data_alloc_list_count();
-int exm_overload_data_free_list_count();
+Exm_List *exm_overload_data_alloc_list(void);
+Exm_List *exm_overload_data_free_list(void);
+int exm_overload_data_alloc_list_count(void);
+int exm_overload_data_free_list_count(void);
 
 
 /***** Hook *****/
 
-Exm_Overload *exm_hook_instance_overloads_get();
-Exm_List *exm_hook_instance_stack_frames_get();
+Exm_Overload *exm_hook_instance_overloads_get(void);
+Exm_List *exm_hook_instance_stack_frames_get(void);
 
 
 #endif /* EXAMINE_PRIVATE_H */

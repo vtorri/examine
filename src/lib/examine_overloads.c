@@ -315,25 +315,25 @@ exm_overload_data_free_size_get(Exm_Overload_Data_Free *df)
 }
 
 Exm_List *
-exm_overload_data_alloc_list()
+exm_overload_data_alloc_list(void)
 {
     return _exm_overload_data.alloc;
 }
 
 Exm_List *
-exm_overload_data_free_list()
+exm_overload_data_free_list(void)
 {
     return _exm_overload_data.free;
 }
 
 int
-exm_overload_data_alloc_list_count()
+exm_overload_data_alloc_list_count(void)
 {
     return exm_list_count(_exm_overload_data.alloc);
 }
 
 int
-exm_overload_data_free_list_count()
+exm_overload_data_free_list_count(void)
 {
     return exm_list_count(_exm_overload_data.free);
 }
