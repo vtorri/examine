@@ -486,7 +486,7 @@ int main(int argc, char *argv[])
         goto unmap_exm;
     }
 
-    Sleep(2000);
+    Sleep(1000);
     EXM_LOG_DBG("end of process");
 
     exm_dll_eject(exm);
