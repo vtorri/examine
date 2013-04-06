@@ -7,6 +7,8 @@ libexamine_la_SOURCES = \
 examine_log.c \
 examine_log.h
 
+libexamine_la_CFLAGS = @EXM_CFLAGS@
+
 libexamine_la_LDFLAGS = -no-undefined -version-info @version_info@
 
 libexamine_la_LIBTOOLFLAGS = --tag=disable-static
@@ -27,6 +29,8 @@ examine_dll_la_CPPFLAGS = \
 -I$(top_srcdir)/src/lib \
 -DPSAPI_VERSION=1 \
 @EXM_CPPFLAGS@
+
+examine_dll_la_CFLAGS = @EXM_CFLAGS@
 
 examine_dll_la_LIBADD = \
 $(top_builddir)/src/lib/libexamine.la \
