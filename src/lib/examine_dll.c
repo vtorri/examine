@@ -36,6 +36,7 @@
 
 #include "examine_log.h"
 #include "examine_list.h"
+#include "examine_pe.h"
 #include "examine_private.h"
 #include "examine_stacktrace.h"
 
@@ -43,7 +44,7 @@
 typedef struct
 {
     char        *filename;
-    Exm_List    *modules;
+    Exm_List    *dll;
     Exm_Overload overloads[EXM_OVERLOAD_COUNT_CRT];
     char        *crt_name;
     Exm_Sw      *stacktrace;
@@ -53,19 +54,40 @@ static Exm_Hook _exm_hook_instance =
 {
     NULL,
     NULL,
-    NULL,
+    {
+        {
+            NULL,
+            NULL,
+            NULL
+        },
+        {
+            NULL,
+            NULL,
+            NULL
+        },
+        {
+            NULL,
+            NULL,
+            NULL
+        },
+        {
+            NULL,
+            NULL,
+            NULL
+        }
+    },
     NULL,
     NULL
 };
 
 Exm_Overload *
-exm_hook_instance_overloads_get()
+exm_hook_instance_overloads_get(void)
 {
     return _exm_hook_instance.overloads;
 }
 
 Exm_List *
-exm_hook_instance_stack_frames_get()
+exm_hook_instance_stack_frames_get(void)
 {
     return exm_sw_frames_get(_exm_hook_instance.stacktrace);
 }
@@ -144,53 +166,11 @@ _exm_hook_crt_name_get(void)
 }
 
 static int
-_exm_modules_get(void)
-{
-    HMODULE      modules[1024];
-    DWORD        modules_nbr;
-    unsigned int i;
-
-    /* FIXME: use EnumProcessModulesEx for windows >= Vista */
-    if (!EnumProcessModules(GetCurrentProcess(), modules, sizeof(modules), &modules_nbr))
-        return 0;
-
-    for (i = 0; i < (modules_nbr / sizeof(HMODULE)); i++)
-    {
-        char   name[MAX_PATH] = "";
-        char  *tmp;
-        size_t l;
-        DWORD  res;
-
-        res = GetModuleFileName(modules[i], name, sizeof(name));
-        if (!res)
-          return 0;
-
-        /* we skip the filename of the process */
-        if (_stricmp(name, _exm_hook_instance.filename) == 0)
-            continue;
-
-        /* we exit the loop if we find the injected DLL */
-        tmp = strstr(name, "examine_dll.dll");
-        if (tmp && (*(tmp + strlen("examine_dll.dll")) == '\0'))
-            break;
-
-        /* what remains is the list of the needed modules */
-        l = strlen(name) + 1;
-        tmp = malloc(sizeof(char) * l);
-        if (!tmp)
-            continue;
-        memcpy(tmp, name, l);
-        _exm_hook_instance.modules = exm_list_append(_exm_hook_instance.modules, tmp);
-    }
-    /* exm_list_print(_exm_hook_instance.modules); */
-    return 1;
-}
-
-static int
 _exm_hook_init(void)
 {
     HANDLE handle;
     void  *base;
+    Exm_List *iter;
     int    length;
 
     handle = OpenFileMapping(PAGE_READWRITE, FALSE, "shared_size");
@@ -233,7 +213,20 @@ _exm_hook_init(void)
 
     printf(" ** filename : %s\n", _exm_hook_instance.filename);
 
-    _exm_modules_get();
+    _exm_hook_instance.dll = exm_list_append(_exm_hook_instance.dll,
+                                             strdup(_exm_hook_instance.filename));
+    _exm_hook_instance.dll = exm_pe_modules_list_get(_exm_hook_instance.dll,
+                                                     _exm_hook_instance.filename);
+    iter = _exm_hook_instance.dll;
+    while (iter)
+    {
+        char *full_name;
+
+        full_name = exm_pe_dll_path_find(iter->data);
+        free(iter->data);
+        iter->data = full_name;
+        iter = iter->next;
+    }
 
     memcpy(_exm_hook_instance.overloads, exm_overloads_instance, sizeof(_exm_hook_instance.overloads));
 
@@ -304,11 +297,7 @@ _exm_modules_hook_set(HMODULE module, const char *lib_name, PROC old_function_pr
 static void
 _exm_hook_modules_hook(const char *lib_name, int crt)
 {
-    HMODULE      mods[1024];
     HMODULE      lib_module;
-    HMODULE      hook_module = NULL;
-    DWORD        res;
-    DWORD        mods_nbr;
     unsigned int i;
     unsigned int start;
     unsigned int end;
@@ -329,49 +318,31 @@ _exm_hook_modules_hook(const char *lib_name, int crt)
     for (i = start; i < end; i++)
         _exm_hook_instance.overloads[i].func_proc_old = GetProcAddress(lib_module, _exm_hook_instance.overloads[i].func_name_old);
 
-    if (!EnumProcessModules(GetCurrentProcess(), mods, sizeof(mods), &mods_nbr))
-        return;
-
-    for (i = 0; i < (mods_nbr / sizeof(HMODULE)); i++)
-    {
-        char name[256] = "";
-        char *windir = getenv("WINDIR");
-        char buf[256];
-
-        res = GetModuleFileNameEx(GetCurrentProcess(), mods[i], name, sizeof(name));
-        if (!res)
-            continue;
-
-        snprintf(buf, 255, "%s\\system32\\", windir);
-
-        /* if (strcmp(buf, name) > 0) */
-            /* printf(" $$$$ %s\n", name); */
-
-        if (lstrcmp(name, _exm_hook_instance.filename) != 0)
-            continue;
-
-        /* printf(" $$$$ %s\n", name); */
-        hook_module = mods[i];
-    }
-
-    if (hook_module)
-    {
-        for (i = start; i < end; i++)
-            _exm_modules_hook_set(hook_module, lib_name,
-                                  _exm_hook_instance.overloads[i].func_proc_old,
-                                  _exm_hook_instance.overloads[i].func_proc_new);
-    }
-
     FreeLibrary(lib_module);
+
+    {
+        Exm_List *iter;
+        iter = _exm_hook_instance.dll;
+        while (iter)
+        {
+            HMODULE mod;
+
+            mod = GetModuleHandle((char *)iter->data);
+            if (mod)
+            {
+                for (i = start; i < end; i++)
+                    _exm_modules_hook_set(mod, lib_name,
+                                          _exm_hook_instance.overloads[i].func_proc_old,
+                                          _exm_hook_instance.overloads[i].func_proc_new);
+            }
+            iter = iter->next;
+        }
+    }
 }
 
 static void
 _exm_hook_modules_unhook(const char *lib_name, int crt)
 {
-    HMODULE      mods[1024];
-    HMODULE      hook_module = NULL;
-    DWORD        mods_nbr;
-    DWORD        res;
     unsigned int i;
     unsigned int start;
     unsigned int end;
@@ -387,29 +358,23 @@ _exm_hook_modules_unhook(const char *lib_name, int crt)
         end = EXM_OVERLOAD_COUNT_CRT;
     }
 
-    if (!EnumProcessModules(GetCurrentProcess(), mods, sizeof(mods), &mods_nbr))
-        return;
-
-    for (i = 0; i < (mods_nbr / sizeof(HMODULE)); i++)
     {
-        char name[256] = "";
+        Exm_List *iter;
+        iter = _exm_hook_instance.dll;
+        while (iter)
+        {
+            HMODULE mod;
 
-        res = GetModuleFileNameEx(GetCurrentProcess(), mods[i], name, sizeof(name));
-        if (!res)
-            continue;
-
-        if (lstrcmp(name, _exm_hook_instance.filename) != 0)
-            continue;
-
-        hook_module = mods[i];
-    }
-
-    if (hook_module)
-    {
-        for (i = start; i < end; i++)
-            _exm_modules_hook_set(hook_module, lib_name,
-                                  _exm_hook_instance.overloads[i].func_proc_new,
-                                  _exm_hook_instance.overloads[i].func_proc_old);
+            mod = GetModuleHandle((char *)iter->data);
+            if (mod)
+            {
+                for (i = start; i < end; i++)
+                    _exm_modules_hook_set(mod, lib_name,
+                                          _exm_hook_instance.overloads[i].func_proc_new,
+                                          _exm_hook_instance.overloads[i].func_proc_old);
+            }
+            iter = iter->next;
+        }
     }
 }
 

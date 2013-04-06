@@ -20,8 +20,10 @@ examine_dll_la_SOURCES = \
 examine_dll.c \
 examine_list.c \
 examine_overloads.c \
+examine_pe.c \
 examine_stacktrace.c \
 examine_list.h \
+examine_pe.h \
 examine_private.h \
 examine_stacktrace.h
 
