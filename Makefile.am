@@ -1,3 +1,4 @@
+AUTOMAKE_OPTIONS = subdir-objects
 
 ACLOCAL_AMFLAGS = -I m4
 
@@ -24,9 +25,15 @@ m4/ltoptions.m4 \
 m4/ltsugar.m4 \
 m4/ltversion.m4
 
-SUBDIRS = src
+lib_LTLIBRARIES =
+pkg_LTLIBRARIES =
+bin_PROGRAMS =
+EXTRA_DIST =
 
-EXTRA_DIST = \
+include src/lib/Makefile.mk
+include src/bin/Makefile.mk
+
+EXTRA_DIST += \
 autogen.sh \
 COPYING \
 THANKS \
