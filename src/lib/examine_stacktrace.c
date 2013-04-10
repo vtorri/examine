@@ -31,6 +31,7 @@
 #include "examine_stacktrace.h"
 
 typedef struct _Exm_Sw_Find_Data Exm_Sw_Find_Data;
+typedef struct _Exm_Sw_Bfd_Data Exm_Sw_Bfd_Data;
 
 struct _Exm_Sw_Find_Data
 {
@@ -45,6 +46,12 @@ struct _Exm_Sw_Data
     char *filename;
     char *function;
     int   line;
+};
+
+struct _Ewm_Sw_Bfd_Data
+{
+    bfd *fd;
+    asymbol **symbol_table;
 };
 
 struct _Exm_Sw
@@ -133,7 +140,7 @@ sw_find_function_name_in_section(bfd      *abfd,
 }
 
 Exm_Sw *
-exm_sw_init(void)
+exm_sw_new(void)
 {
     char         filename[MAX_PATH];
     Exm_Sw      *sw;
@@ -184,7 +191,7 @@ exm_sw_init(void)
 }
 
 void
-exm_sw_shutdown(Exm_Sw *sw)
+exm_sw_free(Exm_Sw *sw)
 {
     if (!sw)
         return;
@@ -229,6 +236,8 @@ exm_sw_frames_get(Exm_Sw *sw)
         frames_nbr = i;
     }
 #endif
+
+    printf(" ** frames nbr : %d\n", (int)frames_nbr);
 
     data.list = NULL;
     for (i = 0; i < frames_nbr; i++)

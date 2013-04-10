@@ -44,7 +44,6 @@ typedef struct
     Exm_List    *dll;
     Exm_Overload overloads[EXM_OVERLOAD_COUNT_CRT];
     char        *crt_name;
-    Exm_Sw      *stacktrace;
 } Exm_Hook;
 
 static Exm_Hook _exm_hook_instance =
@@ -73,7 +72,6 @@ static Exm_Hook _exm_hook_instance =
             NULL
         }
     },
-    NULL,
     NULL
 };
 
@@ -81,12 +79,6 @@ Exm_Overload *
 exm_hook_instance_overloads_get(void)
 {
     return _exm_hook_instance.overloads;
-}
-
-Exm_List *
-exm_hook_instance_stack_frames_get(void)
-{
-    return exm_sw_frames_get(_exm_hook_instance.stacktrace);
 }
 
 static int
@@ -162,9 +154,13 @@ _exm_hook_init(void)
         iter = iter->next;
     }
 
-    memcpy(_exm_hook_instance.overloads, exm_overloads_instance, sizeof(_exm_hook_instance.overloads));
+    if (!exm_overload_init())
+    {
+        /* FIXME: something to free here ? */
+        return 0;
+    }
 
-    _exm_hook_instance.stacktrace = exm_sw_init();
+    memcpy(_exm_hook_instance.overloads, exm_overloads_instance, sizeof(_exm_hook_instance.overloads));
 
     return 1;
 }
@@ -172,8 +168,7 @@ _exm_hook_init(void)
 static void
 _exm_hook_shutdown(void)
 {
-    if (_exm_hook_instance.stacktrace)
-        free(_exm_hook_instance.stacktrace);
+    exm_overload_shutdown();
     if (_exm_hook_instance.filename)
         free(_exm_hook_instance.filename);
 }

@@ -57,7 +57,7 @@ static BOOL __stdcall _sw_read_memory_cb(HANDLE      hProcess,
 }
 
 Exm_Sw *
-exm_sw_init(void)
+exm_sw_new(void)
 {
     Exm_Sw *sw;
     DWORD   options;
@@ -88,7 +88,7 @@ exm_sw_init(void)
 }
 
 void
-exm_sw_shutdown(Exm_Sw *sw)
+exm_sw_free(Exm_Sw *sw)
 {
     if (!sw)
         return;

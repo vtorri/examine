@@ -45,6 +45,8 @@ typedef struct
 
 extern Exm_Overload exm_overloads_instance[];
 
+int exm_overload_init(void);
+void exm_overload_shutdown(void);
 
 size_t exm_overload_data_alloc_size_get(Exm_Overload_Data_Alloc *da);
 int exm_overload_data_alloc_nbr_free_get(Exm_Overload_Data_Alloc *da);
@@ -60,7 +62,6 @@ int exm_overload_data_free_list_count(void);
 /***** Hook *****/
 
 Exm_Overload *exm_hook_instance_overloads_get(void);
-Exm_List *exm_hook_instance_stack_frames_get(void);
 
 
 #endif /* EXAMINE_PRIVATE_H */

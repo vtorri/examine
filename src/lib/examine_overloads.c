@@ -74,10 +74,15 @@ typedef void   (*exm_free_t)             (void *memblock);
 
 static Exm_Overload_Data _exm_overload_data = { NULL, NULL };
 
+static Exm_Sw *_exm_overload_stack = NULL;
+
 static Exm_Overload_Data_Alloc *
 exm_overload_data_alloc_new(Exm_Overload_Fct fct, size_t size, void *data, Exm_List *stack)
 {
     Exm_Overload_Data_Alloc *da;
+
+    if (!stack)
+        return NULL;
 
     da = (Exm_Overload_Data_Alloc *)malloc(sizeof(Exm_Overload_Data_Alloc));
     if (!da)
@@ -148,7 +153,7 @@ EXM_HeapAlloc(HANDLE hHeap, DWORD dwFlags, SIZE_T dwBytes)
 
     printf("HeapAlloc !!! %p\n", data);
 
-    stack = exm_hook_instance_stack_frames_get();
+    stack = exm_sw_frames_get(_exm_overload_stack);
     da = exm_overload_data_alloc_new(EXM_OVERLOAD_FCT_HEAPALLOC, dwBytes, data, stack);
     if (da)
     {
@@ -163,14 +168,14 @@ EXM_HeapFree(HANDLE hHeap, DWORD dwFlags, LPVOID lpMem)
 {
     exm_heap_free_t hf;
     Exm_Overload_Data_Free *df;
-    BOOL res;
     Exm_List *stack;
     Exm_List *iter;
     size_t size = 0;
+    BOOL res;
 
     printf("HeapFree !!! %p\n", lpMem);
 
-    stack = exm_hook_instance_stack_frames_get();
+    stack = exm_sw_frames_get(_exm_overload_stack);
 
     iter = _exm_overload_data.alloc;
     while (iter)
@@ -214,7 +219,8 @@ EXM_malloc(size_t size)
     data = ma(size);
 
     printf("malloc !!! %p\n", data);
-    stack = exm_hook_instance_stack_frames_get();
+
+    stack = exm_sw_frames_get(_exm_overload_stack);
     da = exm_overload_data_alloc_new(EXM_OVERLOAD_FCT_MALLOC, size, data, stack);
     if (da)
     {
@@ -235,7 +241,7 @@ EXM_free(void *memblock)
 
     printf("free !!! %p\n", memblock);
 
-    stack = exm_hook_instance_stack_frames_get();
+    stack = exm_sw_frames_get(_exm_overload_stack);
 
     iter = _exm_overload_data.alloc;
     while (iter)
@@ -289,6 +295,23 @@ Exm_Overload exm_overloads_instance[EXM_OVERLOAD_COUNT_CRT] =
         (PROC)EXM_free
     }
 };
+
+int
+exm_overload_init(void)
+{
+    _exm_overload_stack = exm_sw_new();
+    if (!_exm_overload_stack)
+        return 0;
+
+    return 1;
+}
+
+void
+exm_overload_shutdown(void)
+{
+    if (_exm_overload_stack)
+        exm_sw_free(_exm_overload_stack);
+}
 
 size_t
 exm_overload_data_alloc_size_get(Exm_Overload_Data_Alloc *da)
