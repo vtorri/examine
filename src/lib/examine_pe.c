@@ -71,8 +71,14 @@ static const char *_exm_pe_dll_supp[] =
     "kernel32.dll",
     "kernelbase.dll",
     "msvcrt.dll",
+    "msvcr80.dll",
+    "msvcr80d.dll",
     "msvcr90.dll",
     "msvcr90d.dll",
+    "msvcr100.dll",
+    "msvcr100d.dll",
+    "msvcr110.dll",
+    "msvcr110d.dll",
     "ntdll.dll",
     "user32.dll",
     NULL
@@ -272,6 +278,16 @@ exm_pe_msvcrt_get(Exm_Pe_File *file)
             EXM_LOG_DBG("msvcrt.dll !!");
             return _strdup(dll_name);
         }
+        if (_stricmp("msvcr80.dll", dll_name) == 0)
+        {
+            EXM_LOG_DBG("msvcr80.dll !!");
+            return _strdup(dll_name);
+        }
+        if (_stricmp("msvcr80d.dll", dll_name) == 0)
+        {
+            EXM_LOG_DBG("msvcr80d.dll !!");
+            return _strdup(dll_name);
+        }
         if (_stricmp("msvcr90.dll", dll_name) == 0)
         {
             EXM_LOG_DBG("msvcr90.dll !!");
@@ -280,6 +296,26 @@ exm_pe_msvcrt_get(Exm_Pe_File *file)
         if (_stricmp("msvcr90d.dll", dll_name) == 0)
         {
             EXM_LOG_DBG("msvcr90d.dll !!");
+            return _strdup(dll_name);
+        }
+        if (_stricmp("msvcr100.dll", dll_name) == 0)
+        {
+            EXM_LOG_DBG("msvcr100.dll !!");
+            return _strdup(dll_name);
+        }
+        if (_stricmp("msvcr100d.dll", dll_name) == 0)
+        {
+            EXM_LOG_DBG("msvcr100d.dll !!");
+            return _strdup(dll_name);
+        }
+        if (_stricmp("msvcr110.dll", dll_name) == 0)
+        {
+            EXM_LOG_DBG("msvcr110.dll !!");
+            return _strdup(dll_name);
+        }
+        if (_stricmp("msvcr110d.dll", dll_name) == 0)
+        {
+            EXM_LOG_DBG("msvcr110d.dll !!");
             return _strdup(dll_name);
         }
 
