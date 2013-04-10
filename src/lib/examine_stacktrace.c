@@ -237,8 +237,6 @@ exm_sw_frames_get(Exm_Sw *sw)
     }
 #endif
 
-    printf(" ** frames nbr : %d\n", (int)frames_nbr);
-
     data.list = NULL;
     for (i = 0; i < frames_nbr; i++)
     {
