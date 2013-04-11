@@ -28,9 +28,9 @@ Exm_Sw     *exm_sw_new(void);
 void        exm_sw_free(Exm_Sw *sw);
 Exm_List   *exm_sw_frames_get(Exm_Sw *sw);
 
-const char *exm_sw_data_filename_get(Exm_Sw_Data *data);
-const char *exm_sw_data_function_get(Exm_Sw_Data *data);
-int         exm_sw_data_line_get(Exm_Sw_Data *data);
+const char *exm_sw_data_filename_get(const Exm_Sw_Data *data);
+const char *exm_sw_data_function_get(const Exm_Sw_Data *data);
+int         exm_sw_data_line_get(const Exm_Sw_Data *data);
 void        exm_sw_data_free(void *ptr);
 
 

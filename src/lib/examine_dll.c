@@ -75,6 +75,12 @@ static Exm_Hook _exm_hook_instance =
     NULL
 };
 
+Exm_List *
+exm_hook_instance_dll_get(void)
+{
+    return _exm_hook_instance.dll;
+}
+
 Exm_Overload *
 exm_hook_instance_overloads_get(void)
 {
@@ -304,6 +310,8 @@ _exm_hook_modules_unhook(const char *lib_name, int crt)
         }
     }
 }
+
+BOOL APIENTRY DllMain(HMODULE hModule EXM_UNUSED, DWORD ulReason, LPVOID lpReserved EXM_UNUSED);
 
 BOOL APIENTRY DllMain(HMODULE hModule EXM_UNUSED, DWORD ulReason, LPVOID lpReserved EXM_UNUSED)
 {

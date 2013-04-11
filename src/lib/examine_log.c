@@ -26,6 +26,12 @@
 
 #include "examine_log.h"
 
+
+/*============================================================================*
+ *                                  Local                                     *
+ *============================================================================*/
+
+
 static DWORD
 _exm_log_print_level_color_get(int level)
 {
@@ -135,7 +141,11 @@ _exm_log_fprint_cb(DWORD console,
         fprintf(stderr, "ERROR: %s(): want to write %d bytes, %ld written\n", __FUNCTION__, s + 1, res);
 }
 
-/*** API ***/
+
+/*============================================================================*
+ *                                 Global                                     *
+ *============================================================================*/
+
 
 void
 exm_log_print_cb_stderr(Exm_Log_Level level,

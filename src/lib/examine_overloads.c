@@ -34,6 +34,12 @@
 #include "examine_private.h"
 #include "examine_stacktrace.h"
 
+
+/*============================================================================*
+ *                                  Local                                     *
+ *============================================================================*/
+
+
 typedef enum
 {
     EXM_OVERLOAD_FCT_HEAPALLOC,
@@ -77,7 +83,7 @@ static Exm_Overload_Data _exm_overload_data = { NULL, NULL };
 static Exm_Sw *_exm_overload_stack = NULL;
 
 static Exm_Overload_Data_Alloc *
-exm_overload_data_alloc_new(Exm_Overload_Fct fct, size_t size, void *data, Exm_List *stack)
+_exm_overload_data_alloc_new(Exm_Overload_Fct fct, size_t size, void *data, Exm_List *stack)
 {
     Exm_Overload_Data_Alloc *da;
 
@@ -99,7 +105,7 @@ exm_overload_data_alloc_new(Exm_Overload_Fct fct, size_t size, void *data, Exm_L
 }
 
 static void
-exm_overload_data_alloc_free(void *ptr)
+_exm_overload_data_alloc_free(void *ptr)
 {
     Exm_Overload_Data_Alloc *da = ptr;
 
@@ -112,7 +118,7 @@ exm_overload_data_alloc_free(void *ptr)
 }
 
 static Exm_Overload_Data_Free *
-exm_overload_data_free_new(Exm_Overload_Fct fct, size_t size, Exm_List *stack)
+_exm_overload_data_free_new(Exm_Overload_Fct fct, size_t size, Exm_List *stack)
 {
     Exm_Overload_Data_Free *df;
 
@@ -128,7 +134,7 @@ exm_overload_data_free_new(Exm_Overload_Fct fct, size_t size, Exm_List *stack)
 }
 
 static void
-exm_overload_data_free_free(void *ptr)
+_exm_overload_data_free_free(void *ptr)
 {
     Exm_Overload_Data_Free *df = ptr;
 
@@ -141,7 +147,7 @@ exm_overload_data_free_free(void *ptr)
 
 
 static LPVOID WINAPI
-EXM_HeapAlloc(HANDLE hHeap, DWORD dwFlags, SIZE_T dwBytes)
+_exm_HeapAlloc(HANDLE hHeap, DWORD dwFlags, SIZE_T dwBytes)
 {
     exm_heap_alloc_t ha;
     Exm_Overload_Data_Alloc *da;
@@ -154,7 +160,7 @@ EXM_HeapAlloc(HANDLE hHeap, DWORD dwFlags, SIZE_T dwBytes)
     printf("HeapAlloc !!! %p\n", data);
 
     stack = exm_sw_frames_get(_exm_overload_stack);
-    da = exm_overload_data_alloc_new(EXM_OVERLOAD_FCT_HEAPALLOC, dwBytes, data, stack);
+    da = _exm_overload_data_alloc_new(EXM_OVERLOAD_FCT_HEAPALLOC, dwBytes, data, stack);
     if (da)
     {
         _exm_overload_data.alloc = exm_list_append(_exm_overload_data.alloc, da);
@@ -164,7 +170,7 @@ EXM_HeapAlloc(HANDLE hHeap, DWORD dwFlags, SIZE_T dwBytes)
 }
 
 static BOOL WINAPI
-EXM_HeapFree(HANDLE hHeap, DWORD dwFlags, LPVOID lpMem)
+_exm_HeapFree(HANDLE hHeap, DWORD dwFlags, LPVOID lpMem)
 {
     exm_heap_free_t hf;
     Exm_Overload_Data_Free *df;
@@ -195,7 +201,7 @@ EXM_HeapFree(HANDLE hHeap, DWORD dwFlags, LPVOID lpMem)
 
     /* TODO : size == 0 : free sans malloc */
 
-    df = exm_overload_data_free_new(EXM_OVERLOAD_FCT_HEAPFREE, size, stack);
+    df = _exm_overload_data_free_new(EXM_OVERLOAD_FCT_HEAPFREE, size, stack);
     if (df)
     {
         _exm_overload_data.free = exm_list_append(_exm_overload_data.free, df);
@@ -208,7 +214,7 @@ EXM_HeapFree(HANDLE hHeap, DWORD dwFlags, LPVOID lpMem)
 }
 
 static void *
-EXM_malloc(size_t size)
+_exm_malloc(size_t size)
 {
     exm_malloc_t ma;
     Exm_Overload_Data_Alloc *da;
@@ -221,7 +227,7 @@ EXM_malloc(size_t size)
     printf("malloc !!! %p\n", data);
 
     stack = exm_sw_frames_get(_exm_overload_stack);
-    da = exm_overload_data_alloc_new(EXM_OVERLOAD_FCT_MALLOC, size, data, stack);
+    da = _exm_overload_data_alloc_new(EXM_OVERLOAD_FCT_MALLOC, size, data, stack);
     if (da)
     {
         _exm_overload_data.alloc = exm_list_append(_exm_overload_data.alloc, da);
@@ -231,7 +237,7 @@ EXM_malloc(size_t size)
 }
 
 static void
-EXM_free(void *memblock)
+_exm_free(void *memblock)
 {
     exm_free_t f;
     Exm_Overload_Data_Free *df;
@@ -261,7 +267,7 @@ EXM_free(void *memblock)
 
     /* TODO : size == 0 : free sans malloc */
 
-    df = exm_overload_data_free_new(EXM_OVERLOAD_FCT_FREE, size, stack);
+    df = _exm_overload_data_free_new(EXM_OVERLOAD_FCT_FREE, size, stack);
     if (df)
     {
         _exm_overload_data.free = exm_list_append(_exm_overload_data.free, df);
@@ -272,27 +278,32 @@ EXM_free(void *memblock)
 }
 
 
+/*============================================================================*
+ *                                 Global                                     *
+ *============================================================================*/
+
+
 Exm_Overload exm_overloads_instance[EXM_OVERLOAD_COUNT_CRT] =
 {
     {
         "HeapAlloc",
         NULL,
-        (PROC)EXM_HeapAlloc
+        (PROC)_exm_HeapAlloc
     },
     {
         "HeapFree",
         NULL,
-        (PROC)EXM_HeapFree
+        (PROC)_exm_HeapFree
     },
     {
         "malloc",
         NULL,
-        (PROC)EXM_malloc
+        (PROC)_exm_malloc
     },
     {
         "free",
         NULL,
-        (PROC)EXM_free
+        (PROC)_exm_free
     }
 };
 
@@ -314,25 +325,25 @@ exm_overload_shutdown(void)
 }
 
 size_t
-exm_overload_data_alloc_size_get(Exm_Overload_Data_Alloc *da)
+exm_overload_data_alloc_size_get(const Exm_Overload_Data_Alloc *da)
 {
     return da->size;
 }
 
 int
-exm_overload_data_alloc_nbr_free_get(Exm_Overload_Data_Alloc *da)
+exm_overload_data_alloc_nbr_free_get(const Exm_Overload_Data_Alloc *da)
 {
     return da->nbr_free_to_do;
 }
 
 Exm_List *
-exm_overload_data_alloc_stack_get(Exm_Overload_Data_Alloc *da)
+exm_overload_data_alloc_stack_get(const Exm_Overload_Data_Alloc *da)
 {
     return da->stack;
 }
 
 size_t
-exm_overload_data_free_size_get(Exm_Overload_Data_Free *df)
+exm_overload_data_free_size_get(const Exm_Overload_Data_Free *df)
 {
     return df->size;
 }

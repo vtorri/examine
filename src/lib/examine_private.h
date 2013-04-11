@@ -48,10 +48,10 @@ extern Exm_Overload exm_overloads_instance[];
 int exm_overload_init(void);
 void exm_overload_shutdown(void);
 
-size_t exm_overload_data_alloc_size_get(Exm_Overload_Data_Alloc *da);
-int exm_overload_data_alloc_nbr_free_get(Exm_Overload_Data_Alloc *da);
-Exm_List *exm_overload_data_alloc_stack_get(Exm_Overload_Data_Alloc *da);
-size_t exm_overload_data_free_size_get(Exm_Overload_Data_Free *df);
+size_t exm_overload_data_alloc_size_get(const Exm_Overload_Data_Alloc *da);
+int exm_overload_data_alloc_nbr_free_get(const Exm_Overload_Data_Alloc *da);
+Exm_List *exm_overload_data_alloc_stack_get(const Exm_Overload_Data_Alloc *da);
+size_t exm_overload_data_free_size_get(const Exm_Overload_Data_Free *df);
 
 Exm_List *exm_overload_data_alloc_list(void);
 Exm_List *exm_overload_data_free_list(void);
@@ -61,6 +61,7 @@ int exm_overload_data_free_list_count(void);
 
 /***** Hook *****/
 
+Exm_List *exm_hook_instance_dll_get(void);
 Exm_Overload *exm_hook_instance_overloads_get(void);
 
 

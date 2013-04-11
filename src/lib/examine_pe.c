@@ -33,6 +33,12 @@
 #include "examine_log.h"
 #include "examine_pe.h"
 
+
+/*============================================================================*
+ *                                  Local                                     *
+ *============================================================================*/
+
+
 struct _Exm_Pe_File
 {
     HANDLE file;
@@ -126,7 +132,7 @@ _exm_pe_module_name_cmp(void *d1, void *d2)
 }
 
 static void *
-_exm_pe_rva_to_ptr_get(Exm_Pe_File *file, DWORD rva)
+_exm_pe_rva_to_ptr_get(const Exm_Pe_File *file, DWORD rva)
 {
     IMAGE_SECTION_HEADER *sh;
     IMAGE_SECTION_HEADER *sh_iter;
@@ -152,6 +158,12 @@ _exm_pe_rva_to_ptr_get(Exm_Pe_File *file, DWORD rva)
 
     return (void *)((unsigned char *)file->base + rva - delta);
 }
+
+
+/*============================================================================*
+ *                                 Global                                     *
+ *============================================================================*/
+
 
 Exm_Pe_File *
 exm_pe_file_new(const char *filename)
@@ -263,7 +275,7 @@ exm_pe_file_free(Exm_Pe_File *file)
 }
 
 char *
-exm_pe_msvcrt_get(Exm_Pe_File *file)
+exm_pe_msvcrt_get(const Exm_Pe_File *file)
 {
     IMAGE_IMPORT_DESCRIPTOR *iter;
 
