@@ -1,5 +1,3 @@
-AUTOMAKE_OPTIONS = subdir-objects
-
 ACLOCAL_AMFLAGS = -I m4
 
 DISTCHECK_CONFIGURE_FLAGS = --host=$(host_triplet)

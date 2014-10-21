@@ -41,12 +41,12 @@ case "$host_os" in
     ;;
 esac
 
-AM_INIT_AUTOMAKE([1.6 dist-bzip2])
+AM_INIT_AUTOMAKE([1.6 dist-bzip2 dist-xz subdir-objects])
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 
 lt_cv_deplibs_check_method='pass_all'
 LT_PREREQ([2.4])
-LT_INIT([win32-dll])
+LT_INIT([win32-dll disable-static])
 
 VMAJ=v_maj
 AC_SUBST([VMAJ])
@@ -78,6 +78,8 @@ AM_PROG_CC_C_O
 
 ### Checks for types
 
+AC_CHECK_SIZEOF([void *])
+
 
 ### Checks for structures
 
@@ -100,7 +102,11 @@ AC_MSG_CHECKING([for bfd_init in libbfd])
 CPPFLAGS_save="${CPPFLAGS}"
 CPPFLAGS="${CPPFLAGS} -I${_exm_libbfd_prefix}/include"
 LIBS_save="${LIBS}"
-LIBS="${LIBS} -L${_exm_libbfd_prefix}/lib/ -lbfd -liberty -lintl"
+if test "x${ac_cv_sizeof_void_p}" = "x8" ; then
+   LIBS="${LIBS} -L${_exm_libbfd_prefix}/lib64/ -lbfd -liberty -lintl -lz"
+else
+   LIBS="${LIBS} -L${_exm_libbfd_prefix}/lib/ -lbfd -liberty -lintl -lz"
+fi
 AC_LINK_IFELSE(
    [AC_LANG_PROGRAM(
        [[
@@ -111,7 +117,11 @@ bfd_init();
        ]])],
    [
     EXM_CPPFLAGS="-I${_exm_libbfd_prefix}/include"
-    EXM_LIBS="-L${_exm_libbfd_prefix}/lib/ -lbfd -liberty -lintl"
+    if test "x${ac_cv_sizeof_void_p}" = "x8" ; then
+       EXM_LIBS="-L${_exm_libbfd_prefix}/lib64/ -lbfd -liberty -lintl -lz"
+    else
+       EXM_LIBS="-L${_exm_libbfd_prefix}/lib/ -lbfd -liberty -lintl -lz"
+    fi
     _efl_have_bfd_init="yes"
    ],
    [_efl_have_bfd_init="no"])
