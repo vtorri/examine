@@ -274,25 +274,25 @@ exm_file_map(Exm *exm)
     length = strlen(exm->filename) + 1;
 
     exm->map_size.handle = CreateFileMapping(INVALID_HANDLE_VALUE,
-                                            NULL, PAGE_READWRITE, 0, sizeof(int),
-                                            "shared_size");
+                                             NULL, PAGE_READWRITE, 0, sizeof(int),
+                                             "shared_size");
     if (!exm->map_size.handle)
         return 0;
 
     exm->map_size.base = MapViewOfFile(exm->map_size.handle, FILE_MAP_WRITE,
-                                      0, 0, sizeof(int));
+                                       0, 0, sizeof(int));
     if (!exm->map_size.base)
         goto close_size_mapping;
 
     CopyMemory(exm->map_size.base, &length, sizeof(int));
 
     exm->map_file.handle = CreateFileMapping(INVALID_HANDLE_VALUE,
-                                            NULL, PAGE_READWRITE, 0, length,
-                                            "shared_filename");
+                                             NULL, PAGE_READWRITE, 0, length,
+                                             "shared_filename");
     if (!exm->map_file.handle)
         goto unmap_size_base;
     exm->map_file.base = MapViewOfFile(exm->map_file.handle, FILE_MAP_WRITE,
-                                      0, 0, length);
+                                       0, 0, length);
     if (!exm->map_file.base)
         goto close_file_mapping;
     CopyMemory(exm->map_file.base, exm->filename, length);
