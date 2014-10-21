@@ -58,7 +58,7 @@ AC_SUBST([version_info])
 ### configure options
 
 AC_ARG_WITH([libbfd-prefix],
-   [AC_HELP_STRING([--with-libbfd-prefix=DIR], [prefix of libbfd @<:@default=/usr/local@:>@])],
+   [AS_HELP_STRING([--with-libbfd-prefix=DIR], [prefix of libbfd @<:@default=/usr/local@:>@])],
    [_exm_libbfd_prefix="${with_libbfd_prefix}"],
    [_exm_libbfd_prefix="/usr/local"])
 
