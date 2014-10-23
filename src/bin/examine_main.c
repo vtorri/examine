@@ -486,7 +486,8 @@ int main(int argc, char *argv[])
         goto unmap_exm;
     }
 
-    Sleep(1000);
+    WaitForSingleObject(exm->child.process1, INFINITE);
+
     EXM_LOG_DBG("end of process");
 
     exm_dll_eject(exm);
