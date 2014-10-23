@@ -30,12 +30,12 @@ struct _Exm_List
 };
 
 typedef void (*Exm_List_Free_Cb)(void *ptr);
-typedef int (*Exm_List_Cmp_Cb)(void *d1, void *d2);
+typedef int (*Exm_List_Cmp_Cb)(const void *d1, const void *d2);
 
-Exm_List *exm_list_append(Exm_List *l, void *data);
-Exm_List *exm_list_append_if_new(Exm_List *l, void *data, Exm_List_Cmp_Cb cmp_cb);
+Exm_List *exm_list_append(Exm_List *l, const void *data);
+Exm_List *exm_list_append_if_new(Exm_List *l, const void *data, Exm_List_Cmp_Cb cmp_cb);
 void      exm_list_free(Exm_List *l, Exm_List_Free_Cb free_cb);
-int       exm_list_count(Exm_List *l);
+int       exm_list_count(const Exm_List *l);
 
 
 #endif /* EXAMINE_LIST_H */

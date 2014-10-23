@@ -27,6 +27,12 @@
 #include "examine_list.h"
 
 
+/**
+ * @defgroup List functions
+ *
+ * @{
+ */
+
 /*============================================================================*
  *                                  Local                                     *
  *============================================================================*/
@@ -37,8 +43,19 @@
  *============================================================================*/
 
 
+/**
+ * @brief Append an element to the given list.
+ *
+ * @param[inout] l The list.
+ * @param[in] data The element.
+ * @return The list with the appended element.
+ *
+ * This function appends @p data to the list @p l. If @p data is
+ * @c NULL, this function returns @p l. To create a new list, @p l
+ * must be @c NULL.
+ */
 Exm_List *
-exm_list_append(Exm_List *l, void *data)
+exm_list_append(Exm_List *l, const void *data)
 {
     Exm_List *iter;
     Exm_List *n;
@@ -50,7 +67,7 @@ exm_list_append(Exm_List *l, void *data)
     if (!n)
         return l;
 
-    n->data = data;
+    n->data = (void *)data;
     n->next = NULL;
 
     if (!l)
@@ -65,8 +82,20 @@ exm_list_append(Exm_List *l, void *data)
     return l;
 }
 
+/**
+ * @brief append an element to the given list with a comparison callback.
+ *
+ * @param[inout] l The list.
+ * @param[in] data The data to append.
+ * @param[in] cmp_cb The comparison callback.
+ * @return The list with the appended element.
+ *
+ * This function appends @p data to @p l if it satisfies the
+ * comparison callback @p cmp_cb. If @cmp_cb returns 0, @p data is not
+ * added to @p l.
+ */
 Exm_List *
-exm_list_append_if_new(Exm_List *l, void *data, Exm_List_Cmp_Cb cmp_cb)
+exm_list_append_if_new(Exm_List *l, const void *data, Exm_List_Cmp_Cb cmp_cb)
 {
     Exm_List *iter;
     int append = 1;
@@ -91,6 +120,15 @@ exm_list_append_if_new(Exm_List *l, void *data, Exm_List_Cmp_Cb cmp_cb)
     return l;
 }
 
+/**
+ * @brief Free the given list.
+ *
+ * @param[inout] l The list to free.
+ * @param[in] free_cb The free callback.
+ *
+ * This function frees the list @l using the free callback @p free_cb
+ * to free each element. If @p l is @c NULL, nothing is done.
+ */
 void
 exm_list_free(Exm_List *l, Exm_List_Free_Cb free_cb)
 {
@@ -112,8 +150,17 @@ exm_list_free(Exm_List *l, Exm_List_Free_Cb free_cb)
     }
 }
 
+/**
+ * @brief Return the nmber of elements of the given list.
+ *
+ * @param[in] l The list.
+ * @return The number of elements.
+ *
+ * This function returns the number of elements of the list @p l. If
+ * @p l is @c null, 0 is returned.
+ */
 int
-exm_list_count(Exm_List *l)
+exm_list_count(const Exm_List *l)
 {
     Exm_List *iter;
     int count = 0;
@@ -121,7 +168,7 @@ exm_list_count(Exm_List *l)
     if (!l)
         return 0;
 
-    iter = l;
+    iter = (Exm_List *)l;
     while (iter)
     {
         count ++;
@@ -130,3 +177,7 @@ exm_list_count(Exm_List *l)
 
     return count;
 }
+
+/**
+ * @}
+ */

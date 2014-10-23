@@ -34,6 +34,19 @@
 #include "examine_pe.h"
 
 
+/**
+ * @defgroup PE file functions
+ *
+ * The main purpose of this file is to list the modules of a PE
+ * file. Indeed, the process which is checked is launched as
+ * suspended. So the modules can not be retrieved with
+ * EnumProcessModule, but they are accessible within the PE file.
+ *
+ * See http://bbs.pediy.com/upload/bbs/unpackfaq/ARTeam%20PE_appendix1_offsets.htm
+ *
+ * @{
+ */
+
 /*============================================================================*
  *                                  Local                                     *
  *============================================================================*/
@@ -41,11 +54,11 @@
 
 struct _Exm_Pe_File
 {
-    HANDLE file;
-    HANDLE file_map;
-    void *base;
-    IMAGE_NT_HEADERS *nt_header;
-    IMAGE_IMPORT_DESCRIPTOR *import_desc;
+    HANDLE file; /**< The handle returned by CreateFile() */
+    HANDLE file_map; /**< The file mapping object */
+    void *base; /**< The starting adress of the mapped view */
+    IMAGE_NT_HEADERS *nt_header; /**< The NT header address */
+    IMAGE_IMPORT_DESCRIPTOR *import_desc; /**< The import descriptor address */
 };
 
 static const char *_exm_pe_dll_supp[] =
@@ -88,8 +101,18 @@ static const char *_exm_pe_dll_supp[] =
     "ntdll.dll",
     "user32.dll",
     NULL
-};
+}; /**< array of system DLL */
 
+/**
+ * @brief Check if the given path is absolute or not.
+ *
+ * @param[in] filename The file name.
+ * @return 1 if the  path is absolute, 0 otherwise.
+ *
+ * This function checks if @filename has an absolute path or relative
+ * path by looking at thefirst three characters. It returnd 1 if the
+ * path is absolute, 0 otherwise.
+ */
 static int
 _exm_pe_path_is_absolute(const char *filename)
 {
@@ -108,8 +131,20 @@ _exm_pe_path_is_absolute(const char *filename)
     return 0;
 }
 
+/**
+ * @brief Compare the two given strings if they are not a system DLL.
+ *
+ * @param[in] d1 The first string.
+ * @param[in] d2 The second string.
+ * @return 0 if the second string is a system DLL, otherwise the
+ * result of _stricmp.
+ *
+ * This function compare the strings @p d1 and @p d2. If @d2 is a
+ * system DLL as listed in #_exm_pe_dll_supp, this function returns 0,
+ * otherwise it returns the result of _stricmp().
+ */
 static int
-_exm_pe_module_name_cmp(void *d1, void *d2)
+_exm_pe_module_name_cmp(const void *d1, const void *d2)
 {
     char **iter;
     int is_dll_sup = 0;
@@ -117,7 +152,7 @@ _exm_pe_module_name_cmp(void *d1, void *d2)
     iter = (char **)_exm_pe_dll_supp;
     while (*iter)
     {
-        if (stricmp((const char *)d2, *iter) == 0)
+        if (_stricmp((const char *)d2, *iter) == 0)
         {
             is_dll_sup = 1;
             break;
@@ -131,6 +166,17 @@ _exm_pe_module_name_cmp(void *d1, void *d2)
     return _stricmp((const char *)d1, (const char *)d2);
 }
 
+/**
+ * @brief Return the absolute address from a relative virtual address.
+ *
+ * @param[in] file The PE file.
+ * @param[in] The relative virtual address.
+ * @return The corresponding absolute address.
+ *
+ * In PE files, all the addresses are given as relative virtual
+ * address (RVA). This function returns the absolute address from this
+ * RVA. On error, this function returns @c NULL.
+ */
 static void *
 _exm_pe_rva_to_ptr_get(const Exm_Pe_File *file, DWORD rva)
 {
@@ -165,6 +211,18 @@ _exm_pe_rva_to_ptr_get(const Exm_Pe_File *file, DWORD rva)
  *============================================================================*/
 
 
+/**
+ * @brief Return a new #Exm_Pe_File object.
+ *
+ * @param[in] The filename of the binary file to open.
+ * @return A new #Exm_Pe_File object, or @c NULL on error.
+ *
+ * This function opens and mmaps the file named @p filename, get the
+ * starting address of the NT header from the DOS header and teh
+ * import descriptor from the import directory. It returns @c NULL on
+ * error, or a newly created #Exm_Pe_File object otherwise. Once not
+ * needed anymore, use exm_pe_file_free() to free resources.
+ */
 Exm_Pe_File *
 exm_pe_file_new(const char *filename)
 {
@@ -262,6 +320,13 @@ exm_pe_file_new(const char *filename)
     return NULL;
 }
 
+/**
+ * @Brief Free the given PE file.
+ *
+ * @param[out] The PE file.
+ *
+ * This function frees the resources of @p file.
+ */
 void
 exm_pe_file_free(Exm_Pe_File *file)
 {
@@ -274,6 +339,16 @@ exm_pe_file_free(Exm_Pe_File *file)
     free(file);
 }
 
+/**
+ * @brief Return the libc name used by the given file.
+ *
+ * @param[in] The file to search the libc name from
+ * @return The libc name
+ *
+ * This function returns the libc name used by @p file. If not found,
+ * or on memory error, it returns NULL. When not needed anymore, the
+ * returned value must be freed.
+ */
 char *
 exm_pe_msvcrt_get(const Exm_Pe_File *file)
 {
@@ -337,6 +412,18 @@ exm_pe_msvcrt_get(const Exm_Pe_File *file)
     return NULL;
 }
 
+/**
+ * @brief Append to the given list the name of the modules of the
+ * given PE file.
+ *
+ * @param[inout] The given list of modules.
+ * @param[inout] The PE file.
+ * @param[in] The file name of the binary.
+ * @return The updated list of modules.
+ *
+ * This function appends the module names to @p l which are used by @p
+ * filename. On error, @p l is returned.
+ */
 Exm_List *
 exm_pe_modules_list_get(Exm_List *l, Exm_Pe_File *file, const char *filename)
 {
@@ -373,6 +460,21 @@ exm_pe_modules_list_get(Exm_List *l, Exm_Pe_File *file, const char *filename)
     return l;
 }
 
+/**
+ * @brief Return the absolute path name of the given file.
+ *
+ * @param[in] filename The file name.
+ * @return The absolute path name, or @c NULL on error.
+ *
+ * This function returns the absolute path name of @p filename. If the
+ * file has already an absolute path, it returns its copy. Otherwise,
+ * it seaches the file in the system directory (usually
+ * C:\windows\system32), then in the Windows directory (usually
+ * C:\windows), then in the current directory, then in the environment
+ * variable PATH. If found, a copy of the absolute path name is
+ * returned, or @c NULL on error.when not used anymore, the returned
+ * value must be freed.
+ */
 char *
 exm_pe_dll_path_find(const char *filename)
 {
@@ -465,3 +567,7 @@ exm_pe_dll_path_find(const char *filename)
 
     return strdup(filename);
 }
+
+/**
+ * @}
+ */
