@@ -1,6 +1,6 @@
 /* Examine - a tool for memory leak detection on Windows
  *
- * Copyright (C) 2012-2013 Vincent Torri.
+ * Copyright (C) 2012-2014 Vincent Torri.
  * All rights reserved.
  *
  * This program is free software: you can redistribute it and/or modify
@@ -66,9 +66,8 @@ struct _Exm
 
     struct
     {
-        HANDLE     process1;
+        HANDLE     process;
         HANDLE     thread;
-        HANDLE     process2;
     } child;
 
     struct Exm_Map map_size;
@@ -220,12 +219,10 @@ exm_del(Exm *exm)
     if (!exm)
         return;
 
-    if (exm->child.process2)
-        CloseHandle(exm->child.process2);
     if (exm->child.thread)
         CloseHandle(exm->child.thread);
-    if (exm->child.process1)
-        CloseHandle(exm->child.process1);
+    if (exm->child.process)
+        CloseHandle(exm->child.process);
     free(exm->filename);
     free(exm->dll_fullname);
     free(exm);
@@ -323,7 +320,6 @@ exm_dll_inject(Exm *exm)
 {
     STARTUPINFO         si;
     PROCESS_INFORMATION pi;
-    HANDLE              process;
     HANDLE              remote_thread;
     LPVOID              remote_string;
     DWORD               exit_code; /* actually the base address of the mapped DLL */
@@ -347,14 +343,6 @@ exm_dll_inject(Exm *exm)
         goto close_handles;
     }
 
-    EXM_LOG_DBG("opening child process %s", exm->filename);
-    process = OpenProcess(CREATE_THREAD_ACCESS, FALSE, pi.dwProcessId);
-    if (!process)
-    {
-        EXM_LOG_ERR("opening child process %s failed", exm->filename);
-        goto close_handles;
-    }
-
     EXM_LOG_DBG("mapping process handle 0x%p", pi.hProcess);
     exm->map_process.handle = CreateFileMapping(INVALID_HANDLE_VALUE,
                                                 NULL, PAGE_READWRITE, 0, sizeof(HANDLE),
@@ -362,7 +350,7 @@ exm_dll_inject(Exm *exm)
     if (!exm->map_process.handle)
     {
         EXM_LOG_ERR("mapping process handle 0x%p failed", pi.hProcess);
-        goto close_process;
+        goto close_handles;
     }
 
     exm->map_process.base = MapViewOfFile(exm->map_process.handle, FILE_MAP_WRITE,
@@ -375,26 +363,26 @@ exm_dll_inject(Exm *exm)
 
     CopyMemory(exm->map_process.base, &pi.hProcess, sizeof(HANDLE));
 
-    EXM_LOG_DBG("allocating virtual memory of process 0x%p (%d bytes)", process, exm->dll_length);
-    remote_string = VirtualAllocEx(process, NULL, exm->dll_length, MEM_COMMIT, PAGE_READWRITE);
+    EXM_LOG_DBG("allocating virtual memory of process 0x%p (%d bytes)", pi.hProcess, exm->dll_length);
+    remote_string = VirtualAllocEx(pi.hProcess, NULL, exm->dll_length, MEM_COMMIT, PAGE_READWRITE);
     if (!remote_string)
     {
-        EXM_LOG_ERR("allocating virtual memory of process 0x%p (%d bytes) failed", process, exm->dll_length);
+        EXM_LOG_ERR("allocating virtual memory of process 0x%p (%d bytes) failed", pi.hProcess, exm->dll_length);
         goto unmap_process_handle;
     }
 
-    EXM_LOG_DBG("writing process %p in virtual memory", process);
-    if (!WriteProcessMemory(process, remote_string, exm->dll_fullname, exm->dll_length, NULL))
+    EXM_LOG_DBG("writing process %p in virtual memory", pi.hProcess);
+    if (!WriteProcessMemory(pi.hProcess, remote_string, exm->dll_fullname, exm->dll_length, NULL))
     {
-        EXM_LOG_ERR("writing process %p in virtual memory failed", process);
+        EXM_LOG_ERR("writing process %p in virtual memory failed", pi.hProcess);
         goto virtual_free;
     }
 
-    EXM_LOG_DBG("execute thread 0x%p", process);
-    remote_thread = CreateRemoteThread(process, NULL, 0, (LPTHREAD_START_ROUTINE)exm->ll, remote_string, 0, NULL);
+    EXM_LOG_DBG("execute thread 0x%p", pi.hProcess);
+    remote_thread = CreateRemoteThread(pi.hProcess, NULL, 0, (LPTHREAD_START_ROUTINE)exm->ll, remote_string, 0, NULL);
     if (!remote_thread)
     {
-        EXM_LOG_ERR("execute thread 0x%p failed", process);
+        EXM_LOG_ERR("execute thread 0x%p failed", pi.hProcess);
         goto virtual_free;
     }
 
@@ -408,14 +396,13 @@ exm_dll_inject(Exm *exm)
     }
 
     CloseHandle(remote_thread);
-    VirtualFreeEx(process, remote_string, 0, MEM_RELEASE);
+    VirtualFreeEx(pi.hProcess, remote_string, 0, MEM_RELEASE);
 
     EXM_LOG_DBG("resume child process threas 0x%p", pi.hThread);
     ResumeThread(pi.hThread);
 
-    exm->child.process1 = pi.hProcess;
+    exm->child.process = pi.hProcess;
     exm->child.thread = pi.hThread;
-    exm->child.process2 = process;
     exm->exit_code = exit_code;
 
     return 1;
@@ -423,13 +410,11 @@ exm_dll_inject(Exm *exm)
   close_thread:
     CloseHandle(remote_thread);
   virtual_free:
-    VirtualFreeEx(process, remote_string, 0, MEM_RELEASE);
+    VirtualFreeEx(pi.hProcess, remote_string, 0, MEM_RELEASE);
   unmap_process_handle:
     UnmapViewOfFile(exm->map_process.base);
   close_process_handle:
     CloseHandle(exm->map_process.handle);
-  close_process:
-    CloseHandle(process);
   close_handles:
     CloseHandle(pi.hThread);
     CloseHandle(pi.hProcess);
@@ -442,11 +427,11 @@ exm_dll_eject(Exm *exm)
 {
     HANDLE thread;
 
-    thread = CreateRemoteThread(exm->child.process2, NULL, 0,
+    thread = CreateRemoteThread(exm->child.process, NULL, 0,
                                 (LPTHREAD_START_ROUTINE)exm->fl,
                                 (void*)(uintptr_t)exm->exit_code, 0, NULL );
     WaitForSingleObject(thread, INFINITE );
-    CloseHandle(thread );
+    CloseHandle(thread);
     UnmapViewOfFile(exm->map_process.base);
     CloseHandle(exm->map_process.handle);
 }
@@ -462,7 +447,7 @@ int main(int argc, char *argv[])
     }
 
     EXM_LOG_INFO("Examine, a memory leak detector");
-    EXM_LOG_INFO("Copyright (c) 2013, and GNU GPL'd, by Vincent Torri");
+    EXM_LOG_INFO("Copyright (c) 2013-2014, and GNU GPL'd, by Vincent Torri");
     EXM_LOG_INFO("Options:");
 
     exm = exm_new();
@@ -486,7 +471,7 @@ int main(int argc, char *argv[])
         goto unmap_exm;
     }
 
-    WaitForSingleObject(exm->child.process1, INFINITE);
+    WaitForSingleObject(exm->child.process, INFINITE);
 
     EXM_LOG_DBG("end of process");
 
