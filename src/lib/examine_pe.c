@@ -340,12 +340,12 @@ exm_pe_file_free(Exm_Pe_File *file)
 }
 
 /**
- * @brief Return the libc name used by the given file.
+ * @brief Return the crt DLL name used by the given file.
  *
- * @param[in] The file to search the libc name from
- * @return The libc name
+ * @param[in] The file to search the crt DLL name from
+ * @return The crt DLL name
  *
- * This function returns the libc name used by @p file. If not found,
+ * This function returns the crt DLL name used by @p file. If not found,
  * or on memory error, it returns NULL. When not needed anymore, the
  * returned value must be freed.
  */
