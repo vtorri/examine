@@ -30,6 +30,7 @@ EXTRA_DIST =
 
 include src/lib/Makefile.mk
 include src/bin/Makefile.mk
+include src/tests/Makefile.mk
 
 EXTRA_DIST += \
 autogen.sh \
