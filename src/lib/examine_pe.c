@@ -485,6 +485,23 @@ exm_pe_dll_path_find(const char *filename)
     if (_exm_pe_path_is_absolute(filename))
         return strdup(filename);
 
+    /* current directory */
+    {
+        DWORD length;
+
+        length = GetCurrentDirectory(sizeof(buf), buf);
+        if ((length <= sizeof(buf)) && (length != 0))
+        {
+            snprintf(full_name, sizeof(full_name), "%s\\%s", buf, filename);
+            res = GetFileAttributes(full_name);
+            if (res != (DWORD)-1)
+            {
+                if ((res & FILE_ATTRIBUTE_ARCHIVE) == FILE_ATTRIBUTE_ARCHIVE)
+                    return strdup(full_name);
+            }
+        }
+    }
+
     /* system diretory */
     {
         UINT length;
@@ -508,23 +525,6 @@ exm_pe_dll_path_find(const char *filename)
 
         length = GetWindowsDirectory(buf, sizeof(buf));
         if (length <= sizeof(buf))
-        {
-            snprintf(full_name, sizeof(full_name), "%s\\%s", buf, filename);
-            res = GetFileAttributes(full_name);
-            if (res != (DWORD)-1)
-            {
-                if ((res & FILE_ATTRIBUTE_ARCHIVE) == FILE_ATTRIBUTE_ARCHIVE)
-                    return strdup(full_name);
-            }
-        }
-    }
-
-    /* current directory */
-    {
-        DWORD length;
-
-        length = GetCurrentDirectory(sizeof(buf), buf);
-        if ((length <= sizeof(buf)) && (length != 0))
         {
             snprintf(full_name, sizeof(full_name), "%s\\%s", buf, filename);
             res = GetFileAttributes(full_name);
