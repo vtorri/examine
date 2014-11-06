@@ -1,7 +1,12 @@
 
 bin_PROGRAMS += src/bin/examine
 
-src_bin_examine_SOURCES = src/bin/examine_main.c
+src_bin_examine_SOURCES = \
+src/bin/examine_depends.c \
+src/bin/examine_main.c \
+src/bin/examine_memcheck.c \
+src/bin/examine_trace.c \
+src/bin/examine_private.h
 
 src_bin_examine_CPPFLAGS = \
 -I$(top_srcdir)/src/lib \
