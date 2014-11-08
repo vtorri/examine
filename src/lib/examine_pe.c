@@ -54,6 +54,7 @@
 
 struct _Exm_Pe_File
 {
+    char *filename;
     HANDLE file; /**< The handle returned by CreateFile() */
     HANDLE file_map; /**< The file mapping object */
     void *base; /**< The starting adress of the mapped view */
@@ -144,7 +145,7 @@ _exm_pe_path_is_absolute(const char *filename)
  * otherwise it returns the result of _stricmp().
  */
 static int
-_exm_pe_module_name_cmp(const void *d1, const void *d2)
+_exm_pe_module_name_cmp_without_crt(const void *d1, const void *d2)
 {
     char **iter;
     int is_dll_sup = 0;
@@ -163,6 +164,22 @@ _exm_pe_module_name_cmp(const void *d1, const void *d2)
     if (is_dll_sup == 1)
         return 0;
 
+    return _stricmp((const char *)d1, (const char *)d2);
+}
+
+/**
+ * @brief Compare the two given strings.
+ *
+ * @param[in] d1 The first string.
+ * @param[in] d2 The second string.
+ * @return The result of _stricmp.
+ *
+ * This function compare the strings @p d1 and @p d2. It returns the result
+ * of _stricmp().
+ */
+static int
+_exm_pe_module_name_cmp_with_crt(const void *d1, const void *d2)
+{
     return _stricmp((const char *)d1, (const char *)d2);
 }
 
@@ -211,6 +228,11 @@ _exm_pe_rva_to_ptr_get(const Exm_Pe_File *file, DWORD rva)
  *============================================================================*/
 
 
+/*============================================================================*
+ *                                   API                                      *
+ *============================================================================*/
+
+
 /**
  * @brief Return a new #Exm_Pe_File object.
  *
@@ -253,6 +275,8 @@ exm_pe_file_new(const char *filename)
     file = (Exm_Pe_File *)malloc(sizeof(Exm_Pe_File));
     if (!file)
         goto free_filename;
+
+    file->filename = full_filename;
 
     file->file = CreateFile(full_filename,
                             GENERIC_READ,
@@ -302,8 +326,6 @@ exm_pe_file_new(const char *filename)
         goto unmap_base;
     }
 
-    free(full_filename);
-
     return file;
 
   unmap_base:
@@ -336,7 +358,29 @@ exm_pe_file_free(Exm_Pe_File *file)
     UnmapViewOfFile(file->base);
     CloseHandle(file->file_map);
     CloseHandle(file->file);
+    CloseHandle(file->filename);
     free(file);
+}
+
+const char *
+exm_pe_filename_get(Exm_Pe_File *file)
+{
+    if (!file)
+        return NULL;
+
+    return file->filename;
+}
+
+unsigned char
+exm_pe_file_is_dll(Exm_Pe_File *file)
+{
+    if (!file)
+        return 0;
+
+    if (file->nt_header->FileHeader.Characteristics & IMAGE_FILE_DLL)
+        return 1;
+
+    return 0;
 }
 
 /**
@@ -447,7 +491,7 @@ exm_pe_modules_list_get(Exm_List *l, Exm_Pe_File *file, const char *filename)
         dll_name = (char *)_exm_pe_rva_to_ptr_get(file, iter->Name);
         dll_name = strdup(dll_name);
         if (dll_name)
-            l = exm_list_append_if_new(l, dll_name, _exm_pe_module_name_cmp);
+            l = exm_list_append_if_new(l, dll_name, _exm_pe_module_name_cmp_without_crt);
         tmp = exm_pe_modules_list_get(l, NULL, dll_name);
         if (tmp) l = tmp;
 
@@ -456,6 +500,43 @@ exm_pe_modules_list_get(Exm_List *l, Exm_Pe_File *file, const char *filename)
 
     if (must_free == 1)
         exm_pe_file_free(file);
+
+    return l;
+}
+
+Exm_List *
+exm_pe_modules_list_string_get(Exm_List *l, const char *filename, unsigned char with_crt)
+{
+    IMAGE_IMPORT_DESCRIPTOR *iter;
+    Exm_Pe_File *file;
+    Exm_List *tmp;
+    Exm_List_Cmp_Cb cmp_cb;
+
+    file = exm_pe_file_new(filename);
+    if (!file)
+        return l;
+
+    if (with_crt)
+        cmp_cb = _exm_pe_module_name_cmp_with_crt;
+    else
+        cmp_cb = _exm_pe_module_name_cmp_without_crt;
+
+    iter = file->import_desc;
+    while (iter->Name != 0)
+    {
+        char *dll_name;
+
+        dll_name = (char *)_exm_pe_rva_to_ptr_get(file, iter->Name);
+        dll_name = strdup(dll_name);
+        if (dll_name)
+            l = exm_list_append_if_new(l, dll_name, cmp_cb);
+        tmp = exm_pe_modules_list_string_get(l, dll_name, with_crt);
+        if (tmp) l = tmp;
+
+        iter++;
+    }
+
+    exm_pe_file_free(file);
 
     return l;
 }

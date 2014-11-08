@@ -21,9 +21,9 @@
 #define EXAMINE_PRIVATE_H
 
 
-void examine_memcheck_run(const char *module, const char *args);
-void examine_trace_run(const char *module, const char *args);
-void examine_depends_run(const char *module, unsigned char gui);
+void examine_memcheck_run(char *filename, char *args);
+void examine_trace_run(char *filename, char *args);
+void examine_depends_run(char *filename, unsigned char gui);
 
 
 #endif /* EXAMINE_PRIVATE_H */

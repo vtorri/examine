@@ -160,7 +160,11 @@ int main(int argc, char *argv[])
     else if (tool == 1)
         examine_trace_run(module, args);
     else
+    {
+        if (args)
+            free(args);
         examine_depends_run(module, depends_gui);
+    }
 
     return 0;
 }

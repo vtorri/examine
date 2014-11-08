@@ -63,6 +63,7 @@ struct _Exm
     _free_library  fl;
 
     char          *filename;
+    char          *args;
     char          *dll_fullname;
     int            dll_length;
 
@@ -111,17 +112,79 @@ _exm_symbol_get(const char *module, const char *symbol)
     return NULL;
 }
 
+/*
+ * check is the given filename is a PE file
+ * result :
+ * 2: DLL
+ * 1: binary and not DLL
+ * 0: not binary, nor DLL
+ */
+static unsigned char
+_exm_file_is_pe(const char *filename)
+{
+    HANDLE file;
+    HANDLE map;
+    IMAGE_DOS_HEADER *dos_header;
+    IMAGE_NT_HEADERS *nt_header;
+    unsigned char res = 0;
+
+    file = CreateFile(filename,
+                      GENERIC_READ,
+                      FILE_SHARE_READ,
+                      NULL,
+                      OPEN_EXISTING,
+                      FILE_ATTRIBUTE_NORMAL,
+                      NULL);
+    if (file == INVALID_HANDLE_VALUE)
+        return 0;
+
+    map = CreateFileMapping(file, NULL, PAGE_READONLY, 0, 0, NULL);
+    if (!map)
+        goto close_file;
+
+    dos_header = (IMAGE_DOS_HEADER *)MapViewOfFile(map, FILE_MAP_READ, 0, 0, 0);
+    if (!dos_header)
+        goto close_map;
+
+    if (dos_header->e_magic != IMAGE_DOS_SIGNATURE)
+        goto unmap_dos_header;
+
+    nt_header = (IMAGE_NT_HEADERS *)((uintptr_t)dos_header + (uintptr_t)dos_header->e_lfanew);
+    if (nt_header->Signature != IMAGE_NT_SIGNATURE)
+        goto unmap_dos_header;
+
+    if (nt_header->FileHeader.Characteristics & IMAGE_FILE_DLL)
+        res = 2;
+    else
+        res = 1;
+
+    UnmapViewOfFile(dos_header);
+    CloseHandle(map);
+    CloseHandle(file);
+
+    return res;
+
+  unmap_dos_header:
+    UnmapViewOfFile(dos_header);
+  close_map:
+    CloseHandle(map);
+  close_file:
+    CloseHandle(file);
+
+    return 0;
+}
+
 static Exm *
-exm_new(void)
+exm_new(char *filename, char *args)
 {
 #ifdef _MSC_VER
     char buf[MAX_PATH];
 #endif
     Exm     *exm;
     HMODULE kernel32;
+    char *iter;
     size_t  l1;
     size_t  l2;
-    DWORD   type;
 
     /* Check if CreateRemoteThread() is available. */
     /* MSDN suggests to check the availability of a */
@@ -131,7 +194,7 @@ exm_new(void)
     if (!kernel32)
     {
         EXM_LOG_ERR("no kernel32.dll found");
-        return 0;
+        return NULL;
     }
 
     if (!GetProcAddress(kernel32, "CreateRemoteThread"))
@@ -144,9 +207,27 @@ exm_new(void)
     if (!exm)
         goto free_kernel32;
 
+    exm->filename = filename;
+
+    if (_exm_file_is_pe(exm->filename) != 1)
+    {
+        EXM_LOG_ERR("%s is not a valid binary", exm->filename);
+        goto free_filename;
+    }
+
+    /* '/' replaced by '\' */
+    iter = exm->filename;
+    while (*iter)
+    {
+        if (*iter == '/') *iter = '\\';
+        iter++;
+    }
+
+    exm->args = args;
+
     exm->ll = (_load_library)_exm_symbol_get("kernel32.dll", "LoadLibraryA");
     if (!exm->ll)
-        goto free_exm;
+        goto free_args;
 
     exm->fl = (_free_library)_exm_symbol_get("kernel32.dll", "FreeLibrary");
     if (!exm->fl)
@@ -171,18 +252,10 @@ exm_new(void)
     memcpy(exm->dll_fullname + l1, "/examine_dll.dll", l2);
     exm->dll_fullname[l1 + l2] = '\0';
 
-    if (GetBinaryType(exm->dll_fullname, &type))
+    if (_exm_file_is_pe(exm->dll_fullname) != 2)
     {
         EXM_LOG_ERR("%s is not a valid DLL", exm->dll_fullname);
         goto free_exm;
-    }
-    else
-    {
-        if (GetLastError() != ERROR_BAD_EXE_FORMAT)
-        {
-            EXM_LOG_ERR("%s is not a valid DLL", exm->dll_fullname);
-            goto free_exm;
-        }
     }
 
     exm->dll_length = l1 + l2 + 1;
@@ -193,62 +266,29 @@ exm_new(void)
 
     return exm;
 
+  free_args:
+    free(exm->args);
+  free_filename:
+    free(exm->filename);
   free_exm:
     free(exm);
   free_kernel32:
     FreeLibrary(kernel32);
 
-    return 0;
+    return NULL;
 }
 
 static void
 exm_del(Exm *exm)
 {
-    if (!exm)
-        return;
-
     if (exm->child.thread)
         CloseHandle(exm->child.thread);
     if (exm->child.process)
         CloseHandle(exm->child.process);
-    free(exm->filename);
     free(exm->dll_fullname);
+    free(exm->args);
+    free(exm->filename);
     free(exm);
-}
-
-static int
-exm_file_check(Exm *exm, const char *filename)
-{
-    char *iter;
-    size_t length;
-    DWORD ret = -1;
-
-    if (!filename || !*filename)
-        return 0;
-
-    if (!GetBinaryType(filename, &ret) ||
-        ((ret != SCS_32BIT_BINARY) &&
-         (ret != SCS_64BIT_BINARY)))
-    {
-        EXM_LOG_ERR("file %s is not an executable program or its path is wrong (%ld)", filename, ret);
-        return 0;
-    }
-
-    length = strlen(filename);
-    exm->filename = malloc(sizeof(char) * (length + 1));
-    if (!exm->filename)
-        return 0;
-    memcpy(exm->filename, filename, length + 1);
-
-    /* '/' replaced by '\' */
-    iter = exm->filename;
-    while (*iter)
-    {
-        if (*iter == '/') *iter = '\\';
-        iter++;
-    }
-
-    return 1;
 }
 
 static int
@@ -431,26 +471,23 @@ exm_dll_eject(Exm *exm)
 
 
 void
-examine_memcheck_run(const char *module, const char *args)
+examine_memcheck_run(char *filename, char *args)
 {
     Exm *exm;
 
     EXM_LOG_INFO("Examine, a memory leak detector");
     EXM_LOG_INFO("Copyright (c) 2013-2014, and GNU GPL2'd, by Vincent Torri");
-    EXM_LOG_INFO("Options:");
+    EXM_LOG_INFO("Options: --tool=memcheck");
 
-    exm = exm_new();
+    exm = exm_new(filename, args);
     if (!exm)
         return;
 
-    if (!exm_file_check(exm, module))
-        goto del_exm;
-
-    EXM_LOG_INFO("Command: %s %s", module, args);
+    EXM_LOG_INFO("Command: %s %s", filename, args);
 
     if (!exm_file_map(exm))
     {
-        EXM_LOG_ERR("impossible to map filename %s", module);
+        EXM_LOG_ERR("impossible to map filename %s", filename);
         goto del_exm;
     }
 

@@ -26,7 +26,7 @@
 #include "examine_private.h"
 
 void
-examine_trace_run(const char *module, const char *args)
+examine_trace_run(char *module, char *args)
 {
     EXM_LOG_ERR("trace tool not done yet");
 }
