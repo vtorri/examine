@@ -1,6 +1,6 @@
 /* Examine - a tool for memory leak detection on Windows
  *
- * Copyright (C) 2012-2013 Vincent Torri.
+ * Copyright (C) 2012-2014 Vincent Torri.
  * All rights reserved.
  *
  * This program is free software: you can redistribute it and/or modify
