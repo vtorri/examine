@@ -1,6 +1,6 @@
 /* Examine - a tool for memory leak detection on Windows
  *
- * Copyright (C) 2012-2013 Vincent Torri.
+ * Copyright (C) 2012-2014 Vincent Torri.
  * All rights reserved.
  *
  * This program is free software: you can redistribute it and/or modify
@@ -31,6 +31,8 @@
  *                                  Local                                     *
  *============================================================================*/
 
+
+static Exm_Log_Level _exm_log_level = EXM_LOG_LEVEL_INFO;
 
 static DWORD
 _exm_log_print_level_color_get(int level)
@@ -181,7 +183,21 @@ exm_log_print(Exm_Log_Level level, const char *fmt, ...)
         return;
     }
 
-    va_start(args, fmt);
-    exm_log_print_cb_stderr(level, fmt, NULL, args);
-    va_end(args);
+    if (level <= _exm_log_level)
+    {
+        va_start(args, fmt);
+        exm_log_print_cb_stderr(level, fmt, NULL, args);
+        va_end(args);
+    }
+}
+
+void exm_log_level_set(Exm_Log_Level level)
+{
+    if ((level < EXM_LOG_LEVEL_ERR) || (level >= EXM_LOG_LEVEL_LAST))
+    {
+        EXM_LOG_WARN("level %s not corect", level);
+        return;
+    }
+
+    _exm_log_level = level;
 }

@@ -1,6 +1,6 @@
 /* Examine - a tool for memory leak detection on Windows
  *
- * Copyright (C) 2012-2013 Vincent Torri.
+ * Copyright (C) 2012-2014 Vincent Torri.
  * All rights reserved.
  *
  * This program is free software: you can redistribute it and/or modify
@@ -26,8 +26,8 @@ typedef enum
 {
     EXM_LOG_LEVEL_ERR,
     EXM_LOG_LEVEL_WARN,
-    EXM_LOG_LEVEL_DBG,
     EXM_LOG_LEVEL_INFO,
+    EXM_LOG_LEVEL_DBG,
     EXM_LOG_LEVEL_LAST
 } Exm_Log_Level;
 
@@ -40,11 +40,11 @@ typedef enum
 #define EXM_LOG_WARN(...) \
     EXM_LOG(EXM_LOG_LEVEL_WARN, __VA_ARGS__)
 
-#define EXM_LOG_DBG(...) \
-    EXM_LOG(EXM_LOG_LEVEL_DBG, __VA_ARGS__)
-
 #define EXM_LOG_INFO(...) \
     EXM_LOG(EXM_LOG_LEVEL_INFO, __VA_ARGS__)
+
+#define EXM_LOG_DBG(...) \
+    EXM_LOG(EXM_LOG_LEVEL_DBG, __VA_ARGS__)
 
 void exm_log_print_cb_stderr(Exm_Log_Level level,
                              const char *fmt,
@@ -57,5 +57,7 @@ void exm_log_print_cb_stdout(Exm_Log_Level level,
                              va_list args);
 
 void exm_log_print(Exm_Log_Level level, const char *fmt, ...);
+
+void exm_log_level_set(Exm_Log_Level level);
 
 #endif /* EXAMINE_LOG_H */

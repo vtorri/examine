@@ -47,6 +47,8 @@ _exm_usage(void)
   printf("  basic user options for all Examine tools, with defaults in [ ]:\n");
   printf("    -h, --help                 show this message\n");
   printf("    -V, --version              show version\n");
+  printf("    -v, --verbose              print also debug messages [disabled]\n");
+  printf("    -q, --quiet                print only error messages [disabled]\n");
   printf("\n");
   printf("  user options for Depends:\n");
   printf("    --gui                      run in graphical mode\n");
@@ -63,6 +65,8 @@ int main(int argc, char *argv[])
     char *args = NULL;
     int i;
     unsigned char tool = 0; /* 0 : memcheck, 1 : trace, 2 : depends */
+    unsigned char verbose = 0;
+    unsigned char quiet = 0;
     unsigned char depends_gui = 0;
 
     if (argc < 2)
@@ -82,6 +86,14 @@ int main(int argc, char *argv[])
         {
             printf("%s\n", PACKAGE_STRING);
             return 0;
+        }
+        else if ((strcmp(argv[i], "-v") == 0) || (strcmp(argv[i], "--verbose") == 0))
+        {
+            verbose = 1;
+        }
+        else if ((strcmp(argv[i], "-q") == 0) || (strcmp(argv[i], "--quiet") == 0))
+        {
+            quiet = 1;
         }
         else if (memcmp(argv[i], "--tool=", sizeof("--tool=") - 1) == 0)
         {
@@ -154,6 +166,22 @@ int main(int argc, char *argv[])
             }
         }
     }
+
+    if (verbose && quiet)
+    {
+        EXM_LOG_ERR("can not pass verbose and quiet option at the same time");
+        _exm_usage();
+        if (args)
+            free(args);
+        free(module);
+        return -1;
+    }
+
+    if (verbose)
+        exm_log_level_set(EXM_LOG_LEVEL_DBG);
+
+    if (quiet)
+        exm_log_level_set(EXM_LOG_LEVEL_ERR);
 
     if (tool == 0)
         examine_memcheck_run(module, args);
