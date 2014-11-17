@@ -82,13 +82,15 @@ _exm_log_print_prefix_func(HANDLE std_handle, Exm_Log_Level level)
         goto free_str;
     }
 
+    free(str);
+
     if ((int)res != s)
         fprintf(stderr, "ERROR: %s(): want to write %d bytes, %ld written\n", __FUNCTION__, s, res);
 
     SetConsoleTextAttribute(std_handle, scbi.wAttributes);
 
     if (!WriteConsole(std_handle, " ", 1, &res, NULL))
-        goto free_str;
+      return;
 
     if ((int)res != 1)
         fprintf(stderr, "ERROR: %s(): want to write %d bytes, %ld written\n", __FUNCTION__, 1, res);
@@ -138,6 +140,8 @@ _exm_log_fprint_cb(DWORD console,
         free(str);
         return;
     }
+
+    free(str);
 
     if ((int)res != (s + 1))
         fprintf(stderr, "ERROR: %s(): want to write %d bytes, %ld written\n", __FUNCTION__, s + 1, res);
