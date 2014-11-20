@@ -404,6 +404,7 @@ exm_dll_inject(Exm *exm)
   close_process_handle:
     CloseHandle(exm->map_process.handle);
   close_handles:
+    ResumeThread(pi.hThread);
     CloseHandle(pi.hThread);
     CloseHandle(pi.hProcess);
 
