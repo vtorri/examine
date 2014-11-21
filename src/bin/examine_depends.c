@@ -36,7 +36,7 @@
 #include "examine_private.h"
 
 static void
-examine_depends_cmd_run(Exm_Pe_File *pe)
+examine_depends_cmd_run(Exm_Pe *pe)
 {
     Exm_List *l = NULL;
     Exm_List *iter;
@@ -65,13 +65,13 @@ examine_depends_gui_run(char *module)
 void
 examine_depends_run(char *module, unsigned char gui)
 {
-    Exm_Pe_File *pe;
+    Exm_Pe *pe;
 
     EXM_LOG_INFO("Examine, a memory leak detector");
     EXM_LOG_INFO("Copyright (c) 2013-2014, and GNU GPL2'd, by Vincent Torri");
     EXM_LOG_INFO("Options: --tool=depends%s", gui ? "" : " --gui");
 
-    pe = exm_pe_file_new(module);
+    pe = exm_pe_new(module);
     if (!pe)
     {
         EXM_LOG_ERR("%s is not a binary nor a DLL.", module);
@@ -83,7 +83,7 @@ examine_depends_run(char *module, unsigned char gui)
     else
         examine_depends_cmd_run(pe);
 
-    exm_pe_file_free(pe);
+    exm_pe_free(pe);
 
     EXM_LOG_DBG("resources freed");
 }

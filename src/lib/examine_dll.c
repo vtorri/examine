@@ -90,7 +90,7 @@ exm_hook_instance_overloads_get(void)
 static int
 _exm_hook_init(void)
 {
-    Exm_Pe_File *file;
+    Exm_Pe *pe;
     HANDLE handle;
     void  *base;
     Exm_List *iter;
@@ -136,18 +136,18 @@ _exm_hook_init(void)
 
     printf(" ** filename : %s\n", _exm_hook_instance.filename);
 
-    file = exm_pe_file_new(_exm_hook_instance.filename);
-    if (!file)
+    pe = exm_pe_new(_exm_hook_instance.filename);
+    if (!pe)
         return 0;
 
-    _exm_hook_instance.crt_name = exm_pe_msvcrt_get(file);
+    _exm_hook_instance.crt_name = exm_pe_msvcrt_get(pe);
 
     _exm_hook_instance.dll = exm_list_append(_exm_hook_instance.dll,
                                              strdup(_exm_hook_instance.filename));
     _exm_hook_instance.dll = exm_pe_modules_list_get(_exm_hook_instance.dll,
-                                                     file,
+                                                     pe,
                                                      _exm_hook_instance.filename);
-    exm_pe_file_free(file);
+    exm_pe_free(pe);
 
     iter = _exm_hook_instance.dll;
     while (iter)

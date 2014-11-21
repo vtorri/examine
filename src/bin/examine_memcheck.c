@@ -124,7 +124,7 @@ exm_new(char *filename, char *args)
     char buf[MAX_PATH];
 #endif
     Exm *exm;
-    Exm_Pe_File *pe;
+    Exm_Pe *pe;
     HMODULE kernel32;
     char *iter;
     size_t l1;
@@ -154,7 +154,7 @@ exm_new(char *filename, char *args)
     exm->filename = filename;
     exm->args = args;
 
-    pe = exm_pe_file_new(exm->filename);
+    pe = exm_pe_new(exm->filename);
     if (!pe)
     {
         EXM_LOG_ERR("%s is not a binary nor a DLL.",
@@ -162,15 +162,15 @@ exm_new(char *filename, char *args)
         goto free_args;
     }
 
-    if (exm_pe_file_is_dll(pe))
+    if (exm_pe_is_dll(pe))
     {
         EXM_LOG_ERR("%s is a DLL, but must be an executable.",
 		    exm->filename);
-        exm_pe_file_free(pe);
+        exm_pe_free(pe);
         goto free_args;
     }
 
-    exm_pe_file_free(pe);
+    exm_pe_free(pe);
 
     /* '/' replaced by '\' */
     iter = exm->filename;
@@ -207,7 +207,7 @@ exm_new(char *filename, char *args)
     memcpy(exm->dll_fullname + l1, "/examine_dll.dll", l2);
     exm->dll_fullname[l1 + l2] = '\0';
 
-    pe = exm_pe_file_new(exm->dll_fullname);
+    pe = exm_pe_new(exm->dll_fullname);
     if (!pe)
     {
         EXM_LOG_ERR("%s is not a binary nor a DLL.",
@@ -215,15 +215,15 @@ exm_new(char *filename, char *args)
         goto free_dll_fullname;
     }
 
-    if (!exm_pe_file_is_dll(pe))
+    if (!exm_pe_is_dll(pe))
     {
         EXM_LOG_ERR("%s is not a DLL, but must be a DLL.",
 		    exm->dll_fullname);
-        exm_pe_file_free(pe);
+        exm_pe_free(pe);
         goto free_dll_fullname;
     }
 
-    exm_pe_file_free(pe);
+    exm_pe_free(pe);
 
     exm->dll_length = l1 + l2 + 1;
 

@@ -20,16 +20,16 @@
 #ifndef EXM_PE_H
 #define EXM_PE_H
 
-typedef struct _Exm_Pe_File Exm_Pe_File;
+typedef struct _Exm_Pe Exm_Pe;
 
-Exm_Pe_File *exm_pe_file_new(const char *filename);
-void exm_pe_file_free(Exm_Pe_File *file);
+Exm_Pe *exm_pe_new(const char *filename);
+void exm_pe_free(Exm_Pe *pe);
 
-const char *exm_pe_filename_get(Exm_Pe_File *file);
-unsigned char exm_pe_file_is_dll(Exm_Pe_File *file);
+const char *exm_pe_filename_get(Exm_Pe *pe);
+unsigned char exm_pe_is_dll(Exm_Pe *pe);
 
-char *exm_pe_msvcrt_get(const Exm_Pe_File *file);
-Exm_List *exm_pe_modules_list_get(Exm_List *l, Exm_Pe_File *file, const char *filename);
+char *exm_pe_msvcrt_get(const Exm_Pe *pe);
+Exm_List *exm_pe_modules_list_get(Exm_List *l, Exm_Pe *pe, const char *filename);
 Exm_List *exm_pe_modules_list_string_get(Exm_List *l, const char *filename, unsigned char with_crt);
 char *exm_pe_dll_path_find(const char *filename);
 

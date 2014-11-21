@@ -52,7 +52,7 @@
  *============================================================================*/
 
 
-struct _Exm_Pe_File
+struct _Exm_Pe
 {
     char *filename;
     HANDLE file; /**< The handle returned by CreateFile() */
@@ -195,7 +195,7 @@ _exm_pe_module_name_cmp_with_crt(const void *d1, const void *d2)
  * RVA. On error, this function returns @c NULL.
  */
 static void *
-_exm_pe_rva_to_ptr_get(const Exm_Pe_File *file, DWORD rva)
+_exm_pe_rva_to_ptr_get(const Exm_Pe *pe, DWORD rva)
 {
     IMAGE_SECTION_HEADER *sh;
     IMAGE_SECTION_HEADER *sh_iter;
@@ -203,8 +203,8 @@ _exm_pe_rva_to_ptr_get(const Exm_Pe_File *file, DWORD rva)
     int i;
 
     sh = NULL;
-    sh_iter = IMAGE_FIRST_SECTION(file->nt_header);
-    for (i = 0; i < file->nt_header->FileHeader.NumberOfSections; i++, sh_iter++)
+    sh_iter = IMAGE_FIRST_SECTION(pe->nt_header);
+    for (i = 0; i < pe->nt_header->FileHeader.NumberOfSections; i++, sh_iter++)
     {
         if ((rva >= sh_iter->VirtualAddress) &&
             (rva < (sh_iter->VirtualAddress + sh_iter->Misc.VirtualSize)))
@@ -219,7 +219,7 @@ _exm_pe_rva_to_ptr_get(const Exm_Pe_File *file, DWORD rva)
 
     delta = (int)(sh->VirtualAddress - sh->PointerToRawData);
 
-    return (void *)((unsigned char *)file->base + rva - delta);
+    return (void *)((unsigned char *)pe->base + rva - delta);
 }
 
 
@@ -234,22 +234,22 @@ _exm_pe_rva_to_ptr_get(const Exm_Pe_File *file, DWORD rva)
 
 
 /**
- * @brief Return a new #Exm_Pe_File object.
+ * @brief Return a new #Exm_Pe object.
  *
  * @param[in] The filename of the binary file to open.
- * @return A new #Exm_Pe_File object, or @c NULL on error.
+ * @return A new #Exm_Pe object, or @c NULL on error.
  *
  * This function opens and mmaps the file named @p filename, get the
  * starting address of the NT header from the DOS header and teh
  * import descriptor from the import directory. It returns @c NULL on
- * error, or a newly created #Exm_Pe_File object otherwise. Once not
- * needed anymore, use exm_pe_file_free() to free resources.
+ * error, or a newly created #Exm_Pe object otherwise. Once not
+ * needed anymore, use exm_pe_free() to free resources.
  */
-Exm_Pe_File *
-exm_pe_file_new(const char *filename)
+Exm_Pe *
+exm_pe_new(const char *filename)
 {
     IMAGE_DOS_HEADER *dos_header;
-    Exm_Pe_File *file;
+    Exm_Pe *pe;
     char *full_filename;
     char *iter;
     DWORD import_dir;
@@ -272,70 +272,70 @@ exm_pe_file_new(const char *filename)
         iter++;
     }
 
-    file = (Exm_Pe_File *)malloc(sizeof(Exm_Pe_File));
-    if (!file)
+    pe = (Exm_Pe *)malloc(sizeof(Exm_Pe));
+    if (!pe)
         goto free_filename;
 
-    file->filename = full_filename;
+    pe->filename = full_filename;
 
-    file->file = CreateFile(full_filename,
-                            GENERIC_READ,
-                            FILE_SHARE_READ,
-                            NULL,
-                            OPEN_EXISTING,
-                            FILE_ATTRIBUTE_NORMAL,
-                            NULL);
-    if (file->file == INVALID_HANDLE_VALUE)
-        goto free_file;
+    pe->file = CreateFile(full_filename,
+                          GENERIC_READ,
+                          FILE_SHARE_READ,
+                          NULL,
+                          OPEN_EXISTING,
+                          FILE_ATTRIBUTE_NORMAL,
+                          NULL);
+    if (pe->file == INVALID_HANDLE_VALUE)
+        goto free_pe;
 
-    file->file_map = CreateFileMapping(file->file,
-                                       NULL, PAGE_READONLY,
-                                       0, 0, NULL);
-    if (!file->file_map)
+    pe->file_map = CreateFileMapping(pe->file,
+                                     NULL, PAGE_READONLY,
+                                     0, 0, NULL);
+    if (!pe->file_map)
         goto close_file;
 
-    file->base = MapViewOfFile(file->file_map, FILE_MAP_READ, 0, 0, 0);
-    if (!file->base)
+    pe->base = MapViewOfFile(pe->file_map, FILE_MAP_READ, 0, 0, 0);
+    if (!pe->base)
         goto close_file_map;
 
-    dos_header = (IMAGE_DOS_HEADER *)file->base;
+    dos_header = (IMAGE_DOS_HEADER *)pe->base;
     if (dos_header->e_magic != IMAGE_DOS_SIGNATURE)
     {
         EXM_LOG_ERR("not a valid DOS header");
         goto unmap_base;
     }
 
-    file->nt_header = (IMAGE_NT_HEADERS *)((uintptr_t)dos_header + (uintptr_t)dos_header->e_lfanew);
-    if (file->nt_header->Signature != IMAGE_NT_SIGNATURE)
+    pe->nt_header = (IMAGE_NT_HEADERS *)((uintptr_t)dos_header + (uintptr_t)dos_header->e_lfanew);
+    if (pe->nt_header->Signature != IMAGE_NT_SIGNATURE)
     {
         EXM_LOG_ERR("not a valid NT header");
         goto unmap_base;
     }
 
-    import_dir = file->nt_header->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].VirtualAddress;
+    import_dir = pe->nt_header->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].VirtualAddress;
     if (!import_dir)
     {
         /* printf("not a valid import table\n"); */
         goto unmap_base;
     }
 
-    file->import_desc = (IMAGE_IMPORT_DESCRIPTOR *)_exm_pe_rva_to_ptr_get(file, import_dir);
-    if (!file->import_desc)
+    pe->import_desc = (IMAGE_IMPORT_DESCRIPTOR *)_exm_pe_rva_to_ptr_get(pe, import_dir);
+    if (!pe->import_desc)
     {
         EXM_LOG_ERR("not a valid import table descriptor");
         goto unmap_base;
     }
 
-    return file;
+    return pe;
 
   unmap_base:
-    UnmapViewOfFile(file->base);
+    UnmapViewOfFile(pe->base);
   close_file_map:
-    CloseHandle(file->file_map);
+    CloseHandle(pe->file_map);
   close_file:
-    CloseHandle(file->file);
-  free_file:
-    free(file);
+    CloseHandle(pe->file);
+  free_pe:
+    free(pe);
   free_filename:
     free(full_filename);
 
@@ -347,37 +347,37 @@ exm_pe_file_new(const char *filename)
  *
  * @param[out] The PE file.
  *
- * This function frees the resources of @p file.
+ * This function frees the resources of @p pe.
  */
 void
-exm_pe_file_free(Exm_Pe_File *file)
+exm_pe_free(Exm_Pe *pe)
 {
-    if (!file)
+    if (!pe)
         return;
 
-    UnmapViewOfFile(file->base);
-    CloseHandle(file->file_map);
-    CloseHandle(file->file);
-    CloseHandle(file->filename);
-    free(file);
+    UnmapViewOfFile(pe->base);
+    CloseHandle(pe->file_map);
+    CloseHandle(pe->file);
+    CloseHandle(pe->filename);
+    free(pe);
 }
 
 const char *
-exm_pe_filename_get(Exm_Pe_File *file)
+exm_pe_filename_get(Exm_Pe *pe)
 {
-    if (!file)
+    if (!pe)
         return NULL;
 
-    return file->filename;
+    return pe->filename;
 }
 
 unsigned char
-exm_pe_file_is_dll(Exm_Pe_File *file)
+exm_pe_is_dll(Exm_Pe *pe)
 {
-    if (!file)
+    if (!pe)
         return 0;
 
-    if (file->nt_header->FileHeader.Characteristics & IMAGE_FILE_DLL)
+    if (pe->nt_header->FileHeader.Characteristics & IMAGE_FILE_DLL)
         return 1;
 
     return 0;
@@ -389,21 +389,21 @@ exm_pe_file_is_dll(Exm_Pe_File *file)
  * @param[in] The file to search the crt DLL name from
  * @return The crt DLL name
  *
- * This function returns the crt DLL name used by @p file. If not found,
+ * This function returns the crt DLL name used by @p pe. If not found,
  * or on memory error, it returns NULL. When not needed anymore, the
  * returned value must be freed.
  */
 char *
-exm_pe_msvcrt_get(const Exm_Pe_File *file)
+exm_pe_msvcrt_get(const Exm_Pe *pe)
 {
     IMAGE_IMPORT_DESCRIPTOR *iter;
 
-    iter = file->import_desc;
+    iter = pe->import_desc;
     while (iter->Name != 0)
     {
         char *dll_name;
 
-        dll_name = (char *)_exm_pe_rva_to_ptr_get(file, iter->Name);
+        dll_name = (char *)_exm_pe_rva_to_ptr_get(pe, iter->Name);
         if (_stricmp("msvcrt.dll", dll_name) == 0)
         {
             EXM_LOG_DBG("msvcrt.dll !!");
@@ -469,26 +469,26 @@ exm_pe_msvcrt_get(const Exm_Pe_File *file)
  * filename. On error, @p l is returned.
  */
 Exm_List *
-exm_pe_modules_list_get(Exm_List *l, Exm_Pe_File *file, const char *filename)
+exm_pe_modules_list_get(Exm_List *l, Exm_Pe *pe, const char *filename)
 {
     IMAGE_IMPORT_DESCRIPTOR *iter;
     Exm_List *tmp;
     int must_free = 0;
 
-    if (file == NULL)
+    if (pe == NULL)
     {
-        file = exm_pe_file_new(filename);
-        if (!file)
+        pe = exm_pe_new(filename);
+        if (!pe)
             return l;
         must_free = 1;
     }
 
-    iter = file->import_desc;
+    iter = pe->import_desc;
     while (iter->Name != 0)
     {
         char *dll_name;
 
-        dll_name = (char *)_exm_pe_rva_to_ptr_get(file, iter->Name);
+        dll_name = (char *)_exm_pe_rva_to_ptr_get(pe, iter->Name);
         dll_name = strdup(dll_name);
         if (dll_name)
             l = exm_list_append_if_new(l, dll_name, _exm_pe_module_name_cmp_without_crt);
@@ -499,7 +499,7 @@ exm_pe_modules_list_get(Exm_List *l, Exm_Pe_File *file, const char *filename)
     }
 
     if (must_free == 1)
-        exm_pe_file_free(file);
+        exm_pe_free(pe);
 
     return l;
 }
@@ -508,12 +508,12 @@ Exm_List *
 exm_pe_modules_list_string_get(Exm_List *l, const char *filename, unsigned char with_crt)
 {
     IMAGE_IMPORT_DESCRIPTOR *iter;
-    Exm_Pe_File *file;
+    Exm_Pe *pe;
     Exm_List *tmp;
     Exm_List_Cmp_Cb cmp_cb;
 
-    file = exm_pe_file_new(filename);
-    if (!file)
+    pe = exm_pe_new(filename);
+    if (!pe)
         return l;
 
     if (with_crt)
@@ -521,12 +521,12 @@ exm_pe_modules_list_string_get(Exm_List *l, const char *filename, unsigned char 
     else
         cmp_cb = _exm_pe_module_name_cmp_without_crt;
 
-    iter = file->import_desc;
+    iter = pe->import_desc;
     while (iter->Name != 0)
     {
         char *dll_name;
 
-        dll_name = (char *)_exm_pe_rva_to_ptr_get(file, iter->Name);
+        dll_name = (char *)_exm_pe_rva_to_ptr_get(pe, iter->Name);
         dll_name = strdup(dll_name);
         if (dll_name)
             l = exm_list_append_if_new(l, dll_name, cmp_cb);
@@ -536,7 +536,7 @@ exm_pe_modules_list_string_get(Exm_List *l, const char *filename, unsigned char 
         iter++;
     }
 
-    exm_pe_file_free(file);
+    exm_pe_free(pe);
 
     return l;
 }
