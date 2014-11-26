@@ -27,6 +27,7 @@ void exm_pe_free(Exm_Pe *pe);
 
 const char *exm_pe_filename_get(Exm_Pe *pe);
 unsigned char exm_pe_is_dll(Exm_Pe *pe);
+void *exm_pe_entry_point_get(Exm_Pe *pe);
 
 char *exm_pe_msvcrt_get(const Exm_Pe *pe);
 Exm_List *exm_pe_modules_list_get(Exm_List *l, Exm_Pe *pe, const char *filename);

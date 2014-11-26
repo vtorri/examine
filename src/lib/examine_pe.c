@@ -383,6 +383,12 @@ exm_pe_is_dll(Exm_Pe *pe)
     return 0;
 }
 
+void *
+exm_pe_entry_point_get(Exm_Pe *pe)
+{
+    return (unsigned char *)pe->nt_header->OptionalHeader.ImageBase + pe->nt_header->OptionalHeader.AddressOfEntryPoint;
+}
+
 /**
  * @brief Return the crt DLL name used by the given file.
  *

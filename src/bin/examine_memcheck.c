@@ -41,6 +41,8 @@
 
 #include "examine_private.h"
 
+#define PATCH 0
+
 
 /*============================================================================*
  *                                  Local                                     *
@@ -61,8 +63,8 @@ typedef struct _Exm Exm;
 
 struct _Exm
 {
-    _load_library  ll;
-    _free_library  fl;
+    _load_library  load_library;
+    _free_library  free_library;
 
     char          *filename;
     char          *args;
@@ -71,8 +73,13 @@ struct _Exm
 
     struct
     {
-        HANDLE     process;
-        HANDLE     thread;
+        HANDLE        process1;
+        HANDLE        thread;
+        DWORD         process_id;
+        HANDLE        process2;
+        void         *entry_point;
+        DWORD         old_protect;
+        unsigned char oep[2];
     } child;
 
     struct Exm_Map map_size;
@@ -82,6 +89,8 @@ struct _Exm
     DWORD          exit_code; /* actually the base address of the mapped DLL */
 };
 
+static int _exm_process_entry_point_unpatch(Exm *exm);
+
 static FARPROC
 _exm_symbol_get(const char *module, const char *symbol)
 {
@@ -89,12 +98,12 @@ _exm_symbol_get(const char *module, const char *symbol)
     FARPROC  proc;
 
     EXM_LOG_DBG("loading library %s",
-		module);
+                module);
     mod = LoadLibrary(module);
     if (!mod)
     {
         EXM_LOG_ERR("loading library %s failed",
-		    module);
+                    module);
         return NULL;
     }
 
@@ -103,7 +112,7 @@ _exm_symbol_get(const char *module, const char *symbol)
     if (!proc)
     {
         EXM_LOG_ERR("retrieving symbol %s failed",
-		    symbol);
+                    symbol);
         goto free_library;
     }
 
@@ -118,7 +127,7 @@ _exm_symbol_get(const char *module, const char *symbol)
 }
 
 static Exm *
-exm_new(char *filename, char *args)
+_exm_new(char *filename, char *args)
 {
 #ifdef _MSC_VER
     char buf[MAX_PATH];
@@ -158,17 +167,19 @@ exm_new(char *filename, char *args)
     if (!pe)
     {
         EXM_LOG_ERR("%s is not a binary nor a DLL.",
-		    exm->filename);
+                    exm->filename);
         goto free_args;
     }
 
     if (exm_pe_is_dll(pe))
     {
         EXM_LOG_ERR("%s is a DLL, but must be an executable.",
-		    exm->filename);
+                    exm->filename);
         exm_pe_free(pe);
         goto free_args;
     }
+
+    exm->child.entry_point = exm_pe_entry_point_get(pe);
 
     exm_pe_free(pe);
 
@@ -180,12 +191,14 @@ exm_new(char *filename, char *args)
         iter++;
     }
 
-    exm->ll = (_load_library)_exm_symbol_get("kernel32.dll", "LoadLibraryA");
-    if (!exm->ll)
+    exm->load_library = (_load_library)_exm_symbol_get("kernel32.dll",
+                                                       "LoadLibraryA");
+    if (!exm->load_library)
         goto free_args;
 
-    exm->fl = (_free_library)_exm_symbol_get("kernel32.dll", "FreeLibrary");
-    if (!exm->fl)
+    exm->free_library = (_free_library)_exm_symbol_get("kernel32.dll",
+                                                       "FreeLibrary");
+    if (!exm->free_library)
         goto free_args;
 
 #ifdef _MSC_VER
@@ -211,14 +224,14 @@ exm_new(char *filename, char *args)
     if (!pe)
     {
         EXM_LOG_ERR("%s is not a binary nor a DLL.",
-		    exm->dll_fullname);
+                    exm->dll_fullname);
         goto free_dll_fullname;
     }
 
     if (!exm_pe_is_dll(pe))
     {
         EXM_LOG_ERR("%s is not a DLL, but must be a DLL.",
-		    exm->dll_fullname);
+                    exm->dll_fullname);
         exm_pe_free(pe);
         goto free_dll_fullname;
     }
@@ -228,7 +241,7 @@ exm_new(char *filename, char *args)
     exm->dll_length = l1 + l2 + 1;
 
     EXM_LOG_DBG("DLL to inject: %s",
-		exm->dll_fullname);
+                exm->dll_fullname);
 
     FreeLibrary(kernel32);
 
@@ -247,12 +260,14 @@ exm_new(char *filename, char *args)
 }
 
 static void
-exm_del(Exm *exm)
+_exm_del(Exm *exm)
 {
+    if (exm->child.process2)
+        CloseHandle(exm->child.process2);
     if (exm->child.thread)
         CloseHandle(exm->child.thread);
-    if (exm->child.process)
-        CloseHandle(exm->child.process);
+    if (exm->child.process1)
+        CloseHandle(exm->child.process1);
     free(exm->dll_fullname);
     free(exm->args);
     free(exm->filename);
@@ -260,7 +275,7 @@ exm_del(Exm *exm)
 }
 
 static int
-exm_file_map(Exm *exm)
+_exm_file_map(Exm *exm)
 {
     int length;
 
@@ -303,7 +318,7 @@ exm_file_map(Exm *exm)
 }
 
 static void
-exm_file_unmap(Exm *exm)
+_exm_file_unmap(Exm *exm)
 {
     UnmapViewOfFile(exm->map_file.base);
     CloseHandle(exm->map_file.handle);
@@ -312,50 +327,186 @@ exm_file_unmap(Exm *exm)
 }
 
 static int
-exm_dll_inject(Exm *exm)
+_exm_process_create(Exm *exm)
 {
     STARTUPINFO         si;
     PROCESS_INFORMATION pi;
-    HANDLE              remote_thread;
-    LPVOID              remote_string;
-    DWORD               exit_code; /* actually the base address of the mapped DLL */
 
     ZeroMemory(&pi, sizeof(PROCESS_INFORMATION));
     ZeroMemory(&si, sizeof(STARTUPINFO));
     si.cb = sizeof(STARTUPINFO);
 
-    EXM_LOG_DBG("creating child process %s",
-		exm->filename);
+    EXM_LOG_DBG("creating child process %s", exm->filename);
+
     if (!CreateProcess(NULL, exm->filename, NULL, NULL, TRUE,
                        CREATE_SUSPENDED, NULL, NULL, &si, &pi))
     {
-        EXM_LOG_ERR("creation of child process %s failed",
-		    exm->filename);
+        EXM_LOG_ERR("creation of child process %s failed", exm->filename);
         return 0;
     }
 
-    exm->child.process = pi.hProcess;
+    exm->child.process1 = pi.hProcess;
     exm->child.thread = pi.hThread;
+    exm->child.process_id = pi.dwProcessId;
 
-    EXM_LOG_DBG("waiting for the child process %s to initialize",
-		exm->filename);
-    if (!WaitForInputIdle(exm->child.process, INFINITE))
+    return 1;
+}
+
+static void
+_exm_process_close(Exm *exm)
+{
+    CloseHandle(exm->child.thread);
+    CloseHandle(exm->child.process1);
+}
+
+static void
+_exm_process_run(Exm *exm)
+{
+    EXM_LOG_DBG("resume child process thread 0x%p",
+                exm->child.thread);
+
+    ResumeThread(exm->child.thread);
+    WaitForSingleObject(exm->child.process1, INFINITE);
+}
+
+static int
+_exm_process_entry_point_patch(Exm *exm)
+{
+    CONTEXT context;
+    unsigned char nep[2];
+
+    EXM_LOG_DBG("patch entry point of the process handle 0x%p",
+                exm->child.process1);
+
+    if (!VirtualProtectEx(exm->child.process1, exm->child.entry_point,
+                          2, PAGE_EXECUTE_READWRITE, &exm->child.old_protect))
     {
-        EXM_LOG_ERR("wait for the child process %s failed",
-		    exm->filename);
-        goto close_handles;
+        EXM_LOG_ERR("can not protect page 0x%p in process handle 0x%p failed",
+                    exm->child.entry_point,
+                    exm->child.process1);
+        return 0;
     }
 
-    EXM_LOG_DBG("mapping process handle 0x%p", exm->child.process);
+    if (!ReadProcessMemory(exm->child.process1, exm->child.entry_point,
+                           exm->child.oep, 2, NULL))
+    {
+        EXM_LOG_ERR("read memory 0x%p of process handle 0x%p failed",
+                    exm->child.entry_point,
+                    exm->child.process1);
+        return 0;
+    }
+
+    /* patch with an infinite loop : JMP -2 */
+    nep[0] = 0xEB;
+    nep[1] = 0xFE;
+
+    EXM_LOG_DBG("patching process 0x%p at entry point 0x%p",
+                exm->child.process1,
+                exm->child.entry_point);
+    if (!WriteProcessMemory(exm->child.process1, exm->child.entry_point,
+                            nep, 2, NULL))
+    {
+        EXM_LOG_ERR("write memory 0x%p of process handle 0x%p failed",
+                    exm->child.entry_point,
+                    exm->child.process1);
+        return 0;
+    }
+
+    ResumeThread(exm->child.thread);
+
+    while (1)
+    {
+        Sleep(100);
+        context.ContextFlags = CONTEXT_CONTROL;
+        if (!GetThreadContext(exm->child.thread, &context))
+        {
+            EXM_LOG_ERR("can not retrieve the context of thread 0x%p, unpatch entry point",
+                        exm->child.thread);
+
+            if (!_exm_process_entry_point_unpatch(exm))
+            {
+                EXM_LOG_ERR("can not unpatch entry point");
+            }
+
+            ResumeThread(exm->child.thread);
+
+            return 0;
+        }
+
+#if defined (_AMD64_)
+        if ((uintptr_t)context.Rip == (uintptr_t)exm->child.entry_point)
+            break;
+#elif defined (_X86_)
+        if ((uintptr_t)context.Eip == (uintptr_t)exm->child.entry_point)
+            break;
+#else
+# error "system not supported"
+#endif
+    }
+
+    /* SetThreadContext(exm->child.thread, &context); */
+
+    return 1;
+}
+
+static int
+_exm_process_entry_point_unpatch(Exm *exm)
+{
+    DWORD new_protect;
+
+    EXM_LOG_DBG("unpatch entry point of the process handle 0x%p",
+                exm->child.process2);
+
+    SuspendThread(exm->child.thread);
+
+    if (!WriteProcessMemory(exm->child.process1, exm->child.entry_point,
+                            exm->child.oep, 2, NULL))
+    {
+        EXM_LOG_ERR("write memory 0x%p of process handle 0x%p failed",
+                    exm->child.entry_point,
+                    exm->child.process1);
+        return 0;
+    }
+
+    if (!VirtualProtectEx(exm->child.process1, exm->child.entry_point,
+                          2, exm->child.old_protect, &new_protect))
+    {
+        EXM_LOG_ERR("can not protect page 0x%p in process handle 0x%p failed",
+                    exm->child.entry_point, exm->child.process1);
+        return 0;
+    }
+
+    return 1;
+}
+
+static int
+_exm_dll_inject(Exm *exm)
+{
+    HANDLE              process;
+    HANDLE              remote_thread;
+    LPVOID              remote_string;
+    size_t              size;
+    DWORD               exit_code; /* actually the base address of the mapped DLL */
+
+    EXM_LOG_DBG("opening child process %s", exm->filename);
+    process = OpenProcess(CREATE_THREAD_ACCESS, FALSE, exm->child.process_id);
+    if (!process)
+    {
+        EXM_LOG_ERR("opening child process %s failed", exm->filename);
+        return 0;
+    }
+
+    exm->child.process2 = process;
+
+    EXM_LOG_DBG("mapping process handle 0x%p", exm->child.process2);
     exm->map_process.handle = CreateFileMapping(INVALID_HANDLE_VALUE,
                                                 NULL, PAGE_READWRITE,
-						0, sizeof(HANDLE),
+                                                0, sizeof(HANDLE),
                                                 "shared_process_handle");
     if (!exm->map_process.handle)
     {
-        EXM_LOG_ERR("mapping process handle 0x%p failed",
-		    exm->child.process);
-        goto close_handles;
+        EXM_LOG_ERR("mapping process handle 0x%p failed", exm->child.process2);
+        goto close_process;
     }
 
     exm->map_process.base = MapViewOfFile(exm->map_process.handle, FILE_MAP_WRITE,
@@ -363,91 +514,93 @@ exm_dll_inject(Exm *exm)
     if (!exm->map_process.base)
     {
         EXM_LOG_ERR("viewing map file handle 0x%p failed",
-		    exm->map_process.handle);
+                    exm->map_process.handle);
         goto close_process_handle;
     }
 
-    CopyMemory(exm->map_process.base, &exm->child.process, sizeof(HANDLE));
+    CopyMemory(exm->map_process.base, &exm->child.process2, sizeof(HANDLE));
 
     EXM_LOG_DBG("allocating virtual memory of process 0x%p (%d bytes)",
-		exm->child.process, exm->dll_length);
-    remote_string = VirtualAllocEx(exm->child.process, NULL, exm->dll_length,
-				   MEM_COMMIT, PAGE_READWRITE);
+                exm->child.process2, exm->dll_length);
+    remote_string = VirtualAllocEx(exm->child.process2, NULL, exm->dll_length,
+                                   MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
     if (!remote_string)
     {
         EXM_LOG_ERR("allocating virtual memory of process 0x%p (%d bytes) failed",
-		    exm->child.process, exm->dll_length);
+                    exm->child.process2, exm->dll_length);
         goto unmap_process_handle;
     }
 
-    EXM_LOG_DBG("writing process 0x%p in virtual memory",
-		exm->child.process);
-    if (!WriteProcessMemory(exm->child.process, remote_string,
-			    exm->dll_fullname, exm->dll_length, NULL))
+    EXM_LOG_DBG("writing process 0x%p in virtual memory at address 0x%p",
+                exm->child.process2,
+                remote_string);
+    if (!WriteProcessMemory(exm->child.process2, remote_string,
+                            exm->dll_fullname, exm->dll_length, &size))
     {
         EXM_LOG_ERR("writing process 0x%p in virtual memory failed",
-		    exm->child.process);
+                    exm->child.process2);
+        goto virtual_free;
+    }
+
+    if ((int)size != exm->dll_length)
+    {
+        EXM_LOG_ERR("writing process 0x%p in virtual memory failed (wanted: %d, written: %d",
+                    exm->child.process2,
+                    exm->dll_length,
+                    (int)size);
         goto virtual_free;
     }
 
     EXM_LOG_DBG("execute thread of process 0x%p",
-		exm->child.process);
-    remote_thread = CreateRemoteThread(exm->child.process, NULL, 0,
-				       (LPTHREAD_START_ROUTINE)exm->ll,
-				       remote_string, 0, NULL);
+                exm->child.process2);
+    remote_thread = CreateRemoteThread(exm->child.process2, NULL, 0,
+                                       (LPTHREAD_START_ROUTINE)exm->load_library,
+                                       remote_string, 0, NULL);
     if (!remote_thread)
     {
         EXM_LOG_ERR("execute thread for process 0x%p failed",
-		    exm->child.process);
+                    exm->child.process2);
         goto virtual_free;
     }
 
     WaitForSingleObject(remote_thread, INFINITE);
 
     EXM_LOG_DBG("getting exit code of thread 0x%p",
-		remote_thread);
+                remote_thread);
     if (!GetExitCodeThread(remote_thread, &exit_code))
     {
         EXM_LOG_ERR("getting exit code of thread 0x%p failed",
-		    remote_thread);
+                    remote_thread);
         goto close_thread;
     }
 
-    CloseHandle(remote_thread);
-    VirtualFreeEx(exm->child.process, remote_string, 0, MEM_RELEASE);
-
-    EXM_LOG_DBG("resume child process threas 0x%p",
-		exm->child.thread);
-
-    ResumeThread(exm->child.thread);
-
     exm->exit_code = exit_code;
+    CloseHandle(remote_thread);
+    VirtualFreeEx(exm->child.process2, remote_string, 0, MEM_RELEASE);
 
     return 1;
 
   close_thread:
     CloseHandle(remote_thread);
   virtual_free:
-    VirtualFreeEx(exm->child.process, remote_string, 0, MEM_RELEASE);
+    VirtualFreeEx(exm->child.process2, remote_string, 0, MEM_RELEASE);
   unmap_process_handle:
     UnmapViewOfFile(exm->map_process.base);
   close_process_handle:
     CloseHandle(exm->map_process.handle);
-  close_handles:
-    ResumeThread(exm->child.thread);
-    CloseHandle(exm->child.thread);
-    CloseHandle(exm->child.process);
+  close_process:
+    CloseHandle(exm->child.process2);
 
     return 0;
 }
 
 static void
-exm_dll_eject(Exm *exm)
+_exm_dll_eject(Exm *exm)
 {
     HANDLE thread;
 
-    thread = CreateRemoteThread(exm->child.process, NULL, 0,
-                                (LPTHREAD_START_ROUTINE)exm->fl,
+    thread = CreateRemoteThread(exm->child.process2, NULL, 0,
+                                (LPTHREAD_START_ROUTINE)exm->free_library,
                                 (void*)(uintptr_t)exm->exit_code, 0, NULL );
     WaitForSingleObject(thread, INFINITE );
     CloseHandle(thread);
@@ -470,40 +623,71 @@ examine_memcheck_run(char *filename, char *args)
     EXM_LOG_INFO("Copyright (c) 2013-2014, and GNU GPL2'd, by Vincent Torri");
     EXM_LOG_INFO("Options: --tool=memcheck");
 
-    exm = exm_new(filename, args);
+    exm = _exm_new(filename, args);
     if (!exm)
         return;
 
     EXM_LOG_INFO("Command: %s %s",
-		 filename, args);
+                 filename, args);
 
-    if (!exm_file_map(exm))
+    if (!_exm_file_map(exm))
     {
         EXM_LOG_ERR("impossible to map filename %s",
-		    filename);
+                    filename);
         goto del_exm;
     }
 
-    if (!exm_dll_inject(exm))
+    if (!_exm_process_create(exm))
     {
         EXM_LOG_ERR("injection failed");
         goto unmap_exm;
     }
 
-    WaitForSingleObject(exm->child.process, INFINITE);
+#if PATCH
+    if (!_exm_process_entry_point_patch(exm))
+    {
+        EXM_LOG_ERR("can not patch entry point of the process handle 0x%p",
+                    exm->child.process1);
+        goto close_process;
+    }
+#endif
+
+    if (!_exm_dll_inject(exm))
+    {
+        EXM_LOG_ERR("injection failed");
+        goto unpatch_process;
+    }
+
+#if PATCH
+
+    if (!_exm_process_entry_point_unpatch(exm))
+    {
+        EXM_LOG_ERR("can not patch entry point of the process handle 0x%p",
+                    exm->child.process2);
+        goto dll_eject;
+    }
+#endif
+
+    _exm_process_run(exm);
 
     EXM_LOG_DBG("end of process");
 
-    exm_dll_eject(exm);
+    _exm_dll_eject(exm);
 
-    exm_file_unmap(exm);
-    exm_del(exm);
+    _exm_file_unmap(exm);
+    _exm_del(exm);
     EXM_LOG_DBG("resources freed");
 
     return;
 
+  dll_eject:
+    _exm_dll_eject(exm);
+  unpatch_process:
+    _exm_process_entry_point_unpatch(exm);
+  close_process:
+    _exm_process_close(exm);
   unmap_exm:
-    exm_file_unmap(exm);
+    _exm_file_unmap(exm);
   del_exm:
-    exm_del(exm);
+    _exm_del(exm);
 }
