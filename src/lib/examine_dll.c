@@ -29,6 +29,7 @@
 #endif
 #include <windows.h>
 #undef WIN32_LEAN_AND_MEAN
+
 #include <imagehlp.h>
 
 #include "examine_log.h"
