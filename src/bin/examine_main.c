@@ -63,6 +63,9 @@ int main(int argc, char *argv[])
 {
     char *module = NULL;
     char *args = NULL;
+#ifdef _WIN32
+    char *iter;
+#endif
     int i;
     unsigned char tool = 0; /* 0 : memcheck, 1 : trace, 2 : depends */
     unsigned char verbose = 0;
@@ -182,6 +185,15 @@ int main(int argc, char *argv[])
 
     if (quiet)
         exm_log_level_set(EXM_LOG_LEVEL_ERR);
+
+#ifdef _WIN32
+    iter = module;
+    while (*iter)
+    {
+        if (*iter == '/') *iter = '\\';
+        iter++;
+    }
+#endif
 
     if (tool == 0)
         examine_memcheck_run(module, args);

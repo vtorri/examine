@@ -21,6 +21,8 @@
 # include <config.h>
 #endif
 
+#ifdef _WIN32
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -135,7 +137,6 @@ _exm_new(char *filename, char *args)
     Exm *exm;
     Exm_Pe *pe;
     HMODULE kernel32;
-    char *iter;
     size_t l1;
     size_t l2;
 
@@ -182,14 +183,6 @@ _exm_new(char *filename, char *args)
     exm->child.entry_point = exm_pe_entry_point_get(pe);
 
     exm_pe_free(pe);
-
-    /* '/' replaced by '\' */
-    iter = exm->filename;
-    while (*iter)
-    {
-        if (*iter == '/') *iter = '\\';
-        iter++;
-    }
 
     exm->load_library = (_load_library)_exm_symbol_get("kernel32.dll",
                                                        "LoadLibraryA");
@@ -691,3 +684,19 @@ examine_memcheck_run(char *filename, char *args)
   del_exm:
     _exm_del(exm);
 }
+
+#else
+
+#include <examine_log.h>
+
+#include "examine_private.h"
+
+void
+examine_memcheck_run(char *filename, char *args)
+{
+    EXM_LOG_ERR("memcheck tool not available on UNIX");
+    (void)filename;
+    (void)args;
+}
+
+#endif

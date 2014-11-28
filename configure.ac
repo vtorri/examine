@@ -25,19 +25,22 @@ AH_BOTTOM([
 #endif /* EXAMINE_CONFIG_H__ */
 ])
 
+AC_USE_SYSTEM_EXTENSIONS
 
-### If the host is not Windows, or is ceGCC, we exit
+
+### If the host is ceGCC, we exit
 
 AC_CANONICAL_HOST
 
+have_win32="no"
 case "$host_os" in
-  cegcc* | mingw32ce*)
-    AC_MSG_ERROR([Windows CE is not supported. Exiting...])
-    ;;
-  mingw*)
-    ;;
-  *)
-    AC_MSG_ERROR([OS must be Windows >= XP. Exiting...])
+   cegcc* | mingw32ce*)
+      AC_MSG_ERROR([Windows CE is not supported. Exiting...])
+      ;;
+   mingw*)
+      have_win32="yes"
+      ;;
+   *)
     ;;
 esac
 
@@ -87,7 +90,10 @@ AC_CHECK_SIZEOF([void *])
 ### Checks for compiler characteristics
 EXM_ATTRIBUTE_UNUSED
 
-EXM_CFLAGS="-std=c99 -pedantic -Wall -Wextra -Wshadow -Wdeclaration-after-statement -Wmissing-prototypes -Wstrict-prototypes -Wredundant-decls -Wno-pedantic-ms-format"
+EXM_CFLAGS="-std=c99 -pedantic -Wall -Wextra -Wshadow -Wdeclaration-after-statement -Wmissing-prototypes -Wstrict-prototypes -Wredundant-decls"
+if test "x${have_win32}" = "xyes" ; then
+   EXM_CFLAGS="${EXM_CFLAGS} -Wno-pedantic-ms-format"
+fi
 
 AC_SUBST([EXM_CFLAGS])
 
@@ -98,43 +104,46 @@ AC_SUBST([EXM_CFLAGS])
 ### Checks for library functions
 
 # bfd_init
-AC_MSG_CHECKING([for bfd_init in libbfd])
-CPPFLAGS_save="${CPPFLAGS}"
-CPPFLAGS="${CPPFLAGS} -I${_exm_libbfd_prefix}/include"
-LIBS_save="${LIBS}"
-if test "x${ac_cv_sizeof_void_p}" = "x8" ; then
-   LIBS="${LIBS} -L${_exm_libbfd_prefix}/lib64/ -lbfd -liberty -lintl -lz"
-else
-   LIBS="${LIBS} -L${_exm_libbfd_prefix}/lib/ -lbfd -liberty -lintl -lz"
-fi
-AC_LINK_IFELSE(
-   [AC_LANG_PROGRAM(
-       [[
+if test "x${have_win32}" = "xyes" ; then
+   AC_MSG_CHECKING([for bfd_init in libbfd])
+   CPPFLAGS_save="${CPPFLAGS}"
+   CPPFLAGS="${CPPFLAGS} -I${_exm_libbfd_prefix}/include"
+   LIBS_save="${LIBS}"
+   if test "x${ac_cv_sizeof_void_p}" = "x8" ; then
+      LIBS="${LIBS} -L${_exm_libbfd_prefix}/lib64/ -lbfd -liberty -lintl -lz"
+   else
+      LIBS="${LIBS} -L${_exm_libbfd_prefix}/lib/ -lbfd -liberty -lintl -lz"
+   fi
+   AC_LINK_IFELSE(
+      [AC_LANG_PROGRAM(
+          [[
 #include <bfd.h>
-       ]],
-       [[
+          ]],
+          [[
 bfd_init();
-       ]])],
-   [
-    EXM_CPPFLAGS="-I${_exm_libbfd_prefix}/include"
-    if test "x${ac_cv_sizeof_void_p}" = "x8" ; then
-       EXM_LIBS="-L${_exm_libbfd_prefix}/lib64/ -lbfd -liberty -lintl -lz"
-    else
-       EXM_LIBS="-L${_exm_libbfd_prefix}/lib/ -lbfd -liberty -lintl -lz"
-    fi
-    _efl_have_bfd_init="yes"
-   ],
-   [_efl_have_bfd_init="no"])
+          ]])],
+      [
+       EXM_CPPFLAGS="-I${_exm_libbfd_prefix}/include"
+       if test "x${ac_cv_sizeof_void_p}" = "x8" ; then
+          EXM_LIBS="-L${_exm_libbfd_prefix}/lib64/ -lbfd -liberty -lintl -lz"
+       else
+          EXM_LIBS="-L${_exm_libbfd_prefix}/lib/ -lbfd -liberty -lintl -lz"
+       fi
+       _efl_have_bfd_init="yes"
+      ],
+      [_efl_have_bfd_init="no"])
 
-AC_MSG_RESULT([${_efl_have_bfd_init}])
+   AC_MSG_RESULT([${_efl_have_bfd_init}])
 
-if test "x${_efl_have_bfd_init}" = "xno" ; then
-   AC_MSG_ERROR([libbfd, libiberty and libintl are required from binutils. Use --with-libbfd-prefix to set their prefix.])
+   if test "x${_efl_have_bfd_init}" = "xno" ; then
+      AC_MSG_ERROR([libbfd, libiberty and libintl are required from binutils. Use --with-libbfd-prefix to set their prefix.])
+   fi
 fi
 
 AC_SUBST([EXM_CPPFLAGS])
 AC_SUBST([EXM_LIBS])
 
+AM_CONDITIONAL([HAVE_WIN32], [test "x${have_win32}" = "xyes"])
 
 AC_CONFIG_FILES([
 Makefile

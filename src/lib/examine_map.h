@@ -1,6 +1,6 @@
 /* Examine - a tool for memory leak detection on Windows
  *
- * Copyright (C) 2012-2013 Vincent Torri.
+ * Copyright (C) 2014 Vincent Torri.
  * All rights reserved.
  *
  * This program is free software: you can redistribute it and/or modify
@@ -17,15 +17,13 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef EXAMINE_TEST_DLL_H
-#define EXAMINE_TEST_DLL_H
+#ifndef EXM_MAP_H
+#define EXM_MAP_H
 
-#ifdef _WIN32
-# define EXM_DLL_EXPORT __declspec(dllexport)
-# else
-# define EXM_DLL_EXPORT
-#endif
+typedef struct _Exm_Map Exm_Map;
 
-EXM_DLL_EXPORT void examine_test_dll();
+Exm_Map *exm_map_new(const char *filename);
+void exm_map_del(Exm_Map *map);
+const void *exm_map_base_get(const Exm_Map *map);
 
-#endif /* EXAMINE_TEST_DLL_H */
+#endif /* EXM_MAP_H */

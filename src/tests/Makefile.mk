@@ -1,4 +1,6 @@
 
+if HAVE_WIN32
+
 lib_LTLIBRARIES += src/tests/libexamine_test_dll.la
 src_tests_libexamine_test_dll_la_SOURCES = \
 src/tests/examine_test_dll.c \
@@ -17,3 +19,5 @@ src_tests_examine_test_SOURCES = src/tests/examine_test.c
 
 src_tests_examine_test_LDADD = \
 src/tests/libexamine_test_dll.la
+
+endif

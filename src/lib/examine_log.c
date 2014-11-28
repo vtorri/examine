@@ -22,7 +22,17 @@
 #endif
 
 #include <stdio.h>
-#include <windows.h>
+
+#ifdef _WIN32
+# ifndef WIN32_LEAN_AND_MEAN
+#  define WIN32_LEAN_AND_MEAN
+# endif
+# include <windows.h>
+# undef WIN32_LEAN_AND_MEAN
+#else
+# include <sys/types.h>
+# include <unistd.h>
+#endif
 
 #include "examine_log.h"
 
@@ -33,6 +43,8 @@
 
 
 static Exm_Log_Level _exm_log_level = EXM_LOG_LEVEL_INFO;
+
+#ifdef _WIN32
 
 static DWORD
 _exm_log_print_level_color_get(int level)
@@ -147,6 +159,42 @@ _exm_log_fprint_cb(DWORD console,
         fprintf(stderr, "ERROR: %s(): want to write %d bytes, %ld written\n", __FUNCTION__, s + 1, res);
 }
 
+#else /* !_WIN32 */
+
+static const char *
+_exm_log_print_level_color_get(int level)
+{
+    switch (level)
+    {
+        case EXM_LOG_LEVEL_ERR:
+            return "\033[31m";
+        case EXM_LOG_LEVEL_WARN:
+            return "\033[33;1m";
+        case EXM_LOG_LEVEL_DBG:
+            return "\033[32;1m";
+        case EXM_LOG_LEVEL_INFO:
+            return "\033[1m";
+        default:
+            return "\033[34m";
+    }
+}
+
+static void
+_exm_log_fprint_cb(FILE *st,
+                   Exm_Log_Level level,
+                   const char *fmt,
+                   void *data, /* later for XML output */
+                   va_list args)
+{
+    fprintf(st, "%s==%u==\033[0m ",
+            _exm_log_print_level_color_get(level),
+            (unsigned int)getpid());
+    vfprintf(st, fmt, args);
+    fprintf(st, "\n");
+}
+
+#endif
+
 
 /*============================================================================*
  *                                 Global                                     *
@@ -164,7 +212,11 @@ exm_log_print_cb_stderr(Exm_Log_Level level,
                         void *data,
                         va_list args)
 {
+#ifdef _WIN32
     _exm_log_fprint_cb(STD_ERROR_HANDLE, level, fmt, data, args);
+#else
+    _exm_log_fprint_cb(stderr, level, fmt, data, args);
+#endif
 }
 
 void
@@ -173,7 +225,11 @@ exm_log_print_cb_stdout(Exm_Log_Level level,
                         void *data,
                         va_list args)
 {
+#ifdef _WIN32
     _exm_log_fprint_cb(STD_OUTPUT_HANDLE, level, fmt, data, args);
+#else
+    _exm_log_fprint_cb(stdout, level, fmt, data, args);
+#endif
 }
 
 void

@@ -4,6 +4,9 @@
 *.exe
 *.o
 *.lo
+*.tar.bz2
+*.tar.gz
+*.tar.xz
 .deps
 .libs
 .dirstamp
@@ -30,3 +33,4 @@ m4/ltversion.m4
 m4/lt~obsolete.m4
 missing
 stamp-h1
+src/bin/examine

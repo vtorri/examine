@@ -21,13 +21,8 @@
 # include <config.h>
 #endif
 
+#include <stdlib.h>
 #include <stdio.h>
-
-#ifndef WIN32_LEAN_AND_MEAN
-# define WIN32_LEAN_AND_MEAN
-#endif
-#include <windows.h>
-#undef WIN32_LEAN_AND_MEAN
 
 #include <examine_log.h>
 #include <examine_list.h>
@@ -60,6 +55,7 @@ static void
 examine_depends_gui_run(char *module)
 {
     EXM_LOG_ERR("depends tool with gui not done yet");
+    (void)module;
 }
 
 void
@@ -84,6 +80,8 @@ examine_depends_run(char *module, unsigned char gui)
         examine_depends_cmd_run(pe);
 
     exm_pe_free(pe);
+
+    free(module);
 
     EXM_LOG_DBG("resources freed");
 }

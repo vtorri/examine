@@ -4,10 +4,16 @@ lib_LTLIBRARIES += src/lib/libexamine.la
 src_lib_libexamine_la_SOURCES = \
 src/lib/examine_list.c \
 src/lib/examine_log.c \
+src/lib/examine_map.c \
 src/lib/examine_pe.c \
 src/lib/examine_list.h \
 src/lib/examine_log.h \
+src/lib/examine_map.h \
 src/lib/examine_pe.h
+
+if !HAVE_WIN32
+src_lib_libexamine_la_SOURCES += src/lib/examine_pe_unix.h
+endif
 
 src_lib_libexamine_la_CFLAGS = @EXM_CFLAGS@
 
@@ -16,6 +22,9 @@ src_lib_libexamine_la_LDFLAGS = -no-undefined -version-info @version_info@
 src_lib_libexamine_la_LIBTOOLFLAGS = --tag=disable-static
 
 pkgdir = $(bindir)
+
+if HAVE_WIN32
+
 pkg_LTLIBRARIES += src/lib/examine_dll.la
 
 src_lib_examine_dll_la_SOURCES = \
@@ -40,5 +49,7 @@ src/lib/libexamine.la \
 src_lib_examine_dll_la_LDFLAGS = -no-undefined -module -avoid-version
 
 src_lib_examine_dll_la_LIBTOOLFLAGS = --tag=disable-static
+
+endif
 
 EXTRA_DIST += src/lib/examine_stacktrace_vc.c

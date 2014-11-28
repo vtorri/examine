@@ -29,4 +29,6 @@ void
 examine_trace_run(char *module, char *args)
 {
     EXM_LOG_ERR("trace tool not done yet");
+    (void)module;
+    (void)args;
 }

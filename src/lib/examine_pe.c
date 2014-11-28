@@ -23,15 +23,26 @@
 
 #include <stdio.h>
 
-#ifndef WIN32_LEAN_AND_MEAN
-# define WIN32_LEAN_AND_MEAN
+#ifdef _WIN32
+# ifndef WIN32_LEAN_AND_MEAN
+#  define WIN32_LEAN_AND_MEAN
+# endif
+# include <windows.h>
+# undef WIN32_LEAN_AND_MEAN
+#else
+# include <stdlib.h>
+# include <string.h>
+# include <strings.h>
+# include <inttypes.h>
 #endif
-#include <windows.h>
-#undef WIN32_LEAN_AND_MEAN
 
 #include "examine_list.h"
 #include "examine_log.h"
+#include "examine_map.h"
 #include "examine_pe.h"
+#ifndef _WIN32
+# include "examine_pe_unix.h"
+#endif
 
 
 /**
@@ -55,9 +66,7 @@
 struct _Exm_Pe
 {
     char *filename;
-    HANDLE file; /**< The handle returned by CreateFile() */
-    HANDLE file_map; /**< The file mapping object */
-    void *base; /**< The starting adress of the mapped view */
+    Exm_Map *map;
     IMAGE_NT_HEADERS *nt_header; /**< The NT header address */
     IMAGE_IMPORT_DESCRIPTOR *import_desc; /**< The import descriptor address */
 };
@@ -219,7 +228,7 @@ _exm_pe_rva_to_ptr_get(const Exm_Pe *pe, DWORD rva)
 
     delta = (int)(sh->VirtualAddress - sh->PointerToRawData);
 
-    return (void *)((unsigned char *)pe->base + rva - delta);
+    return (void *)((unsigned char *)exm_map_base_get(pe->map) + rva - delta);
 }
 
 
@@ -251,7 +260,6 @@ exm_pe_new(const char *filename)
     IMAGE_DOS_HEADER *dos_header;
     Exm_Pe *pe;
     char *full_filename;
-    char *iter;
     DWORD import_dir;
 
     if (!filename)
@@ -265,75 +273,48 @@ exm_pe_new(const char *filename)
     if (!full_filename)
         return NULL;
 
-    iter = full_filename;
-    while (*iter)
-    {
-        if (*iter == '/') *iter = '\\';
-        iter++;
-    }
-
     pe = (Exm_Pe *)malloc(sizeof(Exm_Pe));
     if (!pe)
         goto free_filename;
 
     pe->filename = full_filename;
 
-    pe->file = CreateFile(full_filename,
-                          GENERIC_READ,
-                          FILE_SHARE_READ,
-                          NULL,
-                          OPEN_EXISTING,
-                          FILE_ATTRIBUTE_NORMAL,
-                          NULL);
-    if (pe->file == INVALID_HANDLE_VALUE)
+    pe->map = exm_map_new(full_filename);
+    if (!pe->map)
         goto free_pe;
 
-    pe->file_map = CreateFileMapping(pe->file,
-                                     NULL, PAGE_READONLY,
-                                     0, 0, NULL);
-    if (!pe->file_map)
-        goto close_file;
-
-    pe->base = MapViewOfFile(pe->file_map, FILE_MAP_READ, 0, 0, 0);
-    if (!pe->base)
-        goto close_file_map;
-
-    dos_header = (IMAGE_DOS_HEADER *)pe->base;
+    dos_header = (IMAGE_DOS_HEADER *)exm_map_base_get(pe->map);
     if (dos_header->e_magic != IMAGE_DOS_SIGNATURE)
     {
         EXM_LOG_ERR("not a valid DOS header");
-        goto unmap_base;
+        goto del_map;
     }
 
-    pe->nt_header = (IMAGE_NT_HEADERS *)((uintptr_t)dos_header + (uintptr_t)dos_header->e_lfanew);
+    pe->nt_header = (IMAGE_NT_HEADERS *)((unsigned char *)dos_header + dos_header->e_lfanew);
     if (pe->nt_header->Signature != IMAGE_NT_SIGNATURE)
     {
         EXM_LOG_ERR("not a valid NT header");
-        goto unmap_base;
+        goto del_map;
     }
 
     import_dir = pe->nt_header->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].VirtualAddress;
     if (!import_dir)
     {
-        /* printf("not a valid import table\n"); */
-        goto unmap_base;
+        EXM_LOG_ERR("not a valid import table");
+        goto del_map;
     }
 
     pe->import_desc = (IMAGE_IMPORT_DESCRIPTOR *)_exm_pe_rva_to_ptr_get(pe, import_dir);
     if (!pe->import_desc)
     {
         EXM_LOG_ERR("not a valid import table descriptor");
-        goto unmap_base;
+        goto del_map;
     }
 
     return pe;
 
-  unmap_base:
-    UnmapViewOfFile(pe->base);
-  close_file_map:
-    CloseHandle(pe->file_map);
-  close_file:
-    CloseHandle(pe->file);
+  del_map:
+    exm_map_del(pe->map);
   free_pe:
     free(pe);
   free_filename:
@@ -355,10 +336,8 @@ exm_pe_free(Exm_Pe *pe)
     if (!pe)
         return;
 
-    UnmapViewOfFile(pe->base);
-    CloseHandle(pe->file_map);
-    CloseHandle(pe->file);
-    CloseHandle(pe->filename);
+    exm_map_del(pe->map);
+    free(pe->filename);
     free(pe);
 }
 
@@ -386,7 +365,7 @@ exm_pe_is_dll(Exm_Pe *pe)
 void *
 exm_pe_entry_point_get(Exm_Pe *pe)
 {
-    return (unsigned char *)pe->nt_header->OptionalHeader.ImageBase + pe->nt_header->OptionalHeader.AddressOfEntryPoint;
+  return (unsigned char *)(uintptr_t)pe->nt_header->OptionalHeader.ImageBase + pe->nt_header->OptionalHeader.AddressOfEntryPoint;
 }
 
 /**
@@ -565,6 +544,7 @@ exm_pe_modules_list_string_get(Exm_List *l, const char *filename, unsigned char 
 char *
 exm_pe_dll_path_find(const char *filename)
 {
+#ifdef _WIN32
     char buf[MAX_PATH];
     char full_name[MAX_PATH];
     DWORD res;
@@ -651,7 +631,7 @@ exm_pe_dll_path_find(const char *filename)
             }
         }
     }
-
+#endif
     return strdup(filename);
 }
 
