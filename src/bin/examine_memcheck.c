@@ -478,7 +478,7 @@ _exm_dll_inject(Exm *exm)
     HANDLE              process;
     HANDLE              remote_thread;
     LPVOID              remote_string;
-    size_t              size;
+    SIZE_T              size;
     DWORD               exit_code; /* actually the base address of the mapped DLL */
 
     EXM_LOG_DBG("opening child process %s", exm->filename);
