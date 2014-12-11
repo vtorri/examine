@@ -24,6 +24,7 @@
 #include <stdio.h>
 
 #ifdef _WIN32
+# include <stdlib.h>
 # ifndef WIN32_LEAN_AND_MEAN
 #  define WIN32_LEAN_AND_MEAN
 # endif
