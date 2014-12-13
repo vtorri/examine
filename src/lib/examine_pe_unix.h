@@ -223,4 +223,4 @@ typedef struct
     DWORD Characteristics;
 } IMAGE_SECTION_HEADER, *PIMAGE_SECTION_HEADER;
 
- #endif /* EXM_PE_UNIX_H */
+#endif /* EXM_PE_UNIX_H */
