@@ -19,12 +19,21 @@
 
 #include <stdlib.h>
 
+#ifndef WIN32_LEAN_AND_MEAN
+# define WIN32_LEAN_AND_MEAN
+#endif
+#include <windows.h>
+#undef WIN32_LEAN_AND_MEAN
+
 #include <examine_test_dll.h>
 
 void
 examine_test_dll()
 {
     void *ptr;
+    HANDLE h;
 
     ptr = malloc(20);
+    h = GetProcessHeap();
+    ptr = HeapAlloc(h, 0, 40);
 }
