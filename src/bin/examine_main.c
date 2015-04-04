@@ -40,6 +40,14 @@
  *============================================================================*/
 
 
+typedef enum
+{
+    EXM_TOOL_MEMCHECK,
+    EXM_TOOL_TRACE,
+    EXM_TOOL_DEPENDS,
+    EXM_TOOL_VIEW
+} Exm_Tool;
+
 static void
 _exm_usage(void)
 {
@@ -81,7 +89,7 @@ int main(int argc, char *argv[])
     char *args = NULL;
     Exm_List *options = NULL;
     int i;
-    unsigned char tool = 0; /* 0 : memcheck, 1 : trace, 2 : depends 3 : view */
+    Exm_Tool tool = EXM_TOOL_MEMCHECK;
     unsigned char verbose = 0;
     unsigned char quiet = 0;
     unsigned char depends_list = 0;
@@ -242,18 +250,32 @@ int main(int argc, char *argv[])
     EXM_LOG_INFO("Using %s; rerun with -h for help and copyright notice", PACKAGE_STRING);
     EXM_LOG_INFO("");
 
-    if (tool == 0)
-        examine_memcheck_run(options, module, args);
-    else if (tool == 1)
-        examine_trace_run(options, module, args);
-    else if (tool == 2)
+    switch (tool)
     {
-        if (args)
-            free(args);
-        exm_depends_run(options, module, depends_list, depends_gui);
+        case EXM_TOOL_MEMCHECK:
+#ifdef _WIN32
+            exm_memcheck_run(options, module, args);
+#else
+            EXM_LOG_ERR("memcheck tool not available on UNIX");
+#endif
+            break;
+        case EXM_TOOL_TRACE:
+            exm_trace_run(options, module, args);
+            break;
+        case EXM_TOOL_DEPENDS:
+            if (args)
+                free(args);
+            exm_depends_run(options, module, depends_list, depends_gui);
+            break;
+        case EXM_TOOL_VIEW:
+            if (args)
+                free(args);
+            exm_view_run(options, module, view_gui);
+            break;
+        default:
+            EXM_LOG_ERR("unknown tool");
+            break;
     }
-    else
-        exm_view_run(options, module, view_gui);
 
     exm_list_free(options, free);
 

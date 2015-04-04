@@ -9,10 +9,14 @@ src/bin/examine_view
 src_bin_examine_SOURCES = \
 src/bin/examine_depends.c \
 src/bin/examine_main.c \
-src/bin/examine_memcheck.c \
 src/bin/examine_trace.c \
 src/bin/examine_view.c \
 src/bin/examine_private.h
+
+if HAVE_WIN32
+src_bin_examine_SOURCES += \
+src/bin/examine_memcheck.c
+endif
 
 src_bin_examine_CPPFLAGS = \
 -I$(top_srcdir)/src/lib \

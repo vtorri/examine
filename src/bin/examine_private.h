@@ -23,8 +23,8 @@
 #define EXAMINE_BIN_PRIVATE_H
 
 
-void examine_memcheck_run(Exm_List *options, char *filename, char *args);
-void examine_trace_run(Exm_List *options, char *filename, char *args);
+void exm_memcheck_run(Exm_List *options, char *filename, char *args);
+void exm_trace_run(Exm_List *options, char *filename, char *args);
 void exm_depends_run(Exm_List *options, char *filename, unsigned char display_list, unsigned char gui);
 void exm_view_run(Exm_List *options, char *filename, unsigned char gui);
 

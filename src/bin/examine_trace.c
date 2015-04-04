@@ -29,7 +29,7 @@
 #include "examine_private.h"
 
 void
-examine_trace_run(Exm_List *options, char *filename, char *args)
+exm_trace_run(Exm_List *options, char *filename, char *args)
 {
     Exm_List *option;
 

@@ -23,8 +23,6 @@
 # include <config.h>
 #endif
 
-#ifdef _WIN32
-
 #include <stdio.h>
 
 #ifndef WIN32_LEAN_AND_MEAN
@@ -276,7 +274,7 @@ _exm_map(Exm *exm, Exm_Process *process)
 
 
 void
-examine_memcheck_run(Exm_List *options, char *filename, char *args)
+exm_memcheck_run(Exm_List *options, char *filename, char *args)
 {
     char buf[4096];
     Exm *exm;
@@ -374,19 +372,3 @@ examine_memcheck_run(Exm_List *options, char *filename, char *args)
   del_exm:
     _exm_del(exm);
 }
-
-#else
-
-#include <examine_log.h>
-
-#include "examine_private.h"
-
-void
-examine_memcheck_run(char *filename, char *args)
-{
-    EXM_LOG_ERR("memcheck tool not available on UNIX");
-    (void)filename;
-    (void)args;
-}
-
-#endif
