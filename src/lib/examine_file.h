@@ -2,9 +2,6 @@
  * Examine - a set of tools for memory leak detection on Windows and
  * PE file reader
  *
- * Copyright (C) 2014-2015 Vincent Torri.
- * All rights reserved.
- *
  * Copyright (C) 2015 Vincent Torri.
  * All rights reserved.
  *
@@ -22,35 +19,19 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef EXM_MAP_H
-#define EXM_MAP_H
+#ifndef EXM_FILE_H
+#define EXM_FILE_H
 
-typedef struct _Exm_Map Exm_Map;
+void exm_file_backslash_set(char *filename);
 
-Exm_Map *exm_map_new(const char *filename);
+void exm_file_path_set(void);
 
-# ifdef _WIN32
+void exm_file_set(char *filename);
 
-Exm_Map *exm_map_new_from_base(const void *base, DWORD size);
+void exm_file_path_free(void);
 
-# endif
+char *exm_file_find(const char *filename);
 
-void exm_map_del(Exm_Map *map);
+unsigned long long exm_file_size_get(const char *filename);
 
-const void *exm_map_base_get(const Exm_Map *map);
-
-unsigned long long exm_map_size_get(const Exm_Map *map);
-
-# ifdef _WIN32
-
-typedef struct _Exm_Map_Shared Exm_Map_Shared;
-
-Exm_Map_Shared *exm_map_shared_new(const char *name, const void *data, DWORD size);
-
-void exm_map_shared_del(Exm_Map_Shared *map);
-
-int exm_map_shared_read(const char *name, DWORD size, void *data);
-
-# endif
-
-#endif /* EXM_MAP_H */
+#endif /* EXM_FILE_H */

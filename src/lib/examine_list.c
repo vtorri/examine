@@ -1,20 +1,22 @@
-/* Examine - a tool for memory leak detection on Windows
+/*
+ * Examine - a set of tools for memory leak detection on Windows and
+ * PE file reader
  *
- * Copyright (C) 2012-2014 Vincent Torri.
+ * Copyright (C) 2012-2015 Vincent Torri.
  * All rights reserved.
  *
- * This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
+ * This program is free software: you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public License
+ * as published by the Free Software Foundation, either version 3 of
+ * the License, or (at your option) any later version.
  *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details.
  *
- *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -22,7 +24,6 @@
 #endif
 
 #include <stdlib.h>
-#include <stdio.h>
 
 #include "examine_list.h"
 
@@ -87,8 +88,57 @@ exm_list_append(Exm_List *l, const void *data)
     return l;
 }
 
+Exm_List *
+exm_list_prepend(Exm_List *l, const void *data)
+{
+    Exm_List *n;
+
+    if (!data)
+        return l;
+
+    n = (Exm_List *)malloc(sizeof(Exm_List));
+    if (!n)
+        return l;
+
+    n->data = (void *)data;
+    n->next = l;
+
+    return n;
+}
+
 /**
- * @brief append an element to the given list with a comparison callback.
+ * @brief Check if the given data already belongs to the given list.
+ *
+ * @param[inout] l The list.
+ * @param[in] data The data to check.
+ * @param[in] cmp_cb The comparison callback.
+ * @return 1 if the data is found, 0 otherwise.
+ *
+ * This function checks if @p data belongs to @p l. It returns 1 if it
+ * belongs to @p l, 0 otherwise.
+ */
+unsigned char
+exm_list_data_is_found(const Exm_List *l, const void *data, Exm_List_Cmp_Cb cmp_cb)
+{
+    Exm_List *iter;
+
+    if (!data)
+        return 0;
+
+    iter = (Exm_List *)l;
+    while (iter)
+    {
+        if (cmp_cb(iter->data, data) == 0)
+            return 1;
+
+        iter = iter->next;
+    }
+
+    return 0;
+}
+
+/**
+ * @brief Append an element to the given list with a comparison callback.
  *
  * @param[inout] l The list.
  * @param[in] data The data to append.
@@ -121,6 +171,32 @@ exm_list_append_if_new(Exm_List *l, const void *data, Exm_List_Cmp_Cb cmp_cb)
 
     if (append)
         l = exm_list_append(l, data);
+
+    return l;
+}
+
+Exm_List *
+exm_list_prepend_if_new(Exm_List *l, const void *data, Exm_List_Cmp_Cb cmp_cb)
+{
+    Exm_List *iter;
+    int prepend = 1;
+
+    if (!data)
+        return l;
+
+    iter = l;
+    while (iter)
+    {
+        if (cmp_cb(iter->data, data) == 0)
+        {
+            prepend = 0;
+            break;
+        }
+        iter = iter->next;
+    }
+
+    if (prepend)
+        l = exm_list_prepend(l, data);
 
     return l;
 }

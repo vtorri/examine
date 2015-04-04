@@ -1,20 +1,22 @@
-/* Examine - a tool for memory leak detection on Windows
+/*
+ * Examine - a set of tools for memory leak detection on Windows and
+ * PE file reader
  *
- * Copyright (C) 2012-2014 Vincent Torri.
+ * Copyright (C) 2012-2015 Vincent Torri.
  * All rights reserved.
  *
- * This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
+ * This program is free software: you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public License
+ * as published by the Free Software Foundation, either version 3 of
+ * the License, or (at your option) any later version.
  *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details.
  *
- *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -25,7 +27,10 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <examine_main.h>
 #include <examine_log.h>
+#include <examine_list.h>
+#include <examine_file.h>
 
 #include "examine_private.h"
 
@@ -38,39 +43,50 @@
 static void
 _exm_usage(void)
 {
-  printf("Usage:\n");
-  printf("  examine [options] file [args]\n");
-  printf("\n");
-  printf("  tool-selection option, with default in [ ]:\n");
-  printf("    --tool=<name>              use the Examine tool named <name> [memcheck]\n");
-  printf("\n");
-  printf("  basic user options for all Examine tools, with defaults in [ ]:\n");
-  printf("    -h, --help                 show this message\n");
-  printf("    -V, --version              show version\n");
-  printf("    -v, --verbose              print also debug messages [disabled]\n");
-  printf("    -q, --quiet                print only error messages [disabled]\n");
-  printf("\n");
-  printf("  user options for Depends:\n");
-  printf("    --gui                      run in graphical mode\n");
-  printf("\n");
-  printf("  Examine is Copyright (C) 2012-2014, and GNU GPL2'd, by Vincent Torri.\n");
-  printf("\n");
-  printf("  Bug reports, feedback, remarks, ... to https://github.com/vtorri/examine.\n");
-  printf("\n");
+    printf("Usage:\n");
+    printf("  examine [options] file [args]\n");
+    printf("\n");
+    printf("  tool-selection option, with default in [ ]:\n");
+    printf("    --tool=<name>             use the Examine tool named <name> [memcheck]\n");
+    printf("\n");
+    printf("    Available tools:\n");
+    printf("      memcheck: memory checker\n");
+    printf("      trace:    trace calling functions\n");
+    printf("      depends:  dependencies of PE files\n");
+    printf("      view:     view content of PE header file\n");
+    printf("\n");
+    printf("  basic user options for all Examine tools, with defaults in [ ]:\n");
+    printf("    -h, --help                show this message\n");
+    printf("    -V, --version             show version\n");
+    printf("    -v, --verbose             print also debug messages [disabled]\n");
+    printf("    -q, --quiet               print only error messages [disabled]\n");
+    printf("\n");
+    printf("  user options for Depends:\n");
+    printf("    --list                    run in text mode, display the list of dependencies\n");
+    printf("                              default is the tree of dependencies\n");
+    printf("    --gui                     run in graphical mode\n");
+    printf("\n");
+    printf("  user options for View:\n");
+    printf("    --gui                     run in graphical mode\n");
+    printf("\n");
+    printf("  Examine is Copyright (C) 2012-2015, and GNU LGPL3'd, by Vincent Torri.\n");
+    printf("\n");
+    printf("  Bug reports, feedback, remarks, ... to https://github.com/vtorri/examine.\n");
+    printf("\n");
 }
 
 int main(int argc, char *argv[])
 {
     char *module = NULL;
     char *args = NULL;
-#ifdef _WIN32
-    char *iter;
-#endif
+    Exm_List *options = NULL;
     int i;
-    unsigned char tool = 0; /* 0 : memcheck, 1 : trace, 2 : depends */
+    unsigned char tool = 0; /* 0 : memcheck, 1 : trace, 2 : depends 3 : view */
     unsigned char verbose = 0;
     unsigned char quiet = 0;
+    unsigned char depends_list = 0;
     unsigned char depends_gui = 0;
+    unsigned char view_gui = 0;
 
     if (argc < 2)
     {
@@ -103,20 +119,44 @@ int main(int argc, char *argv[])
             if (strcmp(argv[i], "--tool=memcheck") == 0)
             {
                 tool = 0;
+                options = exm_list_append(options, strdup(argv[i]));
             }
             else if (strcmp(argv[i], "--tool=trace") == 0)
             {
                 tool = 1;
+                options = exm_list_append(options, strdup(argv[i]));
             }
             else if (strcmp(argv[i], "--tool=depends") == 0)
             {
                 tool = 2;
+                options = exm_list_append(options, strdup(argv[i]));
                 if ((i + 1) < argc)
                 {
                     if (strcmp(argv[i + 1], "--gui") == 0)
                     {
                         depends_gui = 1;
                         i++;
+                        options = exm_list_append(options, strdup(argv[i]));
+                    }
+                    else if (strcmp(argv[i + 1], "--list") == 0)
+                    {
+                        depends_list = 1;
+                        i++;
+                        options = exm_list_append(options, strdup(argv[i]));
+                    }
+                }
+            }
+            else if (strcmp(argv[i], "--tool=view") == 0)
+            {
+                tool = 3;
+                options = exm_list_append(options, strdup(argv[i]));
+                if ((i + 1) < argc)
+                {
+                    if (strcmp(argv[i + 1], "--gui") == 0)
+                    {
+                        view_gui = 1;
+                        i++;
+                        options = exm_list_append(options, strdup(argv[i]));
                     }
                 }
             }
@@ -186,25 +226,38 @@ int main(int argc, char *argv[])
     if (quiet)
         exm_log_level_set(EXM_LOG_LEVEL_ERR);
 
-#ifdef _WIN32
-    iter = module;
-    while (*iter)
+    if (!exm_init())
     {
-        if (*iter == '/') *iter = '\\';
-        iter++;
+        EXM_LOG_ERR("can not initialise Examine. Exiting...");
+        if (args)
+            free(args);
+        free(module);
+        return -1;
     }
-#endif
+
+    exm_file_set(module);
+
+    EXM_LOG_INFO("Examine, a memory leak detector, function and I/O tracer, and PE file viewer");
+    EXM_LOG_INFO("Copyright (c) 2012-2015, and GNU LGPL3'd, by Vincent Torri");
+    EXM_LOG_INFO("Using %s; rerun with -h for help and copyright notice", PACKAGE_STRING);
+    EXM_LOG_INFO("");
 
     if (tool == 0)
-        examine_memcheck_run(module, args);
+        examine_memcheck_run(options, module, args);
     else if (tool == 1)
-        examine_trace_run(module, args);
-    else
+        examine_trace_run(options, module, args);
+    else if (tool == 2)
     {
         if (args)
             free(args);
-        examine_depends_run(module, depends_gui);
+        exm_depends_run(options, module, depends_list, depends_gui);
     }
+    else
+        exm_view_run(options, module, view_gui);
+
+    exm_list_free(options, free);
+
+    exm_shutdown();
 
     return 0;
 }

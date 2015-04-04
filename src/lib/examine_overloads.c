@@ -1,20 +1,22 @@
-/* Examine - a tool for memory leak detection on Windows
+/*
+ * Examine - a set of tools for memory leak detection on Windows and
+ * PE file reader
  *
- * Copyright (C) 2012-2013 Vincent Torri.
+ * Copyright (C) 2012-2015 Vincent Torri.
  * All rights reserved.
  *
- * This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
+ * This program is free software: you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public License
+ * as published by the Free Software Foundation, either version 3 of
+ * the License, or (at your option) any later version.
  *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details.
  *
- *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -31,8 +33,9 @@
 #undef WIN32_LEAN_AND_MEAN
 
 #include "examine_list.h"
-#include "examine_private.h"
 #include "examine_stacktrace.h"
+#include "examine_overloads.h"
+#include "examine_private.h"
 
 
 /*============================================================================*
@@ -45,8 +48,16 @@ typedef enum
     EXM_OVERLOAD_FCT_HEAPALLOC,
     EXM_OVERLOAD_FCT_HEAPFREE,
     EXM_OVERLOAD_FCT_MALLOC,
-    EXM_OVERLOAD_FCT_FREE
+    EXM_OVERLOAD_FCT_FREE,
+    EXM_OVERLOAD_FCT_COUNT
 } Exm_Overload_Fct;
+
+struct _Exm_Overload
+{
+    const char *func_name_old;
+    FARPROC func_proc_old;
+    FARPROC func_proc_new;
+};
 
 struct _Exm_Overload_Data_Alloc
 {
@@ -72,15 +83,24 @@ typedef struct
     Exm_List *free;
 } Exm_Overload_Data;
 
-typedef LPVOID (WINAPI *exm_heap_alloc_t)(HANDLE hHeap, DWORD dwFlags, SIZE_T dwBytes);
-typedef BOOL   (WINAPI *exm_heap_free_t) (HANDLE hHeap, DWORD dwFlags, LPVOID lpMem);
+typedef LPVOID (WINAPI *exm_heap_alloc_t)(HANDLE hHeap,
+                                          DWORD dwFlags,
+                                          SIZE_T dwBytes);
+
+typedef BOOL   (WINAPI *exm_heap_free_t) (HANDLE hHeap,
+                                          DWORD dwFlags,
+                                          LPVOID lpMem);
+
 typedef void  *(*exm_malloc_t)           (size_t size);
+
 typedef void   (*exm_free_t)             (void *memblock);
 
 
 static Exm_Overload_Data _exm_overload_data = { NULL, NULL };
 
 static Exm_Sw *_exm_overload_stack = NULL;
+
+static Exm_Overload *_exm_overloads_instance = NULL;
 
 static Exm_Overload_Data_Alloc *
 _exm_overload_data_alloc_new(Exm_Overload_Fct fct, size_t size, void *data, Exm_List *stack)
@@ -105,7 +125,7 @@ _exm_overload_data_alloc_new(Exm_Overload_Fct fct, size_t size, void *data, Exm_
 }
 
 static void
-_exm_overload_data_alloc_free(void *ptr)
+_exm_overload_data_alloc_del(void *ptr)
 {
     Exm_Overload_Data_Alloc *da = ptr;
 
@@ -134,7 +154,7 @@ _exm_overload_data_free_new(Exm_Overload_Fct fct, size_t size, Exm_List *stack)
 }
 
 static void
-_exm_overload_data_free_free(void *ptr)
+_exm_overload_data_free_del(void *ptr)
 {
     Exm_Overload_Data_Free *df = ptr;
 
@@ -154,7 +174,7 @@ _exm_HeapAlloc(HANDLE hHeap, DWORD dwFlags, SIZE_T dwBytes)
     LPVOID data;
     Exm_List *stack;
 
-    ha = (exm_heap_alloc_t)exm_hook_instance_overloads_get()[0].func_proc_old;
+    ha = (exm_heap_alloc_t)_exm_overloads_instance[EXM_OVERLOAD_FCT_HEAPALLOC].func_proc_old;
     data = ha(hHeap, dwFlags, dwBytes);
 
     printf("HeapAlloc !!! %p\n", data);
@@ -207,7 +227,7 @@ _exm_HeapFree(HANDLE hHeap, DWORD dwFlags, LPVOID lpMem)
         _exm_overload_data.free = exm_list_append(_exm_overload_data.free, df);
     }
 
-    hf = (exm_heap_free_t)exm_hook_instance_overloads_get()[1].func_proc_old;
+    hf = (exm_heap_free_t)_exm_overloads_instance[EXM_OVERLOAD_FCT_HEAPFREE].func_proc_old;
     res = hf(hHeap, dwFlags, lpMem);
 
     return res;
@@ -221,7 +241,7 @@ _exm_malloc(size_t size)
     void *data;
     Exm_List *stack;
 
-    ma = (exm_malloc_t)exm_hook_instance_overloads_get()[2].func_proc_old;
+    ma = (exm_malloc_t)_exm_overloads_instance[EXM_OVERLOAD_FCT_MALLOC].func_proc_old;
     data = ma(size);
 
     printf("malloc !!! %p\n", data);
@@ -273,8 +293,16 @@ _exm_free(void *memblock)
         _exm_overload_data.free = exm_list_append(_exm_overload_data.free, df);
     }
 
-    f = (exm_free_t)exm_hook_instance_overloads_get()[3].func_proc_old;
+    f = (exm_free_t)_exm_overloads_instance[EXM_OVERLOAD_FCT_FREE].func_proc_old;
     f(memblock);
+}
+
+static void
+_exm_overload_set(unsigned int i, const char *name, FARPROC proc_new)
+{
+    _exm_overloads_instance[i].func_name_old = name;
+    _exm_overloads_instance[i].func_proc_old = NULL;
+    _exm_overloads_instance[i].func_proc_new = proc_new;
 }
 
 
@@ -283,36 +311,25 @@ _exm_free(void *memblock)
  *============================================================================*/
 
 
-Exm_Overload exm_overloads_instance[EXM_OVERLOAD_COUNT_CRT] =
-{
-    {
-        "HeapAlloc",
-        NULL,
-        (PROC)_exm_HeapAlloc
-    },
-    {
-        "HeapFree",
-        NULL,
-        (PROC)_exm_HeapFree
-    },
-    {
-        "malloc",
-        NULL,
-        (PROC)_exm_malloc
-    },
-    {
-        "free",
-        NULL,
-        (PROC)_exm_free
-    }
-};
-
 int
 exm_overload_init(void)
 {
+    _exm_overloads_instance = (Exm_Overload *)calloc(EXM_OVERLOAD_FCT_COUNT,
+                                                     sizeof(Exm_Overload));
+    if (!_exm_overloads_instance)
+        return 0;
+
+    _exm_overload_set(EXM_OVERLOAD_FCT_HEAPALLOC, "HeapAlloc", (FARPROC)_exm_HeapAlloc);
+    _exm_overload_set(EXM_OVERLOAD_FCT_HEAPFREE, "HeapFree", (FARPROC)_exm_HeapFree);
+    _exm_overload_set(EXM_OVERLOAD_FCT_MALLOC, "malloc", (FARPROC)_exm_malloc);
+    _exm_overload_set(EXM_OVERLOAD_FCT_FREE, "free", (FARPROC)_exm_free);
+
     _exm_overload_stack = exm_sw_new();
     if (!_exm_overload_stack)
+    {
+        free(_exm_overloads_instance);
         return 0;
+    }
 
     return 1;
 }
@@ -320,8 +337,34 @@ exm_overload_init(void)
 void
 exm_overload_shutdown(void)
 {
-    if (_exm_overload_stack)
-        exm_sw_free(_exm_overload_stack);
+    exm_list_free(_exm_overload_data.free, _exm_overload_data_free_del);
+    exm_list_free(_exm_overload_data.alloc, _exm_overload_data_alloc_del);
+    exm_sw_del(_exm_overload_stack);
+    free(_exm_overloads_instance);
+}
+
+void
+exm_overload_func_proc_old_set(unsigned int i, HMODULE lib_module)
+{
+    _exm_overloads_instance[i].func_proc_old = GetProcAddress(lib_module, _exm_overloads_instance[i].func_name_old);
+}
+
+FARPROC
+exm_overload_func_proc_old_get(unsigned int i)
+{
+    return _exm_overloads_instance[i].func_proc_old;
+}
+
+FARPROC
+exm_overload_func_proc_new_get(unsigned int i)
+{
+    return _exm_overloads_instance[i].func_proc_new;
+}
+
+const char *
+exm_overload_func_name_old_get(unsigned int i)
+{
+    return _exm_overloads_instance[i].func_name_old;
 }
 
 size_t

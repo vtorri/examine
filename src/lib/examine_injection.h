@@ -2,9 +2,6 @@
  * Examine - a set of tools for memory leak detection on Windows and
  * PE file reader
  *
- * Copyright (C) 2014-2015 Vincent Torri.
- * All rights reserved.
- *
  * Copyright (C) 2015 Vincent Torri.
  * All rights reserved.
  *
@@ -22,35 +19,17 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef EXM_MAP_H
-#define EXM_MAP_H
+#ifndef EXM_INJECTION_H
+#define EXM_INJECTION_H
 
-typedef struct _Exm_Map Exm_Map;
+typedef struct _Exm_Injection Exm_Injection;
 
-Exm_Map *exm_map_new(const char *filename);
+Exm_Injection *exm_injection_new(const char *filename);
 
-# ifdef _WIN32
+void exm_injection_del(Exm_Injection *inj);
 
-Exm_Map *exm_map_new_from_base(const void *base, DWORD size);
+int exm_injection_dll_inject(Exm_Injection *inj, const Exm_Process *proc, const char *dll_file_name);
 
-# endif
+void exm_injection_dll_eject(Exm_Injection *inj, const Exm_Process *proc);
 
-void exm_map_del(Exm_Map *map);
-
-const void *exm_map_base_get(const Exm_Map *map);
-
-unsigned long long exm_map_size_get(const Exm_Map *map);
-
-# ifdef _WIN32
-
-typedef struct _Exm_Map_Shared Exm_Map_Shared;
-
-Exm_Map_Shared *exm_map_shared_new(const char *name, const void *data, DWORD size);
-
-void exm_map_shared_del(Exm_Map_Shared *map);
-
-int exm_map_shared_read(const char *name, DWORD size, void *data);
-
-# endif
-
-#endif /* EXM_MAP_H */
+#endif /* EXM_INJECTION_H */

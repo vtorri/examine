@@ -1,20 +1,22 @@
-/* Examine - a tool for memory leak detection on Windows
+/*
+ * Examine - a set of tools for memory leak detection on Windows and
+ * PE file reader
  *
- * Copyright (C) 2014 Vincent Torri.
+ * Copyright (C) 2014-2015 Vincent Torri.
  * All rights reserved.
  *
- * This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
+ * This program is free software: you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public License
+ * as published by the Free Software Foundation, either version 3 of
+ * the License, or (at your option) any later version.
  *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details.
  *
- *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -60,11 +62,23 @@ struct _Exm_Map
 #ifdef _WIN32
     HANDLE file;
     HANDLE map;
+    unsigned long long size;
+    unsigned int from_base : 1;
 #else
     off_t size;
     int fd;
 #endif
 };
+
+#ifdef _WIN32
+
+struct _Exm_Map_Shared
+{
+    HANDLE handle;
+    void *base;
+};
+
+#endif
 
 
 /*============================================================================*
@@ -78,13 +92,14 @@ Exm_Map *
 exm_map_new(const char *filename)
 {
     Exm_Map *map;
+    LARGE_INTEGER size;
 
     map = (Exm_Map *)calloc(1, sizeof(Exm_Map));
     if (!map)
         return NULL;
 
     map->file = CreateFile(filename,
-                           GENERIC_READ,
+                           GENERIC_READ | FILE_READ_ATTRIBUTES,
                            FILE_SHARE_READ,
                            NULL,
                            OPEN_EXISTING,
@@ -96,9 +111,17 @@ exm_map_new(const char *filename)
         goto free_map;
     }
 
+    if (!GetFileSizeEx(map->file, &size))
+    {
+        EXM_LOG_ERR("Can not retrieve size of file %s", filename);
+        goto close_file;
+    }
+
+    map->size = size.QuadPart;
+
     map->map = CreateFileMapping(map->file,
-                                      NULL, PAGE_READONLY,
-                                      0, 0, NULL);
+                                 NULL, PAGE_READONLY,
+                                 0, 0, NULL);
     if (!map->map)
     {
         EXM_LOG_ERR("Can not create file mapping for file %s", filename);
@@ -124,13 +147,121 @@ exm_map_new(const char *filename)
     return NULL;
 }
 
+Exm_Map *
+exm_map_new_from_base(const void *base, DWORD size)
+{
+    Exm_Map *map;
+
+    if (!base ||(size <= 0))
+    {
+        EXM_LOG_ERR("Base address of the module is invalid");
+        return NULL;
+    }
+
+    map = (Exm_Map *)calloc(1, sizeof(Exm_Map));
+    if (!map)
+        return NULL;
+
+    map->base = (void *)base;
+    map->size = size;
+    map->from_base = 1;
+
+    return map;
+}
+
 void
 exm_map_del(Exm_Map *map)
 {
-    UnmapViewOfFile(map->base);
-    CloseHandle(map->map);
-    CloseHandle(map->file);
+    if (!map->from_base)
+    {
+        UnmapViewOfFile(map->base);
+        CloseHandle(map->map);
+        CloseHandle(map->file);
+    }
     free(map);
+}
+
+Exm_Map_Shared *
+exm_map_shared_new(const char *name, const void *data, DWORD size)
+{
+    Exm_Map_Shared *map;
+
+    if (!name || (size <= 0))
+    {
+        EXM_LOG_ERR("Base address of the module is invalid");
+        return NULL;
+    }
+
+    map = (Exm_Map_Shared *)calloc(1, sizeof(Exm_Map_Shared));
+    if (!map)
+    {
+        EXM_LOG_ERR("Can not allocate memory for shared map");
+        return NULL;
+    }
+
+    map->handle = CreateFileMapping(INVALID_HANDLE_VALUE,
+                                    NULL, PAGE_READWRITE, 0, size, name);
+    if (!map->handle)
+    {
+        EXM_LOG_ERR("Can not allocate memory for shared map");
+        goto free_map;
+    }
+
+    map->base = MapViewOfFile(map->handle, FILE_MAP_WRITE, 0, 0, size);
+    if (!map->base)
+    {
+        EXM_LOG_ERR("Can not map memory for shared map");
+        goto close_file_mapping;
+    }
+
+    CopyMemory(map->base, data, size);
+
+    return map;
+
+  close_file_mapping:
+    CloseHandle(map->handle);
+  free_map:
+    free(map);
+
+    return NULL;
+}
+
+void
+exm_map_shared_del(Exm_Map_Shared *map)
+{
+    if (!map)
+        return;
+
+    UnmapViewOfFile(map->base);
+    CloseHandle(map->handle);
+    free(map);
+}
+
+int
+exm_map_shared_read(const char *name, DWORD size, void *data)
+{
+    HANDLE handle;
+    void *base;
+
+    handle = CreateFileMapping(INVALID_HANDLE_VALUE,
+                               NULL, PAGE_READWRITE, 0, size,
+                               name);
+    if (!handle)
+        return 0;
+
+    base = MapViewOfFile(handle, FILE_MAP_WRITE, 0, 0, size);
+    if (!base)
+    {
+        CloseHandle(handle);
+        return 0;
+    }
+
+    CopyMemory(data, base, size);
+
+    UnmapViewOfFile(base);
+    CloseHandle(handle);
+
+    return 1;
 }
 
 #else
@@ -188,6 +319,12 @@ const void *
 exm_map_base_get(const Exm_Map *map)
 {
     return map->base;
+}
+
+unsigned long long
+exm_map_size_get(const Exm_Map *map)
+{
+    return map->size;
 }
 
 

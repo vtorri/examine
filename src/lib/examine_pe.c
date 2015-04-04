@@ -1,27 +1,27 @@
-/* Examine - a tool for memory leak detection on Windows
+/*
+ * Examine - a set of tools for memory leak detection on Windows and
+ * PE file reader
  *
- * Copyright (C) 2012-2014 Vincent Torri.
+ * Copyright (C) 2012-2015 Vincent Torri.
  * All rights reserved.
  *
- * This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
+ * This program is free software: you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public License
+ * as published by the Free Software Foundation, either version 3 of
+ * the License, or (at your option) any later version.
  *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details.
  *
- *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #ifdef HAVE_CONFIG_H
 # include <config.h>
 #endif
-
-#include <stdio.h>
 
 #ifdef _WIN32
 # ifndef WIN32_LEAN_AND_MEAN
@@ -29,14 +29,10 @@
 # endif
 # include <windows.h>
 # undef WIN32_LEAN_AND_MEAN
-#else
-# include <stdlib.h>
-# include <string.h>
-# include <strings.h>
-# include <inttypes.h>
 #endif
 
 #include "examine_list.h"
+#include "examine_file.h"
 #include "examine_log.h"
 #include "examine_map.h"
 #include "examine_pe.h"
@@ -68,129 +64,7 @@ struct _Exm_Pe
     char *filename;
     Exm_Map *map;
     IMAGE_NT_HEADERS *nt_header; /**< The NT header address */
-    IMAGE_IMPORT_DESCRIPTOR *import_desc; /**< The import descriptor address */
 };
-
-static const char *_exm_pe_dll_supp[] =
-{
-    "API-MS-WIN-CORE-CONSOLE-L1-1-0.DLL",
-    "API-MS-WIN-CORE-DATETIME-L1-1-0.DLL",
-    "API-MS-WIN-CORE-DEBUG-L1-1-0.DLL",
-    "API-MS-WIN-CORE-ERRORHANDLING-L1-1-0.DLL",
-    "API-MS-WIN-CORE-FIBERS-L1-1-0.DLL",
-    "API-MS-WIN-CORE-FILE-L1-1-0.DLL",
-    "API-MS-WIN-CORE-HANDLE-L1-1-0.DLL",
-    "API-MS-WIN-CORE-HEAP-L1-1-0.DLL",
-    "API-MS-WIN-CORE-IO-L1-1-0.DLL",
-    "API-MS-WIN-CORE-LIBRARYLOADER-L1-1-0.DLL",
-    "API-MS-WIN-CORE-LOCALIZATION-L1-1-0.DLL",
-    "API-MS-WIN-CORE-MEMORY-L1-1-0.DLL",
-    "API-MS-WIN-CORE-MISC-L1-1-0.DLL",
-    "API-MS-WIN-CORE-NAMEDPIPE-L1-1-0.DLL",
-    "API-MS-WIN-CORE-PROCESSENVIRONMENT-L1-1-0.DLL",
-    "API-MS-WIN-CORE-PROCESSTHREADS-L1-1-0.DLL",
-    "API-MS-WIN-CORE-PROFILE-L1-1-0.DLL",
-    "API-MS-WIN-CORE-RTLSUPPORT-L1-1-0.DLL",
-    "API-MS-WIN-CORE-STRING-L1-1-0.DLL",
-    "API-MS-WIN-CORE-SYNCH-L1-1-0.DLL",
-    "API-MS-WIN-CORE-SYSINFO-L1-1-0.DLL",
-    "API-MS-WIN-CORE-THREADPOOL-L1-1-0.DLL",
-    "API-MS-WIN-CORE-UTIL-L1-1-0.DLL",
-    "API-MS-WIN-SECURITY-BASE-L1-1-0.DLL",
-    "kernel32.dll",
-    "kernelbase.dll",
-    "msvcrt.dll",
-    "msvcr80.dll",
-    "msvcr80d.dll",
-    "msvcr90.dll",
-    "msvcr90d.dll",
-    "msvcr100.dll",
-    "msvcr100d.dll",
-    "msvcr110.dll",
-    "msvcr110d.dll",
-    "ntdll.dll",
-    "user32.dll",
-    NULL
-}; /**< array of system DLL */
-
-/**
- * @brief Check if the given path is absolute or not.
- *
- * @param[in] filename The file name.
- * @return 1 if the  path is absolute, 0 otherwise.
- *
- * This function checks if @filename has an absolute path or relative
- * path by looking at thefirst three characters. It returnd 1 if the
- * path is absolute, 0 otherwise.
- */
-static int
-_exm_pe_path_is_absolute(const char *filename)
-{
-    if (!filename)
-        return 0;
-
-    if (strlen(filename) < 3)
-        return 0;
-
-    if ((((*filename >= 'a') && (*filename <= 'z')) ||
-         ((*filename >= 'A') && (*filename <= 'Z'))) &&
-        (filename[1] == ':') &&
-        ((filename[2] == '/') || (filename[2] == '\\')))
-        return 1;
-
-    return 0;
-}
-
-/**
- * @brief Compare the two given strings if they are not a system DLL.
- *
- * @param[in] d1 The first string.
- * @param[in] d2 The second string.
- * @return 0 if the second string is a system DLL, otherwise the
- * result of _stricmp.
- *
- * This function compare the strings @p d1 and @p d2. If @d2 is a
- * system DLL as listed in #_exm_pe_dll_supp, this function returns 0,
- * otherwise it returns the result of _stricmp().
- */
-static int
-_exm_pe_module_name_cmp_without_crt(const void *d1, const void *d2)
-{
-    char **iter;
-    int is_dll_sup = 0;
-
-    iter = (char **)_exm_pe_dll_supp;
-    while (*iter)
-    {
-        if (_stricmp((const char *)d2, *iter) == 0)
-        {
-            is_dll_sup = 1;
-            break;
-        }
-        iter++;
-    }
-
-    if (is_dll_sup == 1)
-        return 0;
-
-    return _stricmp((const char *)d1, (const char *)d2);
-}
-
-/**
- * @brief Compare the two given strings.
- *
- * @param[in] d1 The first string.
- * @param[in] d2 The second string.
- * @return The result of _stricmp.
- *
- * This function compare the strings @p d1 and @p d2. It returns the result
- * of _stricmp().
- */
-static int
-_exm_pe_module_name_cmp_with_crt(const void *d1, const void *d2)
-{
-    return _stricmp((const char *)d1, (const char *)d2);
-}
 
 /**
  * @brief Return the absolute address from a relative virtual address.
@@ -204,7 +78,7 @@ _exm_pe_module_name_cmp_with_crt(const void *d1, const void *d2)
  * RVA. On error, this function returns @c NULL.
  */
 static void *
-_exm_pe_rva_to_ptr_get(const Exm_Pe *pe, DWORD rva)
+_exm_pe_rva_to_ptr_get2(const Exm_Pe *pe, DWORD rva)
 {
     IMAGE_SECTION_HEADER *sh;
     IMAGE_SECTION_HEADER *sh_iter;
@@ -245,80 +119,130 @@ _exm_pe_rva_to_ptr_get(const Exm_Pe *pe, DWORD rva)
 /**
  * @brief Return a new #Exm_Pe object.
  *
- * @param[in] The filename of the binary file to open.
+ * @param[in] filename The filename of the binary file to open.
  * @return A new #Exm_Pe object, or @c NULL on error.
  *
  * This function opens and mmaps the file named @p filename, get the
- * starting address of the NT header from the DOS header and teh
- * import descriptor from the import directory. It returns @c NULL on
- * error, or a newly created #Exm_Pe object otherwise. Once not
- * needed anymore, use exm_pe_free() to free resources.
+ * starting address of the NT header from the DOS header. It returns
+ * @c NULL on error, or a newly created #Exm_Pe object otherwise. Once
+ * not needed anymore, use exm_pe_free() to free resources.
  */
 Exm_Pe *
 exm_pe_new(const char *filename)
 {
     IMAGE_DOS_HEADER *dos_header;
     Exm_Pe *pe;
-    char *full_filename;
-    DWORD import_dir;
 
     if (!filename)
         return NULL;
 
-    if (!_exm_pe_path_is_absolute(filename))
-        full_filename = exm_pe_dll_path_find(filename);
-    else
-        full_filename = strdup(filename);
-
-    if (!full_filename)
-        return NULL;
-
     pe = (Exm_Pe *)malloc(sizeof(Exm_Pe));
     if (!pe)
-        goto free_filename;
+        return NULL;
 
-    pe->filename = full_filename;
-
-    pe->map = exm_map_new(full_filename);
-    if (!pe->map)
+    pe->filename = exm_file_find(filename);
+    if (!pe->filename)
         goto free_pe;
+
+    pe->map = exm_map_new(pe->filename);
+    if (!pe->map)
+        goto free_pe_filename;
+
+    if (exm_map_size_get(pe->map) < (sizeof(IMAGE_DOS_HEADER) + sizeof(IMAGE_NT_HEADERS)))
+    {
+        EXM_LOG_ERR("file %s is not sufficiently large to be a PE file", pe->filename);
+        goto del_pe_map;
+    }
 
     dos_header = (IMAGE_DOS_HEADER *)exm_map_base_get(pe->map);
     if (dos_header->e_magic != IMAGE_DOS_SIGNATURE)
     {
         EXM_LOG_ERR("not a valid DOS header");
-        goto del_map;
+        goto del_pe_map;
     }
 
     pe->nt_header = (IMAGE_NT_HEADERS *)((unsigned char *)dos_header + dos_header->e_lfanew);
     if (pe->nt_header->Signature != IMAGE_NT_SIGNATURE)
     {
         EXM_LOG_ERR("not a valid NT header");
-        goto del_map;
-    }
-
-    import_dir = pe->nt_header->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].VirtualAddress;
-    if (!import_dir)
-    {
-        EXM_LOG_ERR("not a valid import table");
-        goto del_map;
-    }
-
-    pe->import_desc = (IMAGE_IMPORT_DESCRIPTOR *)_exm_pe_rva_to_ptr_get(pe, import_dir);
-    if (!pe->import_desc)
-    {
-        EXM_LOG_ERR("not a valid import table descriptor");
-        goto del_map;
+        goto del_pe_map;
     }
 
     return pe;
 
-  del_map:
+  del_pe_map:
     exm_map_del(pe->map);
+  free_pe_filename:
+    free(pe->filename);
   free_pe:
     free(pe);
-  free_filename:
-    free(full_filename);
+
+    return NULL;
+}
+
+/**
+ * @brief Return a new #Exm_Pe object from a loaded module.
+ *
+ * @param[in] filename The filename of the binary file to open.
+ * @param[in] base The base address of the loaded module.
+ * @param[in] size The size of the loaded module.
+ * @return A new #Exm_Pe object, or @c NULL on error.
+ *
+ * This function creates a newly allocated #Exm_Pe object from @p
+ * filename and the base address @p base and size @p size of a loaded
+ * module. It returns @c NULL on error, or a newly created #Exm_Pe
+ * object otherwise. Once not needed anymore, use exm_pe_free() to
+ * free resources.
+ */
+Exm_Pe *
+exm_pe_new_from_base(const char *filename, const void *base, DWORD size)
+{
+    IMAGE_DOS_HEADER *dos_header;
+    Exm_Pe *pe;
+
+    if (!filename)
+        return NULL;
+
+    pe = (Exm_Pe *)malloc(sizeof(Exm_Pe));
+    if (!pe)
+        return NULL;
+
+    pe->filename = exm_file_find(filename);
+    if (!pe->filename)
+        goto free_pe;
+
+    pe->map = exm_map_new_from_base(base, size);
+    if (!pe->map)
+        goto free_pe_filename;
+
+    if (exm_map_size_get(pe->map) < (sizeof(IMAGE_DOS_HEADER) + sizeof(IMAGE_NT_HEADERS)))
+    {
+        EXM_LOG_ERR("file %s is not sufficiently large to be a PE file", pe->filename);
+        goto del_pe_map;
+    }
+
+    dos_header = (IMAGE_DOS_HEADER *)exm_map_base_get(pe->map);
+    if (dos_header->e_magic != IMAGE_DOS_SIGNATURE)
+    {
+        EXM_LOG_ERR("not a valid DOS header");
+        goto del_pe_map;
+    }
+
+    pe->nt_header = (IMAGE_NT_HEADERS *)((unsigned char *)dos_header + dos_header->e_lfanew);
+    if (pe->nt_header->Signature != IMAGE_NT_SIGNATURE)
+    {
+        EXM_LOG_ERR("not a valid NT header");
+        goto del_pe_map;
+    }
+
+    return pe;
+
+  del_pe_map:
+    exm_map_del(pe->map);
+  free_pe_filename:
+    free(pe->filename);
+  free_pe:
+    free(pe);
 
     return NULL;
 }
@@ -341,300 +265,264 @@ exm_pe_free(Exm_Pe *pe)
     free(pe);
 }
 
+/**
+ * @Brief Return the file name from the given PE file.
+ *
+ * @param[in] The PE file.
+ * @return The file name.
+ *
+ * This function returns the file name of the PE file @p pe.
+ */
 const char *
-exm_pe_filename_get(Exm_Pe *pe)
+exm_pe_filename_get(const Exm_Pe *pe)
 {
-    if (!pe)
-        return NULL;
-
     return pe->filename;
 }
 
+/**
+ * @Brief Check is the given PE file is 64 bits or not.
+ *
+ * @param[in] The PE file.
+ * @return -1 on error, 0 if 32 bits, 1 if 64 bits.
+ *
+ * This function returns -1 on error, 0 if @p pe is a 32 bits file and
+ * 1 if it is a 64 bits file.
+ */
+signed char
+exm_pe_is_64bits(const Exm_Pe *pe)
+{
+    if (pe->nt_header->OptionalHeader.Magic == IMAGE_NT_OPTIONAL_HDR64_MAGIC)
+        return 1;
+    else if (pe->nt_header->OptionalHeader.Magic == IMAGE_NT_OPTIONAL_HDR32_MAGIC)
+        return 0;
+    else
+        return -1;
+}
+
+/**
+ * @Brief Check is the given PE file is a DLL or not.
+ *
+ * @param[in] The PE file.
+ * @return 0 if it is an executable, 1 if it is a DLL.
+ *
+ * This function returns 0 if @p pe is an executable and 1 if it is a DLL.
+ */
 unsigned char
 exm_pe_is_dll(Exm_Pe *pe)
 {
-    if (!pe)
-        return 0;
-
-    if (pe->nt_header->FileHeader.Characteristics & IMAGE_FILE_DLL)
-        return 1;
-
-    return 0;
+    return (pe->nt_header->FileHeader.Characteristics & IMAGE_FILE_DLL) == IMAGE_FILE_DLL;
 }
 
-void *
-exm_pe_entry_point_get(Exm_Pe *pe)
+/**
+ * @Brief Return the address of the DOS header from the given PE file.
+ *
+ * @param[in] The PE file.
+ * @return The DOS header address.
+ *
+ * This function returns the DOS header of the PE file @p pe.
+ */
+const IMAGE_DOS_HEADER *
+exm_pe_dos_header_get(const Exm_Pe *pe)
+{
+    return exm_map_base_get(pe->map);
+}
+
+/**
+ * @Brief Return the address of the NT header from the given PE file.
+ *
+ * @param[in] The PE file.
+ * @return The NT header address.
+ *
+ * This function returns the NT header of the PE file @p pe.
+ */
+const IMAGE_NT_HEADERS *
+exm_pe_nt_header_get(const Exm_Pe *pe)
+
+{
+  return pe->nt_header;
+}
+
+/**
+ * @brief Return the entry point of a PE file.
+ *
+ * @param pe The PE file
+ * @return The entry point.
+ *
+ * This function returns the entry point of the PE file @p pe.
+ */
+const void *
+exm_pe_entry_point_get(const Exm_Pe *pe)
 {
   return (unsigned char *)(uintptr_t)pe->nt_header->OptionalHeader.ImageBase + pe->nt_header->OptionalHeader.AddressOfEntryPoint;
 }
 
 /**
- * @brief Return the crt DLL name used by the given file.
+ * @Brief Return the address of the export directory from the given PE file.
  *
- * @param[in] The file to search the crt DLL name from
- * @return The crt DLL name
+ * @param[in] The PE file.
+ * @return The export directory address.
  *
- * This function returns the crt DLL name used by @p pe. If not found,
- * or on memory error, it returns NULL. When not needed anymore, the
- * returned value must be freed.
+ * This function returns the address of the export directory of the
+ * PE file @p pe. If there is no export directory, @c NULL is returned.
  */
-char *
-exm_pe_msvcrt_get(const Exm_Pe *pe)
+const IMAGE_EXPORT_DIRECTORY *
+exm_pe_export_directory_get(const Exm_Pe *pe, DWORD *count)
 {
-    IMAGE_IMPORT_DESCRIPTOR *iter;
+    DWORD rva;
 
-    iter = pe->import_desc;
-    while (iter->Name != 0)
+    rva = pe->nt_header->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].VirtualAddress;
+    if (rva == 0)
     {
-        char *dll_name;
-
-        dll_name = (char *)_exm_pe_rva_to_ptr_get(pe, iter->Name);
-        if (_stricmp("msvcrt.dll", dll_name) == 0)
-        {
-            EXM_LOG_DBG("msvcrt.dll !!");
-            return _strdup(dll_name);
-        }
-        if (_stricmp("msvcr80.dll", dll_name) == 0)
-        {
-            EXM_LOG_DBG("msvcr80.dll !!");
-            return _strdup(dll_name);
-        }
-        if (_stricmp("msvcr80d.dll", dll_name) == 0)
-        {
-            EXM_LOG_DBG("msvcr80d.dll !!");
-            return _strdup(dll_name);
-        }
-        if (_stricmp("msvcr90.dll", dll_name) == 0)
-        {
-            EXM_LOG_DBG("msvcr90.dll !!");
-            return _strdup(dll_name);
-        }
-        if (_stricmp("msvcr90d.dll", dll_name) == 0)
-        {
-            EXM_LOG_DBG("msvcr90d.dll !!");
-            return _strdup(dll_name);
-        }
-        if (_stricmp("msvcr100.dll", dll_name) == 0)
-        {
-            EXM_LOG_DBG("msvcr100.dll !!");
-            return _strdup(dll_name);
-        }
-        if (_stricmp("msvcr100d.dll", dll_name) == 0)
-        {
-            EXM_LOG_DBG("msvcr100d.dll !!");
-            return _strdup(dll_name);
-        }
-        if (_stricmp("msvcr110.dll", dll_name) == 0)
-        {
-            EXM_LOG_DBG("msvcr110.dll !!");
-            return _strdup(dll_name);
-        }
-        if (_stricmp("msvcr110d.dll", dll_name) == 0)
-        {
-            EXM_LOG_DBG("msvcr110d.dll !!");
-            return _strdup(dll_name);
-        }
-
-        iter++;
+        EXM_LOG_WARN("PE file %s has no export directory", pe->filename);
+        if (count)
+            *count = 0;
+        return NULL;
     }
 
-    return NULL;
+    if (count)
+        *count = pe->nt_header->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].Size;
+
+    return (IMAGE_EXPORT_DIRECTORY *)_exm_pe_rva_to_ptr_get2(pe, rva);
+}
+
+unsigned char
+exm_pe_export_directory_function_ordinal_get(const Exm_Pe *pe, const IMAGE_EXPORT_DIRECTORY *ed, DWORD idx, WORD *ordinal)
+{
+    WORD *ordinals;
+
+    ordinals = (WORD *)_exm_pe_rva_to_ptr_get2(pe, ed->AddressOfNameOrdinals);
+    if (!ordinals)
+    {
+        *ordinal = 0;
+        return 0;
+    }
+
+    *ordinal = ed->Base + ordinals[idx];
+    return 1;
+}
+
+const char *
+exm_pe_export_directory_function_name_get(const Exm_Pe *pe, const IMAGE_EXPORT_DIRECTORY *ed, DWORD idx)
+{
+    DWORD *names;
+
+    names = (DWORD *)_exm_pe_rva_to_ptr_get2(pe, ed->AddressOfNames);
+    if (!names)
+        return NULL;
+
+    return (char *)_exm_pe_rva_to_ptr_get2(pe, names[idx]);
+}
+
+DWORD
+exm_pe_export_directory_function_address_get(const Exm_Pe *pe, const IMAGE_EXPORT_DIRECTORY *ed, DWORD idx)
+{
+    DWORD *addresses;
+
+    addresses = (DWORD *)_exm_pe_rva_to_ptr_get2(pe, ed->AddressOfFunctions);
+    if (!addresses)
+        return 0;
+
+    return (DWORD)(uintptr_t)_exm_pe_rva_to_ptr_get2(pe, addresses[idx]);
 }
 
 /**
- * @brief Append to the given list the name of the modules of the
- * given PE file.
+ * @Brief Return the address of the import descriptor from the given PE file.
  *
- * @param[inout] The given list of modules.
- * @param[inout] The PE file.
- * @param[in] The file name of the binary.
- * @return The updated list of modules.
+ * @param[in] The PE file.
+ * @return The import descriptor address.
  *
- * This function appends the module names to @p l which are used by @p
- * filename. On error, @p l is returned.
+ * This function returns the address of the import descriptor of the
+ * PE file @p pe. If there is no import section, @c NULL is returned.
  */
-Exm_List *
-exm_pe_modules_list_get(Exm_List *l, Exm_Pe *pe, const char *filename)
+const IMAGE_IMPORT_DESCRIPTOR *
+exm_pe_import_descriptor_get(const Exm_Pe *pe, DWORD *count)
 {
-    IMAGE_IMPORT_DESCRIPTOR *iter;
-    Exm_List *tmp;
-    int must_free = 0;
+    DWORD rva;
 
-    if (pe == NULL)
+    rva = pe->nt_header->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].VirtualAddress;
+    if (rva == 0)
     {
-        pe = exm_pe_new(filename);
-        if (!pe)
-            return l;
-        must_free = 1;
+        EXM_LOG_WARN("PE file %s has no import descriptor", pe->filename);
+        if (count)
+            *count = 0;
+        return NULL;
     }
 
-    iter = pe->import_desc;
-    while (iter->Name != 0)
-    {
-        char *dll_name;
+    if (count)
+        *count = pe->nt_header->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].Size;
 
-        dll_name = (char *)_exm_pe_rva_to_ptr_get(pe, iter->Name);
-        dll_name = strdup(dll_name);
-        if (dll_name)
-            l = exm_list_append_if_new(l, dll_name, _exm_pe_module_name_cmp_without_crt);
-        tmp = exm_pe_modules_list_get(l, NULL, dll_name);
-        if (tmp) l = tmp;
-
-        iter++;
-    }
-
-    if (must_free == 1)
-        exm_pe_free(pe);
-
-    return l;
+    return (IMAGE_IMPORT_DESCRIPTOR *)_exm_pe_rva_to_ptr_get2(pe, rva);
 }
 
-Exm_List *
-exm_pe_modules_list_string_get(Exm_List *l, const char *filename, unsigned char with_crt)
+const char *
+exm_pe_import_descriptor_file_name_get(const Exm_Pe *pe, const IMAGE_IMPORT_DESCRIPTOR *id)
 {
-    IMAGE_IMPORT_DESCRIPTOR *iter;
-    Exm_Pe *pe;
-    Exm_List *tmp;
-    Exm_List_Cmp_Cb cmp_cb;
+    return (char *)_exm_pe_rva_to_ptr_get2(pe, id->Name);
+}
 
-    pe = exm_pe_new(filename);
-    if (!pe)
-        return l;
+/**
+ * @Brief Return the address of the debug directory from the given PE file.
+ *
+ * @param[in] The PE file.
+ * @return The debug directory address.
+ *
+ * This function returns the address of the debug directory of the
+ * PE file @p pe. If there is no debug directory, @c NULL is returned.
+ */
+const IMAGE_DEBUG_DIRECTORY *
+exm_pe_debug_directory_get(const Exm_Pe *pe, DWORD *count)
+{
+    DWORD rva;
 
-    if (with_crt)
-        cmp_cb = _exm_pe_module_name_cmp_with_crt;
+    rva = pe->nt_header->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_DEBUG].VirtualAddress;
+    if (rva == 0)
+    {
+        EXM_LOG_WARN("PE file %s has no debug section", pe->filename);
+        if (count)
+            *count = 0;
+        return NULL;
+    }
+
+    if (count)
+        *count = pe->nt_header->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_DEBUG].Size;
+
+    return (IMAGE_DEBUG_DIRECTORY *)_exm_pe_rva_to_ptr_get2(pe, rva);
+}
+
+/**
+ * @Brief Return the address of the delayload directory from the given PE file.
+ *
+ * @param[in] The PE file.
+ * @return The delayload directory address.
+ *
+ * This function returns the address of the delayload directory of the
+ * PE file @p pe. If there is no delayload directory, @c NULL is returned.
+ */
+const IMAGE_DELAYLOAD_DESCRIPTOR *
+exm_pe_delayload_descriptor_get(const Exm_Pe *pe, DWORD *count)
+{
+    DWORD rva;
+
+    rva = pe->nt_header->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_DELAY_IMPORT].VirtualAddress;
+    if (rva == 0)
+    {
+        EXM_LOG_WARN("PE file %s has no delayload section", pe->filename);
+        if (count)
+            *count = 0;
+        return NULL;
+    }
+
+    if (count)
+        *count = pe->nt_header->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_DELAY_IMPORT].Size;
+
+    return (IMAGE_DELAYLOAD_DESCRIPTOR *)_exm_pe_rva_to_ptr_get2(pe, rva);
+}
+
+const char *
+exm_pe_delayload_descriptor_file_name_get(const Exm_Pe *pe, const IMAGE_DELAYLOAD_DESCRIPTOR *dd)
+{
+    if (dd->Attributes.AllAttributes & 1)
+        return (char *)_exm_pe_rva_to_ptr_get2(pe, dd->DllNameRVA);
     else
-        cmp_cb = _exm_pe_module_name_cmp_without_crt;
-
-    iter = pe->import_desc;
-    while (iter->Name != 0)
-    {
-        char *dll_name;
-
-        dll_name = (char *)_exm_pe_rva_to_ptr_get(pe, iter->Name);
-        dll_name = strdup(dll_name);
-        if (dll_name)
-            l = exm_list_append_if_new(l, dll_name, cmp_cb);
-        tmp = exm_pe_modules_list_string_get(l, dll_name, with_crt);
-        if (tmp) l = tmp;
-
-        iter++;
-    }
-
-    exm_pe_free(pe);
-
-    return l;
+        return (char *)((unsigned char *)exm_map_base_get(pe->map) + dd->DllNameRVA);
 }
-
-/**
- * @brief Return the absolute path name of the given file.
- *
- * @param[in] filename The file name.
- * @return The absolute path name, or @c NULL on error.
- *
- * This function returns the absolute path name of @p filename. If the
- * file has already an absolute path, it returns its copy. Otherwise,
- * it seaches the file in the system directory (usually
- * C:\windows\system32), then in the Windows directory (usually
- * C:\windows), then in the current directory, then in the environment
- * variable PATH. If found, a copy of the absolute path name is
- * returned, or @c NULL on error.when not used anymore, the returned
- * value must be freed.
- */
-char *
-exm_pe_dll_path_find(const char *filename)
-{
-#ifdef _WIN32
-    char buf[MAX_PATH];
-    char full_name[MAX_PATH];
-    DWORD res;
-
-    if (_exm_pe_path_is_absolute(filename))
-        return strdup(filename);
-
-    /* current directory */
-    {
-        DWORD length;
-
-        length = GetCurrentDirectory(sizeof(buf), buf);
-        if ((length <= sizeof(buf)) && (length != 0))
-        {
-            snprintf(full_name, sizeof(full_name), "%s\\%s", buf, filename);
-            res = GetFileAttributes(full_name);
-            if (res != (DWORD)-1)
-            {
-                if ((res & FILE_ATTRIBUTE_ARCHIVE) == FILE_ATTRIBUTE_ARCHIVE)
-                    return strdup(full_name);
-            }
-        }
-    }
-
-    /* system diretory */
-    {
-        UINT length;
-
-        length = GetSystemDirectory(buf, sizeof(buf));
-        if (length <= sizeof(buf))
-        {
-            snprintf(full_name, sizeof(full_name), "%s\\%s", buf, filename);
-            res = GetFileAttributes(full_name);
-            if (res != (DWORD)-1)
-            {
-                if ((res & FILE_ATTRIBUTE_ARCHIVE) == FILE_ATTRIBUTE_ARCHIVE)
-                    return strdup(full_name);
-            }
-        }
-    }
-
-    /* windows directory */
-    {
-        UINT length;
-
-        length = GetWindowsDirectory(buf, sizeof(buf));
-        if (length <= sizeof(buf))
-        {
-            snprintf(full_name, sizeof(full_name), "%s\\%s", buf, filename);
-            res = GetFileAttributes(full_name);
-            if (res != (DWORD)-1)
-            {
-                if ((res & FILE_ATTRIBUTE_ARCHIVE) == FILE_ATTRIBUTE_ARCHIVE)
-                    return strdup(full_name);
-            }
-        }
-    }
-
-    /* PATH */
-    {
-        char buf_path[32767];
-
-        res = GetEnvironmentVariable("PATH", buf_path, sizeof(buf_path));
-        if (res != 0)
-        {
-            char *iter;
-            char *s;
-
-            iter = buf_path;
-            while (iter)
-            {
-                s = strchr(iter, ';');
-                if (!s) break;
-                *s = '\0';
-                snprintf(full_name, sizeof(full_name), "%s\\%s", iter, filename);
-                res = GetFileAttributes(full_name);
-                if (res != (DWORD)-1)
-                {
-                    if ((res & FILE_ATTRIBUTE_ARCHIVE) == FILE_ATTRIBUTE_ARCHIVE)
-                        return strdup(full_name);
-                }
-
-                iter = s + 1;
-            }
-        }
-    }
-#endif
-    return strdup(filename);
-}
-
-/**
- * @}
- */

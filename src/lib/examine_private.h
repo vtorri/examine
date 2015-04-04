@@ -1,68 +1,43 @@
-/* Examine - a tool for memory leak detection on Windows
+/*
+ * Examine - a set of tools for memory leak detection on Windows and
+ * PE file reader
  *
- * Copyright (C) 2012-2013 Vincent Torri.
+ * Copyright (C) 2012-2015 Vincent Torri.
  * All rights reserved.
  *
- * This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
+ * This program is free software: you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public License
+ * as published by the Free Software Foundation, either version 3 of
+ * the License, or (at your option) any later version.
  *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details.
  *
- *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #ifndef EXAMINE_PRIVATE_H
 #define EXAMINE_PRIVATE_H
 
-/***** Overload *****/
+/***** UNIX compatibility *****/
 
-/*
- * WARNING
- *
- * Mofidy the value of EXM_OVERLOAD_COUNT and
- * EXM_OVERLOAD_COUNT_CRT when adding other overloaded
- * functions in overloads_instance
- */
-#define EXM_OVERLOAD_COUNT 2
-#define EXM_OVERLOAD_COUNT_CRT 4
+#ifndef _WIN32
 
-typedef struct _Exm_Overload_Data_Alloc Exm_Overload_Data_Alloc;
-typedef struct _Exm_Overload_Data_Free Exm_Overload_Data_Free;
+#define MAX_PATH 260
 
-typedef struct
-{
-    char *func_name_old;
-    PROC  func_proc_old;
-    PROC  func_proc_new;
-} Exm_Overload;
+#define _strdup(s) strdup(s)
+#define _stricmp(s1,s2) strcasecmp(s1,s2)
+#define _fullpath(buf, file, sz) realpath(file, buf)
 
-
-extern Exm_Overload exm_overloads_instance[];
-
-int exm_overload_init(void);
-void exm_overload_shutdown(void);
-
-size_t exm_overload_data_alloc_size_get(const Exm_Overload_Data_Alloc *da);
-int exm_overload_data_alloc_nbr_free_get(const Exm_Overload_Data_Alloc *da);
-Exm_List *exm_overload_data_alloc_stack_get(const Exm_Overload_Data_Alloc *da);
-size_t exm_overload_data_free_size_get(const Exm_Overload_Data_Free *df);
-
-Exm_List *exm_overload_data_alloc_list(void);
-Exm_List *exm_overload_data_free_list(void);
-int exm_overload_data_alloc_list_count(void);
-int exm_overload_data_free_list_count(void);
+#endif
 
 
 /***** Hook *****/
 
-Exm_List *exm_hook_instance_dll_get(void);
-Exm_Overload *exm_hook_instance_overloads_get(void);
+Exm_List *exm_memcheck_dep_names_get(void);
 
 
 #endif /* EXAMINE_PRIVATE_H */

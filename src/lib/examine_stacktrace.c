@@ -1,20 +1,22 @@
-/* Examine - a tool for memory leak detection on Windows
+/*
+ * Examine - a set of tools for memory leak detection on Windows and
+ * PE file reader
  *
- * Copyright (C) 2012-2013 Vincent Torri.
+ * Copyright (C) 2012-2015 Vincent Torri.
  * All rights reserved.
  *
- * This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
+ * This program is free software: you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public License
+ * as published by the Free Software Foundation, either version 3 of
+ * the License, or (at your option) any later version.
  *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details.
  *
- *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -22,7 +24,6 @@
 #endif
 
 #include <stdlib.h>
-#include <stdio.h>
 
 #ifndef WIN32_LEAN_AND_MEAN
 # define WIN32_LEAN_AND_MEAN
@@ -150,21 +151,21 @@ _exm_sw_find_function_name_in_section(bfd      *abfd,
 
     if (!sec)
     {
-        fprintf(stderr, "no section\n");
+        EXM_LOG_ERR("Can not find section");
         return;
     }
 
     data = (Exm_Sw_Find_Data *)obj;
-    if (data->function && (*data->function != '\0'))
+    if (data->function)// && (*data->function != '\0'))
     {
-        /* fprintf(stderr, "function already found : %s\n", data->function); */
+        /* EXM_LOG_ERR("function already found : %s", data->function); */
         /* function already found */
         return;
     }
 
     if (!(bfd_get_section_flags(abfd, sec) & SEC_ALLOC))
     {
-        /* fprintf(stderr, "bad flags\n"); */
+        /* EXM_LOG_ERR("bad flags"); */
         return;
     }
 
@@ -173,7 +174,7 @@ _exm_sw_find_function_name_in_section(bfd      *abfd,
         return;
     if ((vma + bfd_get_section_size(sec)) <= data->counter)
     {
-        /* fprintf(stderr, "wrong size\n"); */
+        /* EXM_LOG_ERR("wrong size"); */
         return;
     }
 
@@ -225,13 +226,9 @@ _exm_sw_find_function_name_in_section(bfd      *abfd,
 Exm_Sw *
 exm_sw_new(void)
 {
-    char             filename[MAX_PATH];
     Exm_Sw          *sw;
     Exm_List        *iter;
     Exm_Sw_Bfd_Data *bfd_data;
-
-    if (!GetModuleFileName(NULL, filename, sizeof(filename)))
-        return NULL;
 
     sw = (Exm_Sw *)calloc(1, sizeof(Exm_Sw));
     if (!sw)
@@ -239,7 +236,7 @@ exm_sw_new(void)
 
     bfd_init();
 
-    iter = exm_hook_instance_dll_get();
+    iter = exm_memcheck_dep_names_get();
     while (iter)
     {
         bfd_data = _exm_sw_bfd_data_new((const char *)iter->data);
@@ -261,7 +258,7 @@ exm_sw_new(void)
 }
 
 void
-exm_sw_free(Exm_Sw *sw)
+exm_sw_del(Exm_Sw *sw)
 {
     if (!sw)
         return;
@@ -273,7 +270,7 @@ exm_sw_free(Exm_Sw *sw)
 Exm_List *
 exm_sw_frames_get(Exm_Sw *sw)
 {
-#define MAX_ENTRIES 50
+#define MAX_ENTRIES 100
     Exm_List        *iter;
     Exm_Sw_Find_Data data;
     void            *frames[MAX_ENTRIES];
@@ -282,7 +279,7 @@ exm_sw_frames_get(Exm_Sw *sw)
 
     if (!sw)
     {
-        printf("Stackwalk NULL\n");
+        EXM_LOG_ERR("Stackwalk is NULL");
         return NULL;
     }
 
@@ -290,7 +287,7 @@ exm_sw_frames_get(Exm_Sw *sw)
     frames_nbr = CaptureStackBackTrace(0, MAX_ENTRIES, frames, NULL);
     if (frames_nbr == 0)
     {
-        fprintf(stderr, "error %ld\n", GetLastError());
+        EXM_LOG_ERR("CaptureStackBackTrace failed with error %ld", GetLastError());
     }
 #else
     {

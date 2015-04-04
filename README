@@ -1,18 +1,54 @@
-Examine, a memory leak detector for Windows
+Examine, a memory leak detector, PE file viewer, PE file dependency viewer for Windows
 
-Dependencies : binutils
+Dependencies : Elementary (optional), win-builds
 
- * build binutils from CVS
- * put libbfd.a, libiberty and libintl.a in a subdir lib of any directory,
-   say : /opt/binutils/lib
+Build for Windows 64 bits:
 
-Note: on Win64, pass --enable-targets=i686-w64-mingw32,x86_64-w64-mingw32 --enable-64-bit-bfd to binutils' configure script
+ * ./autogen.sh --host=x86_64-w64-mingw32 --disable-static --with-libbfd-prefix=/opt/windows_64
 
-Build:
+Build for Windows 32 bits:
 
- * ./autogen.sh --disable-static --with-libbfd-prefix=/opt/binutils
+ * ./autogen.sh --host=i686-w64-mingw32 --disable-static --with-libbfd-prefix=/opt/windows_32
+
+Tools:
+ * memcheck : memory leak detector
+ * depends : PE file dependency viewer (GUI with Elementary)
+ * view : PE file viewer (GUI with Elementary)
 
 Usage:
 
- * examine /path/to/my_tool args
- * examine --tool=depends /path/to/my_tool
+ * help:
+
+examine --help
+
+ * memory checker:
+
+examine /path/to/my_prog args
+
+or
+
+examine --tool=memcheck
+
+ * PE dependencies:
+
+ ** tree dependencies in text mode:
+
+examine --tool=depends /path/to/my_dll
+
+ ** list dependencies in text mode:
+
+examine --tool=depends --list /path/to/my_dll
+
+ ** GUI ala dependency walker:
+
+examine --tool=depends --gui /path/to/my_dll
+
+ * PE viewer:
+
+ ** text mode:
+
+examine --tool=view /path/to/my_dll
+
+ ** GUI:
+
+examine --tool=view --gui /path/to/my_dll

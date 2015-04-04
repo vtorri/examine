@@ -93,7 +93,7 @@ exm_sw_new(void)
 }
 
 void
-exm_sw_free(Exm_Sw *sw)
+exm_sw_del(Exm_Sw *sw)
 {
     if (!sw)
         return;

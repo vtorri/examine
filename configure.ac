@@ -3,7 +3,7 @@
 
 m4_define([v_maj], [0])
 m4_define([v_min], [0])
-m4_define([v_mic], [1])
+m4_define([v_mic], [2])
 
 m4_define([examine_version], [v_maj.v_min.v_mic])
 
@@ -12,7 +12,7 @@ m4_define([lt_rev], v_mic)
 m4_define([lt_age], v_min)
 
 AC_INIT([examine], [examine_version], [enlightenment-devel@lists.sourceforge.net])
-AC_PREREQ([2.52])
+AC_PREREQ([2.60])
 AC_CONFIG_SRCDIR([configure.ac])
 AC_CONFIG_MACRO_DIR([m4])
 
@@ -33,18 +33,25 @@ AC_USE_SYSTEM_EXTENSIONS
 AC_CANONICAL_HOST
 
 have_win32="no"
+have_memcheck="no"
+have_trace="no"
 case "$host_os" in
    cegcc* | mingw32ce*)
       AC_MSG_ERROR([Windows CE is not supported. Exiting...])
       ;;
    mingw*)
       have_win32="yes"
+      have_memcheck="yes"
+      have_trace="yes"
       ;;
    *)
     ;;
 esac
 
-AM_INIT_AUTOMAKE([1.6 dist-bzip2 dist-xz subdir-objects])
+AM_CONDITIONAL([HAVE_WIN32], [test "x${have_win32}" = "xyes"])
+
+
+AM_INIT_AUTOMAKE([1.11 dist-bzip2 dist-xz subdir-objects])
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 
 lt_cv_deplibs_check_method='pass_all'
@@ -57,7 +64,6 @@ AC_SUBST([VMAJ])
 version_info="lt_cur:lt_rev:lt_age"
 AC_SUBST([version_info])
 
-
 ### configure options
 
 AC_ARG_WITH([libbfd-prefix],
@@ -65,19 +71,20 @@ AC_ARG_WITH([libbfd-prefix],
    [_exm_libbfd_prefix="${with_libbfd_prefix}"],
    [_exm_libbfd_prefix="/usr/local"])
 
-
 ### Needed information
 
-
 ### Checks for programs
+
 AC_PROG_CC_C99
 AM_PROG_CC_C_O
 
+PKG_PROG_PKG_CONFIG
+
 ### Checks for libraries
 
+PKG_CHECK_MODULES([EXM_GUI], [elementary], [have_gui="yes"], [have_gui="no"])
 
 ### Checks for header files
-
 
 ### Checks for types
 
@@ -86,20 +93,18 @@ AC_CHECK_SIZEOF([void *])
 
 ### Checks for structures
 
-
 ### Checks for compiler characteristics
+
 EXM_ATTRIBUTE_UNUSED
 
-EXM_CFLAGS="-std=c99 -pedantic -Wall -Wextra -Wshadow -Wdeclaration-after-statement -Wmissing-prototypes -Wstrict-prototypes -Wredundant-decls"
+EXM_CFLAGS="-std=c99 -pedantic -Wall -Wextra -Wshadow -Wdeclaration-after-statement -Wmissing-prototypes -Wstrict-prototypes -Wredundant-decls -Wpointer-arith -Wno-missing-field-initializers"
 if test "x${have_win32}" = "xyes" ; then
    EXM_CFLAGS="${EXM_CFLAGS} -Wno-pedantic-ms-format"
 fi
 
 AC_SUBST([EXM_CFLAGS])
 
-
 ### Checks for linker characteristics
-
 
 ### Checks for library functions
 
@@ -143,7 +148,11 @@ fi
 AC_SUBST([EXM_CPPFLAGS])
 AC_SUBST([EXM_LIBS])
 
-AM_CONDITIONAL([HAVE_WIN32], [test "x${have_win32}" = "xyes"])
+
+### Checks for system services
+
+AC_SYS_LARGEFILE
+
 
 AC_CONFIG_FILES([
 Makefile
@@ -165,6 +174,14 @@ echo
 echo "Configuration Options Summary:"
 echo
 echo "  OS...................: ${host_os}"
+echo
+echo "Tools:"
+echo "  Memcheck.............: ${have_memcheck}"
+echo "  Trace................: ${have_trace}"
+echo "  Depends..............: yes"
+echo "    GUI................: ${have_gui}"
+echo "  View.................: yes"
+echo "    GUI................: ${have_gui}"
 echo
 echo "Compilation............: make"
 echo "  CPPFLAGS.............: $CPPFLAGS"

@@ -1,20 +1,22 @@
-/* Examine - a tool for memory leak detection on Windows
+/*
+ * Examine - a set of tools for memory leak detection on Windows and
+ * PE file reader
  *
- * Copyright (C) 2012-2013 Vincent Torri.
+ * Copyright (C) 2012-2015 Vincent Torri.
  * All rights reserved.
  *
- * This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
+ * This program is free software: you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public License
+ * as published by the Free Software Foundation, either version 3 of
+ * the License, or (at your option) any later version.
  *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details.
  *
- *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -34,154 +36,156 @@
 
 #include "examine_log.h"
 #include "examine_list.h"
+#include "examine_file.h"
+#include "examine_map.h"
 #include "examine_pe.h"
-#include "examine_private.h"
 #include "examine_stacktrace.h"
+#include "examine_overloads.h"
+#include "examine_private.h"
 
 
 typedef struct
 {
-    char        *filename;
-    Exm_List    *dll;
-    Exm_Overload overloads[EXM_OVERLOAD_COUNT_CRT];
-    char        *crt_name;
-} Exm_Hook;
+    Exm_List *crt_names;
+    Exm_List *dep_names;
+} Exm_Memcheck;
 
-static Exm_Hook _exm_hook_instance =
-{
-    NULL,
-    NULL,
-    {
-        {
-            NULL,
-            NULL,
-            NULL
-        },
-        {
-            NULL,
-            NULL,
-            NULL
-        },
-        {
-            NULL,
-            NULL,
-            NULL
-        },
-        {
-            NULL,
-            NULL,
-            NULL
-        }
-    },
-    NULL
-};
+static Exm_Memcheck _exm_memcheck_instance = { NULL, NULL };
 
 Exm_List *
-exm_hook_instance_dll_get(void)
+exm_memcheck_dep_names_get(void)
 {
-    return _exm_hook_instance.dll;
-}
-
-Exm_Overload *
-exm_hook_instance_overloads_get(void)
-{
-    return _exm_hook_instance.overloads;
+    return _exm_memcheck_instance.dep_names;
 }
 
 static int
-_exm_hook_init(void)
+_exm_memcheck_dll_init(void)
 {
-    Exm_Pe *pe;
-    HANDLE handle;
-    void  *base;
-    Exm_List *iter;
-    int    length;
+    int lens[2];
+    int *vals;
+    Exm_List *crt_names;
+    Exm_List *dep_names;
+    char *names;
+    size_t idx;
+    int i;
+    int j;
 
-    handle = OpenFileMapping(PAGE_READWRITE, FALSE, "shared_size");
-    if (!handle)
-        return 0;
-
-    base = MapViewOfFile(handle, FILE_MAP_READ, 0, 0, sizeof(int));
-    if (!base)
+    if (!exm_map_shared_read("exm_memcheck_shared_lens",
+                             sizeof(lens), lens))
     {
-        CloseHandle(handle);
+        EXM_LOG_ERR("Can not retrieve shared lengths data");
         return 0;
     }
 
-    CopyMemory(&length, base, sizeof(int));
-    UnmapViewOfFile(base);
-    CloseHandle(handle);
-
-    handle = OpenFileMapping(PAGE_READWRITE, FALSE, "shared_filename");
-    if (!handle)
-        return 0;
-
-    base = MapViewOfFile(handle, FILE_MAP_READ, 0, 0, length);
-    if (!base)
+    vals = (int *)malloc(lens[0]);
+    if (!vals)
     {
-        CloseHandle(handle);
+        EXM_LOG_ERR("Can not allocate memory");
         return 0;
     }
 
-    _exm_hook_instance.filename = malloc(length * sizeof(char));
-    if (!_exm_hook_instance.filename)
+    names = (char *)malloc(lens[1]);
+    if (!names)
     {
-        UnmapViewOfFile(base);
-        CloseHandle(handle);
+        EXM_LOG_ERR("Can not allocate memory");
+        free(vals);
         return 0;
     }
 
-    CopyMemory(_exm_hook_instance.filename, base, length);
-    UnmapViewOfFile(base);
-    CloseHandle(handle);
-
-    printf(" ** filename : %s\n", _exm_hook_instance.filename);
-
-    pe = exm_pe_new(_exm_hook_instance.filename);
-    if (!pe)
-        return 0;
-
-    _exm_hook_instance.crt_name = exm_pe_msvcrt_get(pe);
-
-    _exm_hook_instance.dll = exm_list_append(_exm_hook_instance.dll,
-                                             strdup(_exm_hook_instance.filename));
-    _exm_hook_instance.dll = exm_pe_modules_list_get(_exm_hook_instance.dll,
-                                                     pe,
-                                                     _exm_hook_instance.filename);
-    exm_pe_free(pe);
-
-    iter = _exm_hook_instance.dll;
-    while (iter)
+    if (!exm_map_shared_read("exm_memcheck_shared_vals",
+                             lens[0], vals))
     {
-        char *full_name;
-
-        full_name = exm_pe_dll_path_find(iter->data);
-        free(iter->data);
-        iter->data = full_name;
-        iter = iter->next;
+        EXM_LOG_ERR("Can not retrieve shared values data");
+        free(names);
+        free(vals);
+        return 0;
     }
+
+    if (!exm_map_shared_read("exm_memcheck_shared_names",
+                             lens[1], names))
+    {
+        EXM_LOG_ERR("Can not retrieve shared names data");
+        free(names);
+        free(vals);
+        return 0;
+    }
+
+    exm_log_level_set(vals[0]);
+
+    idx = 0;
+    i = 3;
+    crt_names = NULL;
+    for (j = 0; j < vals[1]; j++)
+    {
+        char *name;
+
+        name = (char *)malloc(vals[i]);
+        if (!name)
+        {
+            EXM_LOG_ERR("Can not allocate memory for CRT file name");
+            free(names);
+            free(vals);
+            goto free_crt_names;
+        }
+
+        memcpy(name, names + idx, vals[i]);
+        idx += vals[i];
+        i++;
+        crt_names = exm_list_append(crt_names, name);
+    }
+
+    dep_names = NULL;
+    for (j = 0; j < vals[2]; j++)
+    {
+        char *name;
+
+        name = (char *)malloc(vals[i]);
+        if (!name)
+        {
+            EXM_LOG_ERR("Can not allocate memory for CRT file name");
+            free(names);
+            free(vals);
+            goto free_dep_names;
+        }
+
+        memcpy(name, names + idx, vals[i]);
+        idx += vals[i];
+        i++;
+        dep_names = exm_list_append(dep_names, name);
+    }
+
+    free(names);
+    free(vals);
+
+    _exm_memcheck_instance.crt_names =  crt_names;
+    _exm_memcheck_instance.dep_names =  dep_names;
 
     if (!exm_overload_init())
     {
-        /* FIXME: something to free here ? */
-        return 0;
+        EXM_LOG_ERR("Can not initialize overload system");
+        goto free_dep_names;
     }
 
-    memcpy(_exm_hook_instance.overloads, exm_overloads_instance, sizeof(_exm_hook_instance.overloads));
-
     return 1;
+
+  free_dep_names:
+    exm_list_free(dep_names, free);
+  free_crt_names:
+    exm_list_free(crt_names, free);
+
+    return 0;
 }
 
 static void
-_exm_hook_shutdown(void)
+_exm_memcheck_dll_shutdown(void)
 {
     exm_overload_shutdown();
-    if (_exm_hook_instance.filename)
-        free(_exm_hook_instance.filename);
+    exm_list_free(_exm_memcheck_instance.dep_names, free);
+    exm_list_free(_exm_memcheck_instance.crt_names, free);
 }
 
 static void
-_exm_modules_hook_set(HMODULE module, const char *lib_name, PROC old_function_proc, PROC new_function_proc)
+_exm_memcheck_module_hook_set(HMODULE module, const char *lib_name, PROC old_function_proc, PROC new_function_proc)
 {
     PIMAGE_IMPORT_DESCRIPTOR iid;
     PIMAGE_THUNK_DATA        thunk;
@@ -229,9 +233,10 @@ _exm_modules_hook_set(HMODULE module, const char *lib_name, PROC old_function_pr
 }
 
 static void
-_exm_hook_modules_hook(const char *lib_name, int crt)
+_exm_memcheck_modules_hook(const char *lib_name, int crt)
 {
-    HMODULE      lib_module;
+    HMODULE lib_module;
+    Exm_List *iter;
     unsigned int i;
     unsigned int start;
     unsigned int end;
@@ -250,33 +255,68 @@ _exm_hook_modules_hook(const char *lib_name, int crt)
     lib_module = LoadLibrary(lib_name);
 
     for (i = start; i < end; i++)
-        _exm_hook_instance.overloads[i].func_proc_old = GetProcAddress(lib_module, _exm_hook_instance.overloads[i].func_name_old);
+    {
+        exm_overload_func_proc_old_set(i, lib_module);
+        if (!exm_overload_func_proc_old_get(i))
+        {
+            char buf[MAX_PATH];
+
+            GetModuleFileName(lib_module, buf, sizeof(buf));
+            EXM_LOG_ERR("Can not take address of %s in module %s %p [%s]",
+                        exm_overload_func_proc_old_get(i),
+                        lib_name,
+                        lib_module,
+                        buf);
+        }
+    }
 
     FreeLibrary(lib_module);
 
+    iter = _exm_memcheck_instance.dep_names;
+    while (iter)
     {
-        Exm_List *iter;
-        iter = _exm_hook_instance.dll;
-        while (iter)
-        {
-            HMODULE mod;
+        HMODULE mod;
 
-            mod = GetModuleHandle((char *)iter->data);
-            if (mod)
-            {
-                for (i = start; i < end; i++)
-                    _exm_modules_hook_set(mod, lib_name,
-                                          _exm_hook_instance.overloads[i].func_proc_old,
-                                          _exm_hook_instance.overloads[i].func_proc_new);
-            }
-            iter = iter->next;
+        mod = GetModuleHandle((char *)iter->data);
+        if (mod)
+        {
+            for (i = start; i < end; i++)
+                _exm_memcheck_module_hook_set(mod, lib_name,
+                                              exm_overload_func_proc_old_get(i),
+                                              exm_overload_func_proc_new_get(i));
         }
+        iter = iter->next;
     }
 }
 
 static void
-_exm_hook_modules_unhook(const char *lib_name, int crt)
+_exm_memcheck_dll_hook(void)
 {
+    Exm_List *iter;
+
+    EXM_LOG_DBG("Hooking kernel32.dll");
+    _exm_memcheck_modules_hook("kernel32.dll", 0);
+
+    iter = _exm_memcheck_instance.crt_names;
+    while (iter)
+    {
+        char *crt_basename;
+
+        crt_basename = strrchr(iter->data, '\\');
+        if (crt_basename)
+        {
+            crt_basename++;
+            EXM_LOG_DBG("Hooking %s", crt_basename);
+            _exm_memcheck_modules_hook(crt_basename, 1);
+        }
+        iter = iter->next;
+    }
+}
+
+static void
+_exm_memcheck_modules_unhook(const char *lib_name, int crt)
+{
+    Exm_List *iter;
     unsigned int i;
     unsigned int start;
     unsigned int end;
@@ -292,43 +332,67 @@ _exm_hook_modules_unhook(const char *lib_name, int crt)
         end = EXM_OVERLOAD_COUNT_CRT;
     }
 
+    iter = _exm_memcheck_instance.dep_names;
+    while (iter)
     {
-        Exm_List *iter;
-        iter = _exm_hook_instance.dll;
-        while (iter)
-        {
-            HMODULE mod;
+        HMODULE mod;
 
-            mod = GetModuleHandle((char *)iter->data);
-            if (mod)
-            {
-                for (i = start; i < end; i++)
-                    _exm_modules_hook_set(mod, lib_name,
-                                          _exm_hook_instance.overloads[i].func_proc_new,
-                                          _exm_hook_instance.overloads[i].func_proc_old);
-            }
-            iter = iter->next;
+        mod = GetModuleHandle((char *)iter->data);
+        if (mod)
+        {
+            for (i = start; i < end; i++)
+                _exm_memcheck_module_hook_set(mod, lib_name,
+                                              exm_overload_func_proc_new_get(i),
+                                              exm_overload_func_proc_old_get(i));
         }
+        iter = iter->next;
+    }
+}
+
+static void
+_exm_memcheck_dll_unhook(void)
+{
+    Exm_List *iter;
+
+    EXM_LOG_DBG("Unhooking kernel32.dll");
+    _exm_memcheck_modules_unhook("kernel32.dll", 0);
+
+    iter = _exm_memcheck_instance.crt_names;
+    while (iter)
+    {
+        char *crt_basename;
+
+        crt_basename = strrchr(iter->data, '\\');
+        if (crt_basename)
+        {
+            crt_basename++;
+            EXM_LOG_DBG("Unhooking %s", crt_basename);
+            _exm_memcheck_modules_unhook(crt_basename, 1);
+        }
+        iter = iter->next;
     }
 }
 
 BOOL APIENTRY DllMain(HMODULE hModule EXM_UNUSED, DWORD ulReason, LPVOID lpReserved EXM_UNUSED);
 
-BOOL APIENTRY DllMain(HMODULE hModule EXM_UNUSED, DWORD ulReason, LPVOID lpReserved EXM_UNUSED)
+BOOL APIENTRY DllMain(HMODULE hModule EXM_UNUSED, DWORD ulReason, LPVOID lpReserved)
 {
     switch (ulReason)
     {
      case DLL_PROCESS_ATTACH:
-         EXM_LOG_DBG("process attach");
-         if (!_exm_hook_init())
+         if (!_exm_memcheck_dll_init())
+         {
+             EXM_LOG_ERR("Can not initialize DLL");
              return FALSE;
+         }
+
+         EXM_LOG_DBG("process attach");
+
+         _exm_memcheck_dll_hook();
+
          break;
      case DLL_THREAD_ATTACH:
-         EXM_LOG_DBG("thread attach begin");
-         _exm_hook_modules_hook("kernel32.dll", 0);
-         if (_exm_hook_instance.crt_name)
-             _exm_hook_modules_hook(_exm_hook_instance.crt_name, 1);
-         EXM_LOG_DBG("thread attach end");
+         EXM_LOG_DBG("thread attach");
          break;
      case DLL_THREAD_DETACH:
          EXM_LOG_DBG("thread detach");
@@ -341,7 +405,7 @@ BOOL APIENTRY DllMain(HMODULE hModule EXM_UNUSED, DWORD ulReason, LPVOID lpReser
          size_t bytes_allocated;
          size_t bytes_freed;
 
-         EXM_LOG_DBG("process detach");
+         EXM_LOG_DBG("process detach [%p]", lpReserved);
          nbr_alloc = exm_overload_data_alloc_list_count();
          nbr_free = exm_overload_data_free_list_count();
          bytes_allocated = 0;
@@ -417,10 +481,9 @@ BOOL APIENTRY DllMain(HMODULE hModule EXM_UNUSED, DWORD ulReason, LPVOID lpReser
          EXM_LOG_INFO("   definitely lost: %Iu bytes in %d blocks",
                       bytes_allocated - bytes_freed,
                       nbr_alloc - nbr_free);
-         _exm_hook_modules_unhook("kernel32.dll", 0);
-         if (_exm_hook_instance.crt_name)
-             _exm_hook_modules_unhook(_exm_hook_instance.crt_name, 1);
-         _exm_hook_shutdown();
+
+         _exm_memcheck_dll_unhook();
+         _exm_memcheck_dll_shutdown();
          break;
      }
     }

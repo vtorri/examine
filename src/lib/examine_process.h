@@ -2,9 +2,6 @@
  * Examine - a set of tools for memory leak detection on Windows and
  * PE file reader
  *
- * Copyright (C) 2014-2015 Vincent Torri.
- * All rights reserved.
- *
  * Copyright (C) 2015 Vincent Torri.
  * All rights reserved.
  *
@@ -22,35 +19,33 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef EXM_MAP_H
-#define EXM_MAP_H
+#ifndef EXM_PROCESS_H
+#define EXM_PROCESS_H
 
-typedef struct _Exm_Map Exm_Map;
+typedef struct _Exm_Process Exm_Process;
 
-Exm_Map *exm_map_new(const char *filename);
+Exm_Process *exm_process_new(const char *name);
 
-# ifdef _WIN32
+void exm_process_del(Exm_Process *process);
 
-Exm_Map *exm_map_new_from_base(const void *base, DWORD size);
+HANDLE exm_process_get(const Exm_Process *process);
 
-# endif
+const char *exm_process_filename_get(const Exm_Process *process);
 
-void exm_map_del(Exm_Map *map);
+DWORD exm_process_id_get(const Exm_Process *process);
 
-const void *exm_map_base_get(const Exm_Map *map);
+const Exm_List *exm_process_dep_names_get(const Exm_Process *process);
 
-unsigned long long exm_map_size_get(const Exm_Map *map);
+const Exm_List *exm_process_crt_names_get(const Exm_Process *process);
 
-# ifdef _WIN32
+void exm_process_run(const Exm_Process *process);
 
-typedef struct _Exm_Map_Shared Exm_Map_Shared;
+void exm_process_pause(const Exm_Process *process);
 
-Exm_Map_Shared *exm_map_shared_new(const char *name, const void *data, DWORD size);
+int exm_process_entry_point_patch(Exm_Process *process);
 
-void exm_map_shared_del(Exm_Map_Shared *map);
+int exm_process_entry_point_unpatch(const Exm_Process *process);
 
-int exm_map_shared_read(const char *name, DWORD size, void *data);
+int exm_process_dependencies_set(Exm_Process *process);
 
-# endif
-
-#endif /* EXM_MAP_H */
+#endif /* EXM_PROCESS_H */
