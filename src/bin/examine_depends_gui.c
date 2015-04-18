@@ -29,11 +29,12 @@
 
 #include <Elementary.h>
 
-#include <examine_main.h>
-#include <examine_list.h>
 #include <examine_log.h>
+#include <examine_list.h>
+#include <examine_map.h>
 #include <examine_file.h>
 #include <examine_pe.h>
+#include <examine_main.h>
 
 typedef struct _Exm_List_Modules_Node Exm_List_Modules_Node;
 
@@ -1290,20 +1291,20 @@ _exm_depends_modules_fill(Exm_Depends *exm)
 static void
 _exm_depends_usage(void)
 {
-  printf("Usage:\n");
-  printf("  examine_depends [options] file\n");
-  printf("\n");
-  printf("  user options for Examine depends tools:\n");
-  printf("\n");
-  printf("    -h, --help                 show this message\n");
-  printf("    -V, --version              show version\n");
-  printf("\n");
-  printf("    file must be given with absolute path.");
-  printf("\n");
-  printf("  Examine is Copyright (C) 2012-2015, and GNU LGPL3'd, by Vincent Torri.\n");
-  printf("\n");
-  printf("  Bug reports, feedback, remarks, ... to https://github.com/vtorri/examine.\n");
-  printf("\n");
+    printf("Usage:\n");
+    printf("  examine_depends [options] file\n");
+    printf("\n");
+    printf("  user options for Examine depends tools:\n");
+    printf("\n");
+    printf("    -h, --help                 show this message\n");
+    printf("    -V, --version              show version\n");
+    printf("\n");
+    printf("  file must be given with absolute path.\n");
+    printf("\n");
+    printf("  Examine is Copyright (C) 2012-2015, and GNU LGPL3'd, by Vincent Torri.\n");
+    printf("\n");
+    printf("  Bug reports, feedback, remarks, ... to https://github.com/vtorri/examine.\n");
+    printf("\n");
 }
 
 EAPI_MAIN int
@@ -1312,6 +1313,7 @@ elm_main(int argc, char **argv)
     Exm_Depends *exm;
     Exm_List *iter_list;
     char *module;
+    Exm_Log_Level log_level;
     int i;
     Evas_Object *o;
     Evas_Object *bg;
@@ -1352,6 +1354,16 @@ elm_main(int argc, char **argv)
             break;
         }
     }
+
+    if (!exm_map_shared_read("exm_depends_gui_shared",
+                             sizeof(Exm_Log_Level), &log_level))
+    {
+        EXM_LOG_ERR("Can not retrieve shared lengths data");
+        free(module);
+        return -1;
+    }
+
+    exm_log_level_set(log_level);
 
     if (!exm_init())
     {

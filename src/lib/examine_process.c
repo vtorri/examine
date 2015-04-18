@@ -23,6 +23,8 @@
 # include <config.h>
 #endif
 
+#include <stdio.h>
+
 #ifdef _WIN32
 # ifndef WIN32_LEAN_AND_MEAN
 #  define WIN32_LEAN_AND_MEAN
@@ -36,6 +38,7 @@
 #include <tlhelp32.h>
 
 #include "examine_log.h"
+#include "examine_str.h"
 #include "examine_list.h"
 #include "examine_pe.h"
 #include "examine_process.h"
@@ -125,6 +128,8 @@ _exm_process_dep_cmp(const void *d1, const void *d2)
     return _stricmp(d1, d2);
 }
 
+#if 0
+
 static Exm_Process *
 _exm_process_new_from_module(MODULEENTRY32 *me32)
 {
@@ -182,6 +187,8 @@ _exm_process_new_from_module(MODULEENTRY32 *me32)
     return NULL;
 }
 
+#endif
+
 
 /*============================================================================*
  *                                 Global                                     *
@@ -189,8 +196,9 @@ _exm_process_new_from_module(MODULEENTRY32 *me32)
 
 
 Exm_Process *
-exm_process_new(const char *filename)
+exm_process_new(const char *filename, const char *args)
 {
+    char buf[32768];
     STARTUPINFO si;
     PROCESS_INFORMATION pi;
     Exm_Pe *pe;
@@ -236,9 +244,13 @@ exm_process_new(const char *filename)
     ZeroMemory(&si, sizeof(STARTUPINFO));
     si.cb = sizeof(STARTUPINFO);
 
-    EXM_LOG_DBG("creating child process %s", filename);
+    buf[0] = '\0';
+    exm_str_append_with_quotes(buf, filename);
+    exm_str_append_with_quotes(buf, args);
 
-    if (!CreateProcess(NULL, (char *)filename, NULL, NULL, TRUE,
+    EXM_LOG_DBG("Creating child process %s", buf);
+
+    if (!CreateProcess(NULL, buf, NULL, NULL, TRUE,
                        CREATE_SUSPENDED, NULL, NULL, &si, &pi))
     {
         EXM_LOG_ERR("creation of child process %s failed", filename);
@@ -267,8 +279,7 @@ exm_process_del(Exm_Process *process)
     if (process->thread)
         CloseHandle(process->thread);
     CloseHandle(process->process);
-    if (process->filename)
-        free(process->filename);
+    free(process->filename);
     free(process);
 }
 

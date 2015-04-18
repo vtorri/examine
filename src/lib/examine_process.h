@@ -24,7 +24,7 @@
 
 typedef struct _Exm_Process Exm_Process;
 
-Exm_Process *exm_process_new(const char *name);
+Exm_Process *exm_process_new(const char *filename, const char *args);
 
 void exm_process_del(Exm_Process *process);
 

@@ -36,6 +36,7 @@
 #endif
 
 #include <examine_log.h>
+#include <examine_str.h>
 #include <examine_list.h>
 #include <examine_file.h>
 #include <examine_map.h>
@@ -56,7 +57,6 @@ typedef struct _Exm Exm;
 struct _Exm
 {
     char          *filename;
-    char          *args;
     Exm_Map_Shared *map_lens; /* array of 2 int's for the length of vals and names*/
     Exm_Map_Shared *map_vals; /* values to have in the injected DLL */
     Exm_Map_Shared *map_names; /* file names to have in the injected DLL */
@@ -65,7 +65,7 @@ struct _Exm
 
 
 static Exm *
-_exm_new(const char *filename, const char *args)
+_exm_new(const char *filename)
 {
     Exm *exm;
 
@@ -74,7 +74,6 @@ _exm_new(const char *filename, const char *args)
         return NULL;
 
     exm->filename = (char *)filename;
-    exm->args = (char *)args;
 
     return exm;
 }
@@ -88,7 +87,6 @@ _exm_del(Exm *exm)
         exm_map_shared_del(exm->map_vals);
     if (exm->map_vals)
         exm_map_shared_del(exm->map_lens);
-    free(exm->args);
     free(exm->filename);
     free(exm);
 }
@@ -276,17 +274,15 @@ _exm_map(Exm *exm, Exm_Process *process)
 void
 exm_memcheck_run(Exm_List *options, char *filename, char *args)
 {
-    char buf[4096];
+    char buf[32768];
     Exm *exm;
     Exm_Process *process;
     Exm_Injection *inj;
     Exm_List *option;
 
-    if (args)
-        snprintf(buf, sizeof(buf), "%s %s", filename, args);
-    else
-        snprintf(buf, sizeof(buf), "%s", filename);
-    buf[sizeof(buf) - 1] = '\0';
+    buf[0] = '\0';
+    exm_str_append(buf, filename);
+    exm_str_append(buf, args);
 
     EXM_LOG_INFO("Command : %s", buf);
     EXM_LOG_INFO("");
@@ -298,14 +294,14 @@ exm_memcheck_run(Exm_List *options, char *filename, char *args)
         option = option->next;
     }
 
-    exm = _exm_new(filename, args);
+    exm = _exm_new(filename);
     if (!exm)
         return;
 
-    process = exm_process_new(filename);
+    process = exm_process_new(filename, args);
     if (!process)
     {
-        EXM_LOG_ERR("Creation of process %s failed", filename);
+        EXM_LOG_ERR("Creation of process %s %s failed", filename, args);
         goto del_exm;
     }
 

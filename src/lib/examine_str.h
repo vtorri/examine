@@ -2,7 +2,7 @@
  * Examine - a set of tools for memory leak detection on Windows and
  * PE file reader
  *
- * Copyright (C) 2014-2015 Vincent Torri.
+ * Copyright (C) 2012-2015 Vincent Torri.
  * All rights reserved.
  *
  * This program is free software: you can redistribute it and/or
@@ -19,14 +19,10 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef EXAMINE_BIN_PRIVATE_H
-#define EXAMINE_BIN_PRIVATE_H
+#ifndef EXM_STR_H
+#define EXM_STR_H
 
+void exm_str_append(char *buf, const char *str);
+void exm_str_append_with_quotes(char *buf, const char *str);
 
-void exm_memcheck_run(Exm_List *options, char *filename, char *args);
-void exm_trace_run(Exm_List *options, char *filename, char *args);
-void exm_depends_run(Exm_List *options, char *filename, unsigned char display_list, unsigned char gui, Exm_Log_Level log_level);
-void exm_view_run(Exm_List *options, char *filename, unsigned char gui);
-
-
-#endif /* EXAMINE_BIN_PRIVATE_H */
+#endif /* EXM_STR_H */

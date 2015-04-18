@@ -29,6 +29,7 @@
 
 #include <examine_main.h>
 #include <examine_log.h>
+#include <examine_str.h>
 #include <examine_list.h>
 #include <examine_file.h>
 
@@ -66,8 +67,13 @@ _exm_usage(void)
     printf("  basic user options for all Examine tools, with defaults in [ ]:\n");
     printf("    -h, --help                show this message\n");
     printf("    -V, --version             show version\n");
-    printf("    -v, --verbose             print also debug messages [disabled]\n");
-    printf("    -q, --quiet               print only error messages [disabled]\n");
+    printf("    -l, --log-level=lvl       set log level to lvl, print log with level less or equal than lvl [2]\n");
+    printf("                                0: error\n");
+    printf("                                1: warning\n");
+    printf("                                2: information\n");
+    printf("                                3: debug\n");
+    printf("    -v, --verbose             synonym to --log-level=3\n");
+    printf("    -q, --quiet               synonym to --log-level=0\n");
     printf("\n");
     printf("  user options for Depends:\n");
     printf("    --list                    run in text mode, display the list of dependencies\n");
@@ -90,6 +96,8 @@ int main(int argc, char *argv[])
     Exm_List *options = NULL;
     int i;
     Exm_Tool tool = EXM_TOOL_MEMCHECK;
+    Exm_Log_Level log_level = EXM_LOG_LEVEL_INFO;
+    unsigned char lvl = 0;
     unsigned char verbose = 0;
     unsigned char quiet = 0;
     unsigned char depends_list = 0;
@@ -114,13 +122,69 @@ int main(int argc, char *argv[])
             printf("%s\n", PACKAGE_STRING);
             return 0;
         }
+        else if (strcmp(argv[i], "-l") == 0)
+        {
+            char buf[8];
+
+            buf[0] = '\0';
+            exm_str_append(buf, "-l");
+            if ((i + 1) < argc)
+            {
+                i++;
+                if ((argv[i][0] >= '0') &&
+                    (argv[i][0] <= '3') &&
+                    (argv[i][1] == '\0'))
+                {
+                    lvl = 1;
+                    log_level = argv[i][0] - '0';
+                    exm_str_append(buf, argv[i]);
+                    options = exm_list_append(options, strdup(buf));
+                }
+                else
+                {
+                    EXM_LOG_ERR("-l option must be followed by a number between 0 and 3");
+                    _exm_usage();
+                    return 0;
+                }
+            }
+            else
+            {
+                EXM_LOG_ERR("-l option must be followed by a number");
+                _exm_usage();
+                return 0;
+            }
+        }
+        else if (strncmp(argv[i], "--log-level=", sizeof("--log-level=") - 1) == 0)
+        {
+            char *ll;
+
+            ll = argv[i] +  sizeof("--log-level=") - 1;
+            if ((ll[0] >= '0') &&
+                (ll[0] <= '3') &&
+                (ll[1] == '\0'))
+            {
+                lvl = 1;
+                log_level = ll[0] - '0';
+                options = exm_list_append(options, strdup(argv[i]));
+            }
+            else
+            {
+                EXM_LOG_ERR("--log-level option must be followed by a number");
+                _exm_usage();
+                return 0;
+            }
+        }
         else if ((strcmp(argv[i], "-v") == 0) || (strcmp(argv[i], "--verbose") == 0))
         {
             verbose = 1;
+            log_level = EXM_LOG_LEVEL_DBG;
+            options = exm_list_append(options, strdup(argv[i]));
         }
         else if ((strcmp(argv[i], "-q") == 0) || (strcmp(argv[i], "--quiet") == 0))
         {
             quiet = 1;
+            log_level = EXM_LOG_LEVEL_ERR;
+            options = exm_list_append(options, strdup(argv[i]));
         }
         else if (memcmp(argv[i], "--tool=", sizeof("--tool=") - 1) == 0)
         {
@@ -218,9 +282,11 @@ int main(int argc, char *argv[])
         }
     }
 
-    if (verbose && quiet)
+    if ((verbose && quiet) ||
+        (verbose && lvl) ||
+        (lvl && quiet))
     {
-        EXM_LOG_ERR("can not pass verbose and quiet option at the same time");
+        EXM_LOG_ERR("can not pass log level, verbose or quiet options at the same time");
         _exm_usage();
         if (args)
             free(args);
@@ -228,11 +294,7 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    if (verbose)
-        exm_log_level_set(EXM_LOG_LEVEL_DBG);
-
-    if (quiet)
-        exm_log_level_set(EXM_LOG_LEVEL_ERR);
+    exm_log_level_set(log_level);
 
     if (!exm_init())
     {
@@ -255,6 +317,8 @@ int main(int argc, char *argv[])
         case EXM_TOOL_MEMCHECK:
 #ifdef _WIN32
             exm_memcheck_run(options, module, args);
+            if (args)
+                free(args);
 #else
             EXM_LOG_ERR("memcheck tool not available on UNIX");
 #endif
@@ -265,7 +329,7 @@ int main(int argc, char *argv[])
         case EXM_TOOL_DEPENDS:
             if (args)
                 free(args);
-            exm_depends_run(options, module, depends_list, depends_gui);
+            exm_depends_run(options, module, depends_list, depends_gui, log_level);
             break;
         case EXM_TOOL_VIEW:
             if (args)
