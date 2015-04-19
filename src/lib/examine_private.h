@@ -22,17 +22,6 @@
 #ifndef EXAMINE_PRIVATE_H
 #define EXAMINE_PRIVATE_H
 
-/***** UNIX compatibility *****/
-
-#ifndef _WIN32
-
-#define MAX_PATH 260
-
-#define _stricmp(s1,s2) strcasecmp(s1,s2)
-#define _fullpath(buf, file, sz) realpath(file, buf)
-
-#endif
-
 
 /***** Hook *****/
 
