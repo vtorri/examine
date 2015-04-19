@@ -28,7 +28,6 @@
 
 #define MAX_PATH 260
 
-#define _strdup(s) strdup(s)
 #define _stricmp(s1,s2) strcasecmp(s1,s2)
 #define _fullpath(buf, file, sz) realpath(file, buf)
 
