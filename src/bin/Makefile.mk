@@ -13,14 +13,15 @@ src/bin/examine_trace.c \
 src/bin/examine_view.c \
 src/bin/examine_private.h
 
+# Memcheck tool
+
 if HAVE_WIN32
-src_bin_examine_SOURCES += \
-src/bin/examine_memcheck.c
+include src/bin/memcheck/Makefile.mk
 endif
 
 src_bin_examine_CPPFLAGS = \
 -I$(top_srcdir)/src/lib \
--DPACKAGE_BIN_DIR=\"$(bindir)\" \
+-I$(top_srcdir)/src/bin \
 @EXM_CPPFLAGS@
 
 src_bin_examine_CFLAGS = @EXM_CFLAGS@

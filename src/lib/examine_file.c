@@ -39,7 +39,9 @@
 #include "examine_log.h"
 #include "examine_list.h"
 #include "examine_file.h"
-#include "examine_private.h"
+#ifndef _WIN32
+# include "examine_pe_unix.h"
+#endif
 
 
 /*============================================================================*

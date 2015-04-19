@@ -36,7 +36,7 @@
 #include "examine_list.h"
 #include "examine_log.h"
 #include "examine_stacktrace.h"
-#include "examine_private.h"
+#include "examine_dll.h"
 
 
 /*============================================================================*

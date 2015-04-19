@@ -23,6 +23,7 @@ m4/ltoptions.m4 \
 m4/ltsugar.m4 \
 m4/ltversion.m4
 
+pkgdir = $(bindir)
 lib_LTLIBRARIES =
 pkg_LTLIBRARIES =
 bin_PROGRAMS =

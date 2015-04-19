@@ -39,9 +39,9 @@
 #include "examine_file.h"
 #include "examine_map.h"
 #include "examine_pe.h"
+#include "examine_dll.h"
 #include "examine_stacktrace.h"
 #include "examine_overloads.h"
-#include "examine_private.h"
 
 
 typedef struct
