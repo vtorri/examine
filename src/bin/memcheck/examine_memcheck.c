@@ -226,7 +226,6 @@ _exm_map(Exm *exm, Exm_Process *process)
         dep_names = dep_names->next;
     }
 
-    printf(" **$ lens : %d %d\n", lens[0], lens[1]);
     exm->map_lens = exm_map_shared_new("exm_memcheck_shared_lens",
                                        lens, sizeof(lens));
     if (!exm->map_lens)
