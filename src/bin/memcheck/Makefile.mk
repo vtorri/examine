@@ -11,7 +11,7 @@ pkg_LTLIBRARIES += src/bin/memcheck/examine_dll.la
 src_bin_memcheck_examine_dll_la_SOURCES = \
 src/bin/memcheck/examine_dll.c \
 src/bin/memcheck/examine_overloads.c \
-src/bin/memcheck/examine_stacktrace2.c \
+src/bin/memcheck/examine_stacktrace.c \
 src/bin/memcheck/examine_dll.h \
 src/bin/memcheck/examine_overloads.h \
 src/bin/memcheck/examine_stacktrace.h
