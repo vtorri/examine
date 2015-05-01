@@ -36,7 +36,6 @@
 #include "examine_list.h"
 #include "examine_log.h"
 #include "examine_stacktrace.h"
-#include "examine_dll.h"
 
 
 /*============================================================================*
@@ -45,7 +44,6 @@
 
 
 typedef struct _Exm_Sw_Find_Data Exm_Sw_Find_Data;
-typedef struct _Exm_Sw_Bfd_Data Exm_Sw_Bfd_Data;
 
 struct _Exm_Sw_Find_Data
 {
@@ -59,95 +57,19 @@ struct _Exm_Sw_Data
 {
     char *filename;
     char *function;
-    int   line;
+    unsigned int line;
 };
-
-struct _Exm_Sw_Bfd_Data
-{
-    bfd *fd;
-    asymbol **symbol_table;
-};
-
-struct _Exm_Sw
-{
-    Exm_List *bfds;
-};
-
-static Exm_Sw_Bfd_Data *
-_exm_sw_bfd_data_new(const char *filename)
-{
-    Exm_Sw_Bfd_Data  *data;
-    char            **formats = NULL;
-    unsigned int      dummy = 0;
-
-    if (!filename || !*filename)
-        return NULL;
-
-    data = (Exm_Sw_Bfd_Data *)malloc(sizeof(Exm_Sw_Bfd_Data));
-    if (!data)
-        return NULL;
-
-    data->fd = bfd_openr(filename, NULL);
-    if (!data->fd)
-        goto free_data;
-
-    if (!bfd_check_format(data->fd, bfd_object))
-    {
-        EXM_LOG_ERR("bfd_check_format failed: %s", bfd_errmsg(bfd_get_error()));
-        goto close_fd;
-    }
-
-    if (!bfd_check_format_matches(data->fd, bfd_object, &formats))
-        goto close_fd;
-
-    if (!(bfd_get_file_flags(data->fd) & HAS_SYMS))
-    {
-        free(formats);
-        goto close_fd;
-    }
-
-    free(formats);
-
-    if ((bfd_read_minisymbols(data->fd, FALSE, (void **)&data->symbol_table, &dummy) == 0) &&
-        (bfd_read_minisymbols(data->fd, TRUE, (void **)&data->symbol_table, &dummy) < 0))
-        goto close_fd;
-
-    return data;
-
-  close_fd:
-    if (data->symbol_table)
-        free(data->symbol_table);
-    bfd_close(data->fd);
-  free_data:
-    free(data);
-
-    return NULL;
-}
 
 static void
-_exm_sw_bfd_data_free(void *ptr)
-{
-    Exm_Sw_Bfd_Data *data;
-
-    if (!ptr)
-        return;
-
-    data = (Exm_Sw_Bfd_Data *)ptr;
-    free(data->symbol_table);
-    bfd_close(data->fd);
-    free(data);
-}
-
-static void
-_exm_sw_find_function_name_in_section(bfd      *abfd,
-                                      asection *sec,
-                                      void     *obj)
+_exm_sw_find_function_name_in_section(bfd *abfd, asection *sec, void *obj)
 {
     Exm_Sw_Find_Data *data;
-    bfd_vma           vma;
-    const char       *func = NULL;
-    const char       *file = NULL;
-    unsigned          line = 0;
+    bfd_vma vma;
+    const char *func = NULL;
+    const char *file = NULL;
+    unsigned int line = 0;
+
+    printf(" $$$$ %s\n", bfd_get_filename(abfd));
 
     if (!sec)
     {
@@ -158,7 +80,7 @@ _exm_sw_find_function_name_in_section(bfd      *abfd,
     data = (Exm_Sw_Find_Data *)obj;
     if (data->function)// && (*data->function != '\0'))
     {
-        /* EXM_LOG_ERR("function already found : %s", data->function); */
+        EXM_LOG_ERR("function already found : %s", data->function);
         /* function already found */
         return;
     }
@@ -166,7 +88,7 @@ _exm_sw_find_function_name_in_section(bfd      *abfd,
     if (!(bfd_get_section_flags(abfd, sec) & SEC_ALLOC))
     {
         /* EXM_LOG_ERR("bad flags"); */
-        return;
+        /* return; */
     }
 
     vma = bfd_get_section_vma(abfd, sec);
@@ -174,7 +96,7 @@ _exm_sw_find_function_name_in_section(bfd      *abfd,
         return;
     if ((vma + bfd_get_section_size(sec)) <= data->counter)
     {
-        /* EXM_LOG_ERR("wrong size"); */
+        EXM_LOG_ERR("wrong size");
         return;
     }
 
@@ -194,6 +116,7 @@ _exm_sw_find_function_name_in_section(bfd      *abfd,
         sw_data->filename = (char *)malloc(l * sizeof(char));
         if (!sw_data->filename)
         {
+            printf(" ** 1\n");
             free(sw_data);
             return;
         }
@@ -205,15 +128,22 @@ _exm_sw_find_function_name_in_section(bfd      *abfd,
             sw_data->function = (char *)malloc(l * sizeof(char));
             if (!sw_data->function)
             {
+            printf(" ** 2\n");
                 free(sw_data->filename);
                 free(sw_data);
                 return;
             }
             memcpy(sw_data->function, func, l);
         }
+        EXM_LOG_ERR("boooooooooooooooooooon     2  %s %s %d",
+                    file, func, line);
 
         sw_data->line = line;
         data->list = exm_list_append(data->list, sw_data);
+    }
+    else
+    {
+        EXM_LOG_ERR(" pas de liiiiiiiiiiiiiiigne");
     }
 }
 
@@ -223,65 +153,20 @@ _exm_sw_find_function_name_in_section(bfd      *abfd,
  *============================================================================*/
 
 
-Exm_Sw *
-exm_sw_new(void)
-{
-    Exm_Sw          *sw;
-    Exm_List        *iter;
-    Exm_Sw_Bfd_Data *bfd_data;
-
-    sw = (Exm_Sw *)calloc(1, sizeof(Exm_Sw));
-    if (!sw)
-        return NULL;
-
-    bfd_init();
-
-    iter = exm_memcheck_dep_names_get();
-    while (iter)
-    {
-        bfd_data = _exm_sw_bfd_data_new((const char *)iter->data);
-        if (!bfd_data)
-            goto free_list;
-
-        sw->bfds = exm_list_append(sw->bfds, bfd_data);
-
-        iter = iter->next;
-    }
-
-    return sw;
-
-  free_list:
-    exm_list_free(sw->bfds, _exm_sw_bfd_data_free);
-    free(sw);
-
-    return NULL;
-}
-
 void
-exm_sw_del(Exm_Sw *sw)
+exm_sw_init(void)
 {
-    if (!sw)
-        return;
-
-    exm_list_free(sw->bfds, _exm_sw_bfd_data_free);
-    free(sw);
+    bfd_init();
 }
 
 Exm_List *
-exm_sw_frames_get(Exm_Sw *sw)
+exm_sw_frames_get(void)
 {
 #define MAX_ENTRIES 100
-    Exm_List        *iter;
     Exm_Sw_Find_Data data;
     void            *frames[MAX_ENTRIES];
     unsigned short   frames_nbr;
     unsigned int     i;
-
-    if (!sw)
-    {
-        EXM_LOG_ERR("Stackwalk is NULL");
-        return NULL;
-    }
 
 #if 1
     frames_nbr = CaptureStackBackTrace(0, MAX_ENTRIES, frames, NULL);
@@ -305,27 +190,95 @@ exm_sw_frames_get(Exm_Sw *sw)
 #endif
 
     data.list = NULL;
-    iter = sw->bfds;
-    while (iter)
+    for (i = 0; i < frames_nbr; i++)
     {
-        Exm_Sw_Bfd_Data *bfd_data;
+        TCHAR tpath[PATH_MAX];
+        MEMORY_BASIC_INFORMATION mbi;
+        bfd *fd;
+        asymbol **symbol_table;
+        char **formats = NULL;
+        unsigned int dummy = 0;
 
-        bfd_data = iter->data;
+        /* Get the name and base address of the module */
 
-        for (i = 0; i < frames_nbr; i++)
+        if (!VirtualQuery(frames[i], &mbi, sizeof(mbi)))
         {
-            data.function = NULL;
-            data.symbol_table = bfd_data->symbol_table;
-            /* we substract 1 because (From Kai Tietz) : */
-            /* the back-trace address collected is the return-address of the call. */
-            /* So this location might be pointing already to next line.*/
-            data.counter = (bfd_vma)((char *)frames[i] - 1);
-            bfd_map_over_sections(bfd_data->fd,
-                                  &_exm_sw_find_function_name_in_section,
-                                  &data);
+            EXM_LOG_WARN("VirtualQuery failed on frame #%d (0x%p), skipping",
+                        i, frames[i]);
+            continue;
         }
 
-        iter = iter->next;
+        if (mbi.State != MEM_COMMIT)
+        {
+            EXM_LOG_WARN("Address 0x%p of frame #%d is not available, skipping",
+                        frames[i], i);
+            continue;
+        }
+
+        if (!mbi.AllocationBase)
+        {
+            EXM_LOG_WARN("Address 0x%p of frame #%d is not available, skipping",
+                        frames[i], i);
+            continue;
+        }
+
+        if (!GetModuleFileName(mbi.AllocationBase, (LPTSTR)&tpath, PATH_MAX))
+        {
+            EXM_LOG_WARN("Can not retrieve the file name of the module for frame #%d, skipping",
+                        i);
+            continue;
+        }
+
+        EXM_LOG_DBG("Frame #%d in module %s", i, tpath);
+
+        /* set up bfd data for the module found above */
+
+        fd = bfd_openr(tpath, NULL);
+        if (!fd)
+        {
+            EXM_LOG_WARN("Can not open file descriptor for frame #%d, skipping",
+                        i);
+            continue;
+        }
+
+        if (!bfd_check_format(fd, bfd_object))
+        {
+            EXM_LOG_ERR("bfd_check_format failed: %s",
+                        bfd_errmsg(bfd_get_error()));
+            goto close_fd;
+        }
+
+        if (!bfd_check_format_matches(fd, bfd_object, &formats))
+            goto close_fd;
+
+        if (!(bfd_get_file_flags(fd) & HAS_SYMS))
+        {
+            free(formats);
+            goto close_fd;
+        }
+
+        free(formats);
+
+        if ((bfd_read_minisymbols(fd, FALSE, (void **)&symbol_table, &dummy) == 0) &&
+            (bfd_read_minisymbols(fd, TRUE, (void **)&symbol_table, &dummy) < 0))
+            goto free_symbol_table;
+
+        EXM_LOG_DBG("bfd set up for frame #%d", i);
+
+        data.function = NULL;
+        data.symbol_table = symbol_table;
+        /* we substract 1 because (From Kai Tietz) : */
+        /* the back-trace address collected is the return-address of the call. */
+        /* So this location might be pointing already to next line.*/
+        data.counter = (bfd_vma)((char *)frames[i] - 1);
+        bfd_map_over_sections(fd,
+                              &_exm_sw_find_function_name_in_section,
+                              &data);
+
+      free_symbol_table:
+        free(symbol_table);
+      close_fd:
+        bfd_close(fd);
     }
 
     return data.list;
@@ -349,7 +302,7 @@ exm_sw_data_function_get(const Exm_Sw_Data *data)
     return data->function;
 }
 
-int
+unsigned int
 exm_sw_data_line_get(const Exm_Sw_Data *data)
 {
     if (!data)

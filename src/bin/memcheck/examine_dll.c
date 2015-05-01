@@ -52,12 +52,6 @@ typedef struct
 
 static Exm_Memcheck _exm_memcheck_instance = { NULL, NULL };
 
-Exm_List *
-exm_memcheck_dep_names_get(void)
-{
-    return _exm_memcheck_instance.dep_names;
-}
-
 static int
 _exm_memcheck_dll_init(void)
 {
@@ -450,14 +444,14 @@ BOOL APIENTRY DllMain(HMODULE hModule EXM_UNUSED, DWORD ulReason, LPVOID lpReser
                          frame = (Exm_Sw_Data *)iter_stack->data;
                          if (at)
                          {
-                             EXM_LOG_INFO("   at 0x00000000: %s (%s:%d)",
+                             EXM_LOG_INFO("   at 0x00000000: %s (%s:%u)",
                                           exm_sw_data_function_get(frame),
                                           exm_sw_data_filename_get(frame),
                                           exm_sw_data_line_get(frame));
                              at = 0;
                          }
                          else
-                             EXM_LOG_INFO("   by 0x00000000: %s (%s:%d)",
+                             EXM_LOG_INFO("   by 0x00000000: %s (%s:%u)",
                                           exm_sw_data_function_get(frame),
                                           exm_sw_data_filename_get(frame),
                                           exm_sw_data_line_get(frame));

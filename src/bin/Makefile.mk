@@ -1,8 +1,5 @@
 
-bin_PROGRAMS += \
-src/bin/examine \
-src/bin/examine_depends \
-src/bin/examine_view
+bin_PROGRAMS += src/bin/examine
 
 # examine
 
@@ -29,7 +26,13 @@ src_bin_examine_CFLAGS = @EXM_CFLAGS@
 src_bin_examine_LDADD = \
 src/lib/libexamine.la
 
+if HAVE_GUI
+
 # examine_depends
+
+if HAVE_WIN32
+
+bin_PROGRAMS += src/bin/examine_depends
 
 src_bin_examine_depends_SOURCES = \
 src/bin/examine_depends_gui.c
@@ -46,7 +49,11 @@ src_bin_examine_depends_LDADD = \
 src/lib/libexamine.la \
 @EXM_GUI_LIBS@
 
+endif
+
 # examine_view
+
+bin_PROGRAMS += src/bin/examine_view
 
 src_bin_examine_view_SOURCES = \
 src/bin/examine_view_gui.c
@@ -62,3 +69,5 @@ src_bin_examine_view_CPPFLAGS = \
 src_bin_examine_view_LDADD = \
 src/lib/libexamine.la \
 @EXM_GUI_LIBS@
+
+endif

@@ -84,6 +84,8 @@ PKG_PROG_PKG_CONFIG
 
 PKG_CHECK_MODULES([EXM_GUI], [elementary], [have_gui="yes"], [have_gui="no"])
 
+AM_CONDITIONAL([HAVE_GUI], [test "x${have_gui}" = "xyes"])
+
 ### Checks for header files
 
 ### Checks for types
