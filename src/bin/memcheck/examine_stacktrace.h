@@ -24,16 +24,15 @@
 
 
 typedef struct _Exm_Sw_Data Exm_Sw_Data;
-typedef struct _Exm_Sw      Exm_Sw;
 
-Exm_Sw     *exm_sw_new(void);
-void        exm_sw_del(Exm_Sw *sw);
-Exm_List   *exm_sw_frames_get(Exm_Sw *sw);
+void exm_sw_init(void);
+
+Exm_List *exm_sw_frames_get(void);
 
 const char *exm_sw_data_filename_get(const Exm_Sw_Data *data);
 const char *exm_sw_data_function_get(const Exm_Sw_Data *data);
-int         exm_sw_data_line_get(const Exm_Sw_Data *data);
-void        exm_sw_data_free(void *ptr);
+unsigned int exm_sw_data_line_get(const Exm_Sw_Data *data);
+void exm_sw_data_free(void *ptr);
 
 
 #endif /* EXAMINE_STACKTRACE_H */

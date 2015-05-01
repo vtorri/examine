@@ -25,7 +25,5 @@
 
 /***** Hook *****/
 
-Exm_List *exm_memcheck_dep_names_get(void);
-
 
 #endif /* EXAMINE_PRIVATE_H */
