@@ -26,6 +26,6 @@
 # define EXM_DLL_EXPORT
 #endif
 
-EXM_DLL_EXPORT void examine_test_dll();
+EXM_DLL_EXPORT void examine_test_dll(void);
 
 #endif /* EXAMINE_TEST_DLL_H */

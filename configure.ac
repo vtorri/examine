@@ -99,7 +99,7 @@ AC_CHECK_SIZEOF([void *])
 
 EXM_ATTRIBUTE_UNUSED
 
-EXM_CFLAGS="-std=c99 -pedantic -Wall -Wextra -Wshadow -Wdeclaration-after-statement -Wmissing-prototypes -Wstrict-prototypes -Wredundant-decls -Wpointer-arith -Wno-missing-field-initializers"
+EXM_CFLAGS="-std=c99 -pedantic -Wall -Wextra -Wshadow -Wdeclaration-after-statement -Wmissing-prototypes -Wstrict-prototypes -Wredundant-decls -Wpointer-arith -Wno-missing-field-initializers -fno-omit-frame-pointer"
 if test "x${have_win32}" = "xyes" ; then
    EXM_CFLAGS="${EXM_CFLAGS} -Wno-pedantic-ms-format"
 fi
@@ -187,8 +187,11 @@ echo "    GUI................: ${have_gui}"
 echo
 echo "Compilation............: make"
 echo "  CPPFLAGS.............: $CPPFLAGS"
+echo "  EXM_CPPFLAGS.........: $EXM_CPPFLAGS"
 echo "  CFLAGS...............: $CFLAGS"
+echo "  EXM_CFLAGS...........: $EXM_CFLAGS"
 echo "  LDFLAGS..............: $LDFLAGS"
+echo "  EXM_LIBS.............: $EXM_LIBS"
 echo
 echo "Installation...........: make install"
 echo "  prefix...............: $prefix"

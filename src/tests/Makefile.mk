@@ -9,6 +9,9 @@ src/tests/examine_test_dll.h
 src_tests_libexamine_test_dll_la_CPPFLAGS = \
 -I$(top_srcdir)/src/tests
 
+src_tests_libexamine_test_dll_la_CFLAGS = \
+@EXM_CFLAGS@
+
 src_tests_libexamine_test_dll_la_LDFLAGS = -no-undefined -version-info @version_info@
 
 src_tests_libexamine_test_dll_la_LIBTOOLFLAGS = --tag=disable-static

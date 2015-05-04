@@ -28,7 +28,7 @@
 #include <examine_test_dll.h>
 
 void
-examine_test_dll()
+examine_test_dll(void)
 {
     void *ptr;
     HANDLE h;
