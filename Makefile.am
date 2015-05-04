@@ -37,6 +37,7 @@ EXTRA_DIST += \
 autogen.sh \
 COPYING \
 THANKS \
+TODO \
 m4/exm_attribute.m4 \
 win32/examine.sln \
 win32/examine.vcproj \

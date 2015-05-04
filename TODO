@@ -1,10 +1,53 @@
 TODO:
 
- * Split the code so that the overloaded functions are in a separate
-   file, and generally, clean the code.
+[ ] Always look at 'TODO' and 'FIXME' in code
 
- * Add all the memory functions to overload (win32 and C Run Time, DGI, ...)
+[X] Split the code so that the overloaded functions are in a separate
+    file
 
- * Add checks for other CRT DLL than msvcrt.dll, msvcr90.dll and msvcr90d.dll
+[ ] Stack trace code in the lib
 
- * Add a call stack with dgbhelp API
+[ ] Better name for the overloads : exm_replace_malloc() like valgrind
+
+[ ] Add all the memory functions to overload (win32 and C Run Time, GDI, ...)
+
+   [X] Win32: HeapAlloc
+   [X] Win32: HeapFree
+   [ ] Win32: HeapReAlloc
+   [ ] Win32: HeapCreate
+   [ ] Win32: HeapDestroy
+   [ ] Win32: VirtualAlloc
+   [ ] Win32: VirtualAllocEx
+   [ ] Win32: VirtualAllocExNuma (>= Vista)
+   [ ] Win32: VirtualFree
+   [ ] Win32: VirtualFreeEx
+
+   [X] CRT: malloc
+   [X] CRT: free
+   [ ] CRT: calloc
+   [ ] CRT: realloc
+   [ ] CRT: valloc (deprecated)
+   [ ] CRT: memalign (deprecated)
+   [ ] CRT: posix_memalign
+   [ ] CRT: aligned_alloc >= C11
+   [ ] CRT: strdup
+
+   [ ] GDI: 
+
+[ ] Add checks for other CRT DLL than msvcrt.dll, msvcr90.dll and msvcr90d.dll
+
+[ ] Add a call stack with dgbhelp API for vc++
+
+[ ] "missing debug information in module XXX?" (with the '?' at the end) when
+    there is a mismatch between the module which corresponds to the frame
+    address and the file found by libbfd (gcc) : the file should be in the
+    module
+
+[ ] C++ Support with demangle
+
+[ ] Better Elm GUI
+
+[ ] Support of the suppression files ?
+
+[ ] Invalid read / write ? possible ?
+
