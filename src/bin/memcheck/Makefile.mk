@@ -11,9 +11,7 @@ pkg_LTLIBRARIES += src/bin/memcheck/examine_dll.la
 src_bin_memcheck_examine_dll_la_SOURCES = \
 src/bin/memcheck/examine_dll.c \
 src/bin/memcheck/examine_overloads.c \
-src/bin/memcheck/examine_stacktrace.c \
-src/bin/memcheck/examine_overloads.h \
-src/bin/memcheck/examine_stacktrace.h
+src/bin/memcheck/examine_overloads.h
 
 src_bin_memcheck_examine_dll_la_CPPFLAGS = \
 -I$(top_srcdir)/src/lib \
@@ -29,5 +27,3 @@ src/lib/libexamine.la \
 src_bin_memcheck_examine_dll_la_LDFLAGS = -no-undefined -module -avoid-version
 
 src_bin_memcheck_examine_dll_la_LIBTOOLFLAGS = --tag=disable-static
-
-EXTRA_DIST += src/bin/memcheck/examine_stacktrace_vc.c

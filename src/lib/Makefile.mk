@@ -10,6 +10,7 @@ src/lib/examine_main.c \
 src/lib/examine_map.c \
 src/lib/examine_pe.c \
 src/lib/examine_process.c \
+src/lib/examine_stacktrace.c \
 src/lib/examine_str.c \
 src/lib/examine_file.h \
 src/lib/examine_injection.h \
@@ -19,6 +20,7 @@ src/lib/examine_main.h \
 src/lib/examine_map.h \
 src/lib/examine_pe.h \
 src/lib/examine_process.h \
+src/lib/examine_stacktrace.h \
 src/lib/examine_str.h
 
 if !HAVE_WIN32
@@ -35,3 +37,5 @@ endif
 src_lib_libexamine_la_LDFLAGS = -no-undefined -version-info @version_info@
 
 src_lib_libexamine_la_LIBTOOLFLAGS = --tag=disable-static
+
+EXTRA_DIST += src/bin/memcheck/examine_stacktrace_vc.c
