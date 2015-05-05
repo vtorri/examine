@@ -17,7 +17,6 @@ src/bin/memcheck/examine_stacktrace.h
 
 src_bin_memcheck_examine_dll_la_CPPFLAGS = \
 -I$(top_srcdir)/src/lib \
--DPSAPI_VERSION=1 \
 @EXM_CPPFLAGS@
 
 src_bin_memcheck_examine_dll_la_CFLAGS = @EXM_CFLAGS@
