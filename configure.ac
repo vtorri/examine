@@ -99,12 +99,16 @@ AC_CHECK_SIZEOF([void *])
 
 EXM_ATTRIBUTE_UNUSED
 
-EXM_CFLAGS="-std=c99 -pedantic -Wall -Wextra -Wshadow -Wdeclaration-after-statement -Wmissing-prototypes -Wstrict-prototypes -Wredundant-decls -Wpointer-arith -Wno-missing-field-initializers -fno-omit-frame-pointer"
+EXM_CFLAGS="-std=c99 -pedantic -Wall -Wextra -Wshadow -Wdeclaration-after-statement -Wmissing-prototypes -Wstrict-prototypes -Wredundant-decls -Wpointer-arith -Wno-missing-field-initializers"
 if test "x${have_win32}" = "xyes" ; then
    EXM_CFLAGS="${EXM_CFLAGS} -Wno-pedantic-ms-format"
 fi
 
 AC_SUBST([EXM_CFLAGS])
+
+EXM_TEST_CFLAGS="${EXM_CFLAGS} -fno-omit-frame-pointer"
+
+AC_SUBST([EXM_TEST_CFLAGS])
 
 ### Checks for linker characteristics
 

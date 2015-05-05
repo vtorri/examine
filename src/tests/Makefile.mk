@@ -10,7 +10,7 @@ src_tests_libexamine_test_dll_la_CPPFLAGS = \
 -I$(top_srcdir)/src/tests
 
 src_tests_libexamine_test_dll_la_CFLAGS = \
-@EXM_CFLAGS@
+@EXM_TEST_CFLAGS@
 
 src_tests_libexamine_test_dll_la_LDFLAGS = -no-undefined -version-info @version_info@
 
