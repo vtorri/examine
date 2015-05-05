@@ -5,7 +5,7 @@ TODO:
 [X] Split the code so that the overloaded functions are in a separate
     file
 
-[ ] Stack trace code in the lib
+[X] Stack trace code in the lib
 
 [ ] Better name for the overloads : exm_replace_malloc() like valgrind
 
@@ -34,7 +34,7 @@ TODO:
 
    [ ] GDI: 
 
-[ ] Add checks for other CRT DLL than msvcrt.dll, msvcr90.dll and msvcr90d.dll
+[X] Add checks for other CRT DLL than msvcrt.dll, msvcr90.dll, msvcr90d.dll,...
 
 [ ] Add a call stack with dgbhelp API for vc++
 
