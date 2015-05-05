@@ -23,8 +23,6 @@
 # include <config.h>
 #endif
 
-#include <stdio.h>
-
 #ifndef WIN32_LEAN_AND_MEAN
 # define WIN32_LEAN_AND_MEAN
 #endif
@@ -127,29 +125,9 @@ _exm_map(Exm *exm, Exm_Process *process)
     /* first, the names count */
     crt_names = exm_process_crt_names_get(process);
     crt_count = exm_list_count(crt_names);
-    {
-        const Exm_List *iter;
-
-        iter = crt_names;
-        while (iter)
-        {
-            printf(" **$ CRT : %s\n", (char *)iter->data);
-            iter = iter->next;
-        }
-    }
 
     dep_names = exm_process_dep_names_get(process);
     dep_count = exm_list_count(dep_names);
-    {
-        const Exm_List *iter;
-
-        iter = exm_process_dep_names_get(process);
-        while (iter)
-        {
-            printf(" **$ DEP : %s\n", (char *)iter->data);
-            iter = iter->next;
-        }
-    }
 
     lens[0] = (1 + 1 + 1 + crt_count + dep_count) * sizeof(int);
     vals = (int *)malloc(lens[0]);
@@ -162,8 +140,6 @@ _exm_map(Exm *exm, Exm_Process *process)
     vals[0] = exm_log_level_get();
     vals[1] = crt_count;
     vals[2] = dep_count;
-
-    printf(" **$ vals : %d %d %d\n", vals[0], vals[1], vals[2]);
 
     /* second, the crt file lengths */
 
@@ -192,7 +168,6 @@ _exm_map(Exm *exm, Exm_Process *process)
         i++;
         dep_names = dep_names->next;
     }
-    printf(" **$ vals : %d %d %d\n", vals[3], vals[4], vals[5]);
 
     /* fourth, we store the CRT names */
 

@@ -69,7 +69,7 @@ _exm_sw_find_function_name_in_section(bfd *abfd, asection *sec, void *obj)
     const char *file = NULL;
     unsigned int line = 0;
 
-    printf(" $$$$ %s\n", bfd_get_filename(abfd));
+    /* printf(" $$$$ %s\n", bfd_get_filename(abfd)); */
 
     if (!sec)
     {
@@ -116,7 +116,6 @@ _exm_sw_find_function_name_in_section(bfd *abfd, asection *sec, void *obj)
         sw_data->filename = (char *)malloc(l * sizeof(char));
         if (!sw_data->filename)
         {
-            printf(" ** 1\n");
             free(sw_data);
             return;
         }
@@ -128,22 +127,15 @@ _exm_sw_find_function_name_in_section(bfd *abfd, asection *sec, void *obj)
             sw_data->function = (char *)malloc(l * sizeof(char));
             if (!sw_data->function)
             {
-            printf(" ** 2\n");
                 free(sw_data->filename);
                 free(sw_data);
                 return;
             }
             memcpy(sw_data->function, func, l);
         }
-        EXM_LOG_ERR("boooooooooooooooooooon     2  %s %s %d",
-                    file, func, line);
 
         sw_data->line = line;
         data->list = exm_list_append(data->list, sw_data);
-    }
-    else
-    {
-        EXM_LOG_ERR(" pas de liiiiiiiiiiiiiiigne");
     }
 }
 
