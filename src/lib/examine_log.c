@@ -49,7 +49,7 @@ static Exm_Log_Level _exm_log_level = EXM_LOG_LEVEL_INFO;
 
 #ifdef _WIN32
 
-static DWORD
+static WORD
 _exm_log_print_level_color_get(int level)
 {
     switch (level)
