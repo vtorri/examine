@@ -31,21 +31,29 @@
 #include "examine_list.h"
 #include "examine_stacktrace.h"
 
+
+/*============================================================================*
+ *                                  Local                                     *
+ *============================================================================*/
+
+
 #define STACKWALK_MAX_NAMELEN 1024
 
 struct _Exm_Sw_Data
 {
     char *filename;
     char *function;
-    int   line;
+    unsigned int line;
 };
 
 struct _Exm_Sw
 {
     HANDLE proc;
     HANDLE thread;
-    unsigned int resume_thread : 1;
 };
+
+static HANDLE _exm_stack_process = NULL;
+static HANDLE _exm_stack_thread = NULL;
 
 static BOOL __stdcall _sw_read_memory_cb(HANDLE      hProcess,
                                          DWORD64     qwBaseAddress,
@@ -61,15 +69,19 @@ static BOOL __stdcall _sw_read_memory_cb(HANDLE      hProcess,
     return ret;
 }
 
-Exm_Sw *
-exm_sw_new(void)
-{
-    Exm_Sw *sw;
-    DWORD   options;
 
-    sw = (Exm_Sw *)calloc(1, sizeof(Exm_Sw));
-    if (!sw)
-        return NULL;
+/*============================================================================*
+ *                                 Global                                     *
+ *============================================================================*/
+
+
+unsigned char
+exm_sw_init(void)
+{
+    DWORD options;
+
+    _exm_stack_process = GetCurrentProcess();
+    _exm_stack_thread = GetCurrentThread();
 
     options = SymGetOptions();
     SymSetOptions(options |
@@ -78,34 +90,20 @@ exm_sw_new(void)
                   SYMOPT_UNDNAME |
                   SYMOPT_DEBUG);
 
-    if (!SymInitialize(GetCurrentProcess(), NULL, TRUE))
-        goto free_sw;
+    if (!SymInitialize(_exm_stack_process, NULL, TRUE))
+        return 0;
 
-    sw->proc = GetCurrentProcess();
-    sw->thread = GetCurrentThread();
-
-    return sw;
-
-  free_sw:
-    free(sw);
-
-    return NULL;
+    return 1;
 }
 
 void
-exm_sw_del(Exm_Sw *sw)
+exm_sw_shutdown(void)
 {
-    if (!sw)
-        return;
-
-    if (sw->resume_thread)
-        ResumeThread(sw->thread);
-    SymCleanup(sw->proc);
-    free(sw);
+    SymCleanup(_exm_stack_process);
 }
 
 Exm_List *
-exm_sw_frames_get(Exm_Sw *sw)
+exm_sw_frames_get(void)
 {
     CONTEXT context;
     STACKFRAME64 sf;
@@ -162,7 +160,7 @@ exm_sw_frames_get(Exm_Sw *sw)
 
     for (frame_num = 0; ; frame_num++)
     {
-        if (!StackWalk64(arch, sw->proc, sw->thread, &sf, &context,
+        if (!StackWalk64(arch, _exm_stack_process, _exm_stack_thread, &sf, &context,
                          _sw_read_memory_cb,
                          SymFunctionTableAccess64,
                          SymGetModuleBase64,
@@ -190,7 +188,7 @@ exm_sw_frames_get(Exm_Sw *sw)
                 size_t l;
 
                 /* function name */
-                if (SymFromAddr(sw->proc, sf.AddrPC.Offset,
+                if (SymFromAddr(_exm_stack_process, sf.AddrPC.Offset,
                                 &offset_from_symbol, sym))
                 {
                     l = strlen(sym->Name) + 1;
@@ -200,7 +198,7 @@ exm_sw_frames_get(Exm_Sw *sw)
                 }
 
                 /* line number and file name */
-                if (SymGetLineFromAddr64(sw->proc, sf.AddrPC.Offset,
+                if (SymGetLineFromAddr64(_exm_stack_process, sf.AddrPC.Offset,
                                          &offset_from_line, &line))
                 {
                     sw_data->line = line.LineNumber;
@@ -224,7 +222,7 @@ exm_sw_frames_get(Exm_Sw *sw)
 }
 
 const char *
-exm_sw_data_filename_get(Exm_Sw_Data *data)
+exm_sw_data_filename_get(const Exm_Sw_Data *data)
 {
     if (!data)
         return NULL;
@@ -233,7 +231,7 @@ exm_sw_data_filename_get(Exm_Sw_Data *data)
 }
 
 const char *
-exm_sw_data_function_get(Exm_Sw_Data *data)
+exm_sw_data_function_get(const Exm_Sw_Data *data)
 {
     if (!data)
         return NULL;
@@ -241,8 +239,8 @@ exm_sw_data_function_get(Exm_Sw_Data *data)
     return data->function;
 }
 
-int
-exm_sw_data_line_get(Exm_Sw_Data *data)
+unsigned int
+exm_sw_data_line_get(const Exm_Sw_Data *data)
 {
     if (!data)
         return 0;

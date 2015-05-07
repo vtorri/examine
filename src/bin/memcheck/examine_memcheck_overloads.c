@@ -329,6 +329,7 @@ exm_overload_init(void)
 void
 exm_overload_shutdown(void)
 {
+    exm_sw_shutdown();
     exm_list_free(_exm_overload_data.free, _exm_overload_data_free_del);
     exm_list_free(_exm_overload_data.alloc, _exm_overload_data_alloc_del);
     free(_exm_overloads_instance);

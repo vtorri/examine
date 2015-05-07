@@ -25,7 +25,8 @@
 
 typedef struct _Exm_Sw_Data Exm_Sw_Data;
 
-void exm_sw_init(void);
+unsigned char exm_sw_init(void);
+void exm_sw_shutdown(void);
 
 Exm_List *exm_sw_frames_get(void);
 

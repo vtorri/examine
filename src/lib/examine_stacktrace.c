@@ -145,10 +145,17 @@ _exm_sw_find_function_name_in_section(bfd *abfd, asection *sec, void *obj)
  *============================================================================*/
 
 
-void
+unsigned char
 exm_sw_init(void)
 {
     bfd_init();
+
+    return 1;
+}
+
+void
+exm_sw_shutdown(void)
+{
 }
 
 Exm_List *
