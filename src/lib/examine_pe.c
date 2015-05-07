@@ -388,7 +388,7 @@ exm_pe_export_directory_get(const Exm_Pe *pe, DWORD *count)
 }
 
 unsigned char
-exm_pe_export_directory_function_ordinal_get(const Exm_Pe *pe, const IMAGE_EXPORT_DIRECTORY *ed, DWORD idx, WORD *ordinal)
+exm_pe_export_directory_function_ordinal_get(const Exm_Pe *pe, const IMAGE_EXPORT_DIRECTORY *ed, DWORD idx, DWORD *ordinal)
 {
     WORD *ordinals;
 
