@@ -94,7 +94,7 @@ _exm_file_base_dir_name_get(const char *filename, char **dir_name, char **base_n
             if (dir_name) *dir_name = res;
         }
 
-        if (base_name) *base_name = strdup(idx + 1);
+        if (base_name) *base_name = _strdup(idx + 1);
     }
     else
       EXM_LOG_ERR("file %s has not an absolute path", filename);
@@ -217,7 +217,7 @@ exm_file_path_set(void)
         if ((length != 0) && (length <= sizeof(buf)))
         {
             _exm_file_backslash_final_set(buf);
-            _exm_file_path = exm_list_append(_exm_file_path, strdup(buf));
+            _exm_file_path = exm_list_append(_exm_file_path, _strdup(buf));
         }
     }
 
@@ -230,7 +230,7 @@ exm_file_path_set(void)
         if ((length != 0) && (length <= sizeof(buf)))
         {
             _exm_file_backslash_final_set(buf);
-            _exm_file_path = exm_list_append(_exm_file_path, strdup(buf));
+            _exm_file_path = exm_list_append(_exm_file_path, _strdup(buf));
         }
     }
 
@@ -257,7 +257,7 @@ exm_file_path_set(void)
                 length = strlen(iter);
                 memcpy(buf, iter, length + 1);
                 _exm_file_backslash_final_set(buf);
-                _exm_file_path = exm_list_append(_exm_file_path, strdup(buf));
+                _exm_file_path = exm_list_append(_exm_file_path, _strdup(buf));
                 break;
             }
 
@@ -265,7 +265,7 @@ exm_file_path_set(void)
             length = strlen(iter);
             memcpy(buf, iter, length + 1);
             _exm_file_backslash_final_set(buf);
-            _exm_file_path = exm_list_append(_exm_file_path, strdup(buf));
+            _exm_file_path = exm_list_append(_exm_file_path, _strdup(buf));
 
             iter = s + 1;
         }
@@ -385,7 +385,7 @@ exm_file_find(const char *filename)
         }
         else
         {
-            base_name = strdup(filename);
+            base_name = _strdup(filename);
         }
     }
 

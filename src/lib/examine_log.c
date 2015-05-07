@@ -78,7 +78,7 @@ _exm_log_print_prefix_func(HANDLE std_handle, Exm_Log_Level level)
     if (!GetConsoleScreenBufferInfo(std_handle, &scbi))
         return;
 
-    s = snprintf(NULL, 0, "==%ld==", GetCurrentProcessId());
+    s = _snprintf(NULL, 0, "==%ld==", GetCurrentProcessId());
     if (s == -1)
         return;
 
@@ -86,7 +86,7 @@ _exm_log_print_prefix_func(HANDLE std_handle, Exm_Log_Level level)
     if (!str)
         return;
 
-    s = snprintf(str, s + 1, "==%ld==", GetCurrentProcessId());
+    s = _snprintf(str, s + 1, "==%ld==", GetCurrentProcessId());
     if (s == -1)
         goto free_str;
 
@@ -132,7 +132,7 @@ _exm_log_fprint_cb(DWORD console,
     if (std_handle == INVALID_HANDLE_VALUE)
         return;
 
-    s = vsnprintf(NULL, 0, fmt, args);
+    s = _vsnprintf(NULL, 0, fmt, args);
     if (s == -1)
         return;
 
@@ -140,7 +140,7 @@ _exm_log_fprint_cb(DWORD console,
     if (!str)
         return;
 
-    s = vsnprintf(str, s + 1, fmt, args);
+    s = _vsnprintf(str, s + 1, fmt, args);
     if (s == -1)
     {
         free(str);

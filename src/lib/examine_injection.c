@@ -155,7 +155,7 @@ exm_injection_new(const char *filename)
     if (!inj->free_library)
         goto free_inj;
 
-    inj->filename = strdup(filename);
+    inj->filename = _strdup(filename);
     if (!inj->filename)
     {
         EXM_LOG_ERR("Can not allocate memory for file name %s", inj->filename);

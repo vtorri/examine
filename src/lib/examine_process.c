@@ -147,7 +147,7 @@ _exm_process_new_from_module(MODULEENTRY32 *me32)
         return NULL;
     }
 
-    process->filename = strdup(me32->szExePath);
+    process->filename = _strdup(me32->szExePath);
     if (!process->filename)
     {
         EXM_LOG_ERR("Can not allocate memory.");
@@ -235,7 +235,7 @@ exm_process_new(const char *filename, const char *args)
     exm_pe_free(pe);
 
 
-    process->filename = strdup(filename);
+    process->filename = _strdup(filename);
     if (!process->filename)
     {
         EXM_LOG_ERR("Can not allocate memory.");
@@ -487,7 +487,7 @@ exm_process_dependencies_set(Exm_Process *process)
                 continue;
 
             process->crt_names = exm_list_append(process->crt_names,
-                                                 strdup(me32.szExePath));
+                                                 _strdup(me32.szExePath));
         }
 
         is_found = 0;
@@ -506,7 +506,7 @@ exm_process_dependencies_set(Exm_Process *process)
                                     me32.szExePath,
                                     _exm_process_dep_cmp))
             process->dep_names = exm_list_append(process->dep_names,
-                                                 strdup(me32.szExePath));
+                                                 _strdup(me32.szExePath));
     } while(Module32Next(h, &me32));
 
     CloseHandle(h);
