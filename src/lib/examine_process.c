@@ -23,6 +23,7 @@
 # include <config.h>
 #endif
 
+#include <stdlib.h>
 #include <stdio.h>
 
 #ifdef _WIN32

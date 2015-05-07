@@ -23,6 +23,8 @@
 # include <config.h>
 #endif
 
+#include <stdlib.h>
+
 #ifdef _WIN32
 # ifndef WIN32_LEAN_AND_MEAN
 #  define WIN32_LEAN_AND_MEAN
@@ -30,7 +32,6 @@
 # include <windows.h>
 # undef WIN32_LEAN_AND_MEAN
 #else
-# include <stdlib.h>
 # include <sys/types.h>
 # include <sys/stat.h>
 # include <sys/mman.h>
