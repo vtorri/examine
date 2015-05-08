@@ -34,6 +34,7 @@
  * @{
  */
 
+
 /*============================================================================*
  *                                  Local                                     *
  *============================================================================*/
@@ -88,6 +89,17 @@ exm_list_append(Exm_List *l, const void *data)
     return l;
 }
 
+/**
+ * @brief Prepend an element to the given list.
+ *
+ * @param[inout] l The list.
+ * @param[in] data The element.
+ * @return The list with the prepended element.
+ *
+ * This function prepends @p data to the list @p l. If @p data is
+ * @c NULL, this function returns @p l. To create a new list, @p l
+ * must be @c NULL.
+ */
 Exm_List *
 exm_list_prepend(Exm_List *l, const void *data)
 {
@@ -175,6 +187,18 @@ exm_list_append_if_new(Exm_List *l, const void *data, Exm_List_Cmp_Cb cmp_cb)
     return l;
 }
 
+/**
+ * @brief Prepend an element to the given list with a comparison callback.
+ *
+ * @param[inout] l The list.
+ * @param[in] data The data to prepend.
+ * @param[in] cmp_cb The comparison callback.
+ * @return The list with the prepended element.
+ *
+ * This function prepends @p data to @p l if it satisfies the
+ * comparison callback @p cmp_cb. If @cmp_cb returns 0, @p data is not
+ * added to @p l.
+ */
 Exm_List *
 exm_list_prepend_if_new(Exm_List *l, const void *data, Exm_List_Cmp_Cb cmp_cb)
 {
