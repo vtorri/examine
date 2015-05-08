@@ -22,8 +22,6 @@
 #ifndef EXM_FILE_H
 #define EXM_FILE_H
 
-void exm_file_backslash_set(char *filename);
-
 void exm_file_path_set(void);
 
 void exm_file_set(char *filename);
