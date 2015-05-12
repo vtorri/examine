@@ -33,14 +33,12 @@
 # undef WIN32_LEAN_AND_MEAN
 #endif
 
-#include "examine_list.h"
-#include "examine_file.h"
-#include "examine_log.h"
-#include "examine_map.h"
-#include "examine_pe.h"
+#include "Examine.h"
 #ifndef _WIN32
 # include "examine_pe_unix.h"
 #endif
+
+#include "examine_private_map.h"
 
 
 /**
@@ -129,7 +127,7 @@ _exm_pe_rva_to_ptr_get2(const Exm_Pe *pe, DWORD rva)
  * @c NULL on error, or a newly created #Exm_Pe object otherwise. Once
  * not needed anymore, use exm_pe_free() to free resources.
  */
-Exm_Pe *
+EXM_API Exm_Pe *
 exm_pe_new(const char *filename)
 {
     IMAGE_DOS_HEADER *dos_header;
@@ -196,7 +194,7 @@ exm_pe_new(const char *filename)
  * object otherwise. Once not needed anymore, use exm_pe_free() to
  * free resources.
  */
-Exm_Pe *
+EXM_API Exm_Pe *
 exm_pe_new_from_base(const char *filename, const void *base, DWORD size)
 {
     IMAGE_DOS_HEADER *dos_header;
@@ -256,7 +254,7 @@ exm_pe_new_from_base(const char *filename, const void *base, DWORD size)
  *
  * This function frees the resources of @p pe.
  */
-void
+EXM_API void
 exm_pe_free(Exm_Pe *pe)
 {
     if (!pe)
@@ -275,7 +273,7 @@ exm_pe_free(Exm_Pe *pe)
  *
  * This function returns the file name of the PE file @p pe.
  */
-const char *
+EXM_API const char *
 exm_pe_filename_get(const Exm_Pe *pe)
 {
     return pe->filename;
@@ -290,7 +288,7 @@ exm_pe_filename_get(const Exm_Pe *pe)
  * This function returns -1 on error, 0 if @p pe is a 32 bits file and
  * 1 if it is a 64 bits file.
  */
-signed char
+EXM_API signed char
 exm_pe_is_64bits(const Exm_Pe *pe)
 {
     if (pe->nt_header->OptionalHeader.Magic == IMAGE_NT_OPTIONAL_HDR64_MAGIC)
@@ -309,7 +307,7 @@ exm_pe_is_64bits(const Exm_Pe *pe)
  *
  * This function returns 0 if @p pe is an executable and 1 if it is a DLL.
  */
-unsigned char
+EXM_API unsigned char
 exm_pe_is_dll(Exm_Pe *pe)
 {
     return (pe->nt_header->FileHeader.Characteristics & IMAGE_FILE_DLL) == IMAGE_FILE_DLL;
@@ -323,7 +321,7 @@ exm_pe_is_dll(Exm_Pe *pe)
  *
  * This function returns the DOS header of the PE file @p pe.
  */
-const IMAGE_DOS_HEADER *
+EXM_API const IMAGE_DOS_HEADER *
 exm_pe_dos_header_get(const Exm_Pe *pe)
 {
     return exm_map_base_get(pe->map);
@@ -337,7 +335,7 @@ exm_pe_dos_header_get(const Exm_Pe *pe)
  *
  * This function returns the NT header of the PE file @p pe.
  */
-const IMAGE_NT_HEADERS *
+EXM_API const IMAGE_NT_HEADERS *
 exm_pe_nt_header_get(const Exm_Pe *pe)
 
 {
@@ -352,7 +350,7 @@ exm_pe_nt_header_get(const Exm_Pe *pe)
  *
  * This function returns the entry point of the PE file @p pe.
  */
-const void *
+EXM_API const void *
 exm_pe_entry_point_get(const Exm_Pe *pe)
 {
   return (unsigned char *)(uintptr_t)pe->nt_header->OptionalHeader.ImageBase + pe->nt_header->OptionalHeader.AddressOfEntryPoint;
@@ -367,7 +365,7 @@ exm_pe_entry_point_get(const Exm_Pe *pe)
  * This function returns the address of the export directory of the
  * PE file @p pe. If there is no export directory, @c NULL is returned.
  */
-const IMAGE_EXPORT_DIRECTORY *
+EXM_API const IMAGE_EXPORT_DIRECTORY *
 exm_pe_export_directory_get(const Exm_Pe *pe, DWORD *count)
 {
     DWORD rva;
@@ -387,7 +385,7 @@ exm_pe_export_directory_get(const Exm_Pe *pe, DWORD *count)
     return (IMAGE_EXPORT_DIRECTORY *)_exm_pe_rva_to_ptr_get2(pe, rva);
 }
 
-unsigned char
+EXM_API unsigned char
 exm_pe_export_directory_function_ordinal_get(const Exm_Pe *pe, const IMAGE_EXPORT_DIRECTORY *ed, DWORD idx, DWORD *ordinal)
 {
     WORD *ordinals;
@@ -403,7 +401,7 @@ exm_pe_export_directory_function_ordinal_get(const Exm_Pe *pe, const IMAGE_EXPOR
     return 1;
 }
 
-const char *
+EXM_API const char *
 exm_pe_export_directory_function_name_get(const Exm_Pe *pe, const IMAGE_EXPORT_DIRECTORY *ed, DWORD idx)
 {
     DWORD *names;
@@ -415,7 +413,7 @@ exm_pe_export_directory_function_name_get(const Exm_Pe *pe, const IMAGE_EXPORT_D
     return (char *)_exm_pe_rva_to_ptr_get2(pe, names[idx]);
 }
 
-DWORD
+EXM_API DWORD
 exm_pe_export_directory_function_address_get(const Exm_Pe *pe, const IMAGE_EXPORT_DIRECTORY *ed, DWORD idx)
 {
     DWORD *addresses;
@@ -436,7 +434,7 @@ exm_pe_export_directory_function_address_get(const Exm_Pe *pe, const IMAGE_EXPOR
  * This function returns the address of the import descriptor of the
  * PE file @p pe. If there is no import section, @c NULL is returned.
  */
-const IMAGE_IMPORT_DESCRIPTOR *
+EXM_API const IMAGE_IMPORT_DESCRIPTOR *
 exm_pe_import_descriptor_get(const Exm_Pe *pe, DWORD *count)
 {
     DWORD rva;
@@ -456,7 +454,7 @@ exm_pe_import_descriptor_get(const Exm_Pe *pe, DWORD *count)
     return (IMAGE_IMPORT_DESCRIPTOR *)_exm_pe_rva_to_ptr_get2(pe, rva);
 }
 
-const char *
+EXM_API const char *
 exm_pe_import_descriptor_file_name_get(const Exm_Pe *pe, const IMAGE_IMPORT_DESCRIPTOR *id)
 {
     return (char *)_exm_pe_rva_to_ptr_get2(pe, id->Name);
@@ -471,7 +469,7 @@ exm_pe_import_descriptor_file_name_get(const Exm_Pe *pe, const IMAGE_IMPORT_DESC
  * This function returns the address of the debug directory of the
  * PE file @p pe. If there is no debug directory, @c NULL is returned.
  */
-const IMAGE_DEBUG_DIRECTORY *
+EXM_API const IMAGE_DEBUG_DIRECTORY *
 exm_pe_debug_directory_get(const Exm_Pe *pe, DWORD *count)
 {
     DWORD rva;
@@ -500,7 +498,7 @@ exm_pe_debug_directory_get(const Exm_Pe *pe, DWORD *count)
  * This function returns the address of the delayload directory of the
  * PE file @p pe. If there is no delayload directory, @c NULL is returned.
  */
-const IMAGE_DELAYLOAD_DESCRIPTOR *
+EXM_API const IMAGE_DELAYLOAD_DESCRIPTOR *
 exm_pe_delayload_descriptor_get(const Exm_Pe *pe, DWORD *count)
 {
     DWORD rva;
@@ -520,7 +518,7 @@ exm_pe_delayload_descriptor_get(const Exm_Pe *pe, DWORD *count)
     return (IMAGE_DELAYLOAD_DESCRIPTOR *)_exm_pe_rva_to_ptr_get2(pe, rva);
 }
 
-const char *
+EXM_API const char *
 exm_pe_delayload_descriptor_file_name_get(const Exm_Pe *pe, const IMAGE_DELAYLOAD_DESCRIPTOR *dd)
 {
     if (dd->Attributes.AllAttributes & 1)

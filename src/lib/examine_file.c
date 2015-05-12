@@ -36,12 +36,12 @@
 # undef WIN32_LEAN_AND_MEAN
 #endif
 
-#include "examine_log.h"
-#include "examine_list.h"
-#include "examine_file.h"
+#include "Examine.h"
 #ifndef _WIN32
 # include "examine_pe_unix.h"
 #endif
+
+#include "examine_private_file.h"
 
 
 /*============================================================================*
@@ -197,11 +197,6 @@ _exm_file_backslash_final_set(char *filename)
  *============================================================================*/
 
 
-/*============================================================================*
- *                                   API                                      *
- *============================================================================*/
-
-
 void
 exm_file_path_set(void)
 {
@@ -274,6 +269,18 @@ exm_file_path_set(void)
 }
 
 void
+exm_file_path_free(void)
+{
+    exm_list_free(_exm_file_path, free);
+}
+
+
+/*============================================================================*
+ *                                   API                                      *
+ *============================================================================*/
+
+
+EXM_API void
 exm_file_set(char *filename)
 {
 #ifdef _WIN32
@@ -348,13 +355,7 @@ exm_file_set(char *filename)
 #endif
 }
 
-void
-exm_file_path_free(void)
-{
-    exm_list_free(_exm_file_path, free);
-}
-
-char *
+EXM_API char *
 exm_file_find(const char *filename)
 {
 #ifdef _WIN32
@@ -398,7 +399,8 @@ exm_file_find(const char *filename)
     iter = _exm_file_path;
     while (iter)
     {
-        EXM_LOG_DBG("Searching for file %s with base directory %s...", base_name, (const char *)iter->data);
+        EXM_LOG_DBG("Searching for file %s with base directory %s...",
+                    base_name, (const char *)iter->data);
         if (_exm_file_exists((const char *)iter->data, base_name))
         {
             file = _exm_file_concat((const char *)iter->data, base_name);
@@ -412,7 +414,7 @@ exm_file_find(const char *filename)
     return file;
 }
 
-unsigned long long
+EXM_API unsigned long long
 exm_file_size_get(const char *filename)
 {
 #ifdef _WIN32

@@ -37,7 +37,7 @@
 # include <unistd.h>
 #endif
 
-#include "examine_log.h"
+#include "Examine.h"
 
 
 /*============================================================================*
@@ -209,7 +209,7 @@ _exm_log_fprint_cb(FILE *st,
  *============================================================================*/
 
 
-void
+EXM_API void
 exm_log_print_cb_stderr(Exm_Log_Level level,
                         const char *fmt,
                         void *data,
@@ -222,7 +222,7 @@ exm_log_print_cb_stderr(Exm_Log_Level level,
 #endif
 }
 
-void
+EXM_API void
 exm_log_print_cb_stdout(Exm_Log_Level level,
                         const char *fmt,
                         void *data,
@@ -235,7 +235,7 @@ exm_log_print_cb_stdout(Exm_Log_Level level,
 #endif
 }
 
-void
+EXM_API void
 exm_log_print(Exm_Log_Level level, const char *fmt, ...)
 {
     va_list args;
@@ -254,7 +254,7 @@ exm_log_print(Exm_Log_Level level, const char *fmt, ...)
     }
 }
 
-void exm_log_level_set(Exm_Log_Level level)
+EXM_API void exm_log_level_set(Exm_Log_Level level)
 {
     if ((level < EXM_LOG_LEVEL_ERR) || (level >= EXM_LOG_LEVEL_LAST))
     {
@@ -265,7 +265,7 @@ void exm_log_level_set(Exm_Log_Level level)
     _exm_log_level = level;
 }
 
-Exm_Log_Level exm_log_level_get(void)
+EXM_API Exm_Log_Level exm_log_level_get(void)
 {
     return _exm_log_level;
 }

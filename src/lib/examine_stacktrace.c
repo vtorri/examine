@@ -33,9 +33,7 @@
 
 #include <bfd.h>
 
-#include "examine_list.h"
-#include "examine_log.h"
-#include "examine_stacktrace.h"
+#include "Examine.h"
 
 
 /*============================================================================*
@@ -145,7 +143,12 @@ _exm_sw_find_function_name_in_section(bfd *abfd, asection *sec, void *obj)
  *============================================================================*/
 
 
-unsigned char
+/*============================================================================*
+ *                                   API                                      *
+ *============================================================================*/
+
+
+EXM_API unsigned char
 exm_sw_init(void)
 {
     bfd_init();
@@ -153,12 +156,12 @@ exm_sw_init(void)
     return 1;
 }
 
-void
+EXM_API void
 exm_sw_shutdown(void)
 {
 }
 
-Exm_List *
+EXM_API Exm_List *
 exm_sw_frames_get(void)
 {
 #define MAX_ENTRIES 100
@@ -283,7 +286,7 @@ exm_sw_frames_get(void)
     return data.list;
 }
 
-const char *
+EXM_API const char *
 exm_sw_data_filename_get(const Exm_Sw_Data *data)
 {
     if (!data)
@@ -292,7 +295,7 @@ exm_sw_data_filename_get(const Exm_Sw_Data *data)
     return data->filename;
 }
 
-const char *
+EXM_API const char *
 exm_sw_data_function_get(const Exm_Sw_Data *data)
 {
     if (!data)
@@ -301,7 +304,7 @@ exm_sw_data_function_get(const Exm_Sw_Data *data)
     return data->function;
 }
 
-unsigned int
+EXM_API unsigned int
 exm_sw_data_line_get(const Exm_Sw_Data *data)
 {
     if (!data)
@@ -310,7 +313,7 @@ exm_sw_data_line_get(const Exm_Sw_Data *data)
     return data->line;
 }
 
-void
+EXM_API void
 exm_sw_data_free(void *ptr)
 {
     Exm_Sw_Data *data;

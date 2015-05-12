@@ -25,11 +25,7 @@
 
 #include <Elementary.h>
 
-#include <examine_main.h>
-#include <examine_list.h>
-#include <examine_log.h>
-#include <examine_file.h>
-#include <examine_pe.h>
+#include <Examine.h>
 
 typedef struct
 {

@@ -26,7 +26,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "examine_str.h"
+#include "Examine.h"
+
+#include "examine_private_str.h"
 
 
 /*============================================================================*
@@ -39,43 +41,11 @@
  *============================================================================*/
 
 
-/*============================================================================*
- *                                   API                                      *
- *============================================================================*/
-
-/**
- * @brief Append the given string to the given buffer string.
- *
- * @param buf The buffer string;
- * @param str The string to apppend.
- *
- * This function appends the string @p str to the buffer @p buf. The
- * buffer must be initialize at first as an empty string. If @p str is
- * @c NULL, the function does nothing. No check is done on @p buf.
- */
-void
-exm_str_append(char *buf, const char *str)
-{
-    if (!str)
-        return;
-
-    if (!*buf)
-        memcpy(buf, str, strlen(str) + 1);
-    else
-    {
-        size_t l1;
-
-        l1 = strlen(buf);
-        buf[l1] = ' ';
-        memcpy(buf + l1 + 1, str, strlen(str) + 1);
-    }
-}
-
 /**
  * @brief Append the given string to the given buffer string with quotes.
  *
- * @param buf The buffer string;
- * @param str The string to apppend.
+ * @param[inout] buf The buffer string;
+ * @param[in] str The string to apppend.
  *
  * This function appends the string @p str to the buffer @p buf with
  * quotes around it. The buffer must be initialize at first as an
@@ -110,5 +80,39 @@ exm_str_append_with_quotes(char *buf, const char *str)
         memcpy(buf + l1 + 2, str, l2);
         buf[l1 + l2 + 2] = '\"';
         buf[l1 + l2 + 3] = '\0';
+    }
+}
+
+
+/*============================================================================*
+ *                                   API                                      *
+ *============================================================================*/
+
+
+/**
+ * @brief Append the given string to the given buffer string.
+ *
+ * @param[inout] buf The buffer string;
+ * @param[in] str The string to apppend.
+ *
+ * This function appends the string @p str to the buffer @p buf. The
+ * buffer must be initialize at first as an empty string. If @p str is
+ * @c NULL, the function does nothing. No check is done on @p buf.
+ */
+void
+EXM_API exm_str_append(char *buf, const char *str)
+{
+    if (!str)
+        return;
+
+    if (!*buf)
+        memcpy(buf, str, strlen(str) + 1);
+    else
+    {
+        size_t l1;
+
+        l1 = strlen(buf);
+        buf[l1] = ' ';
+        memcpy(buf + l1 + 1, str, strlen(str) + 1);
     }
 }

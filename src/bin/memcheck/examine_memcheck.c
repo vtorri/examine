@@ -35,14 +35,7 @@
 # include <direct.h>
 #endif
 
-#include <examine_log.h>
-#include <examine_str.h>
-#include <examine_list.h>
-#include <examine_file.h>
-#include <examine_map.h>
-#include <examine_pe.h>
-#include <examine_process.h>
-#include <examine_injection.h>
+#include <Examine.h>
 
 #include "examine_private.h"
 

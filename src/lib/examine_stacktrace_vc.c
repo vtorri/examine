@@ -28,8 +28,7 @@
 
 #include <dbghelp.h>
 
-#include "examine_list.h"
-#include "examine_stacktrace.h"
+#include "Examine.h"
 
 
 /*============================================================================*
@@ -75,7 +74,12 @@ static BOOL __stdcall _sw_read_memory_cb(HANDLE      hProcess,
  *============================================================================*/
 
 
-unsigned char
+/*============================================================================*
+ *                                   API                                      *
+ *============================================================================*/
+
+
+EXM_API unsigned char
 exm_sw_init(void)
 {
     DWORD options;
@@ -96,13 +100,13 @@ exm_sw_init(void)
     return 1;
 }
 
-void
+EXM_API void
 exm_sw_shutdown(void)
 {
     SymCleanup(_exm_stack_process);
 }
 
-Exm_List *
+EXM_API Exm_List *
 exm_sw_frames_get(void)
 {
     CONTEXT context;
@@ -221,7 +225,7 @@ exm_sw_frames_get(void)
     return list;
 }
 
-const char *
+EXM_API const char *
 exm_sw_data_filename_get(const Exm_Sw_Data *data)
 {
     if (!data)
@@ -230,7 +234,7 @@ exm_sw_data_filename_get(const Exm_Sw_Data *data)
     return data->filename;
 }
 
-const char *
+EXM_API const char *
 exm_sw_data_function_get(const Exm_Sw_Data *data)
 {
     if (!data)
@@ -239,7 +243,7 @@ exm_sw_data_function_get(const Exm_Sw_Data *data)
     return data->function;
 }
 
-unsigned int
+EXM_API unsigned int
 exm_sw_data_line_get(const Exm_Sw_Data *data)
 {
     if (!data)
@@ -248,7 +252,7 @@ exm_sw_data_line_get(const Exm_Sw_Data *data)
     return data->line;
 }
 
-void
+EXM_API void
 exm_sw_data_free(void *ptr)
 {
     Exm_Sw_Data *data;

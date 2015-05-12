@@ -34,13 +34,7 @@
 # undef WIN32_LEAN_AND_MEAN
 #endif
 
-#include <examine_log.h>
-#include <examine_list.h>
-#include <examine_file.h>
-#include <examine_pe.h>
-#ifndef _WIN32
-# include <examine_pe_unix.h>
-#endif
+#include <Examine.h>
 
 #include "examine_private.h"
 

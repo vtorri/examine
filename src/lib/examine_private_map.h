@@ -22,19 +22,23 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef EXM_MAP_H
-#define EXM_MAP_H
+#ifndef EXM_PRIVATE_MAP_H
+#define EXM_PRIVATE_MAP_H
+
+typedef struct _Exm_Map Exm_Map;
+
+Exm_Map *exm_map_new(const char *filename);
 
 #ifdef _WIN32
 
-typedef struct _Exm_Map_Shared Exm_Map_Shared;
-
-EXM_API Exm_Map_Shared *exm_map_shared_new(const char *name, const void *data, DWORD size);
-
-EXM_API void exm_map_shared_del(Exm_Map_Shared *map);
-
-EXM_API int exm_map_shared_read(const char *name, DWORD size, void *data);
+Exm_Map *exm_map_new_from_base(const void *base, DWORD size);
 
 #endif
 
-#endif /* EXM_MAP_H */
+void exm_map_del(Exm_Map *map);
+
+const void *exm_map_base_get(const Exm_Map *map);
+
+unsigned long long exm_map_size_get(const Exm_Map *map);
+
+#endif /* EXM_PRIVATE_MAP_H */

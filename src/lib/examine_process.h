@@ -24,28 +24,22 @@
 
 typedef struct _Exm_Process Exm_Process;
 
-Exm_Process *exm_process_new(const char *filename, const char *args);
+EXM_API Exm_Process *exm_process_new(const char *filename, const char *args);
 
-void exm_process_del(Exm_Process *process);
+EXM_API void exm_process_del(Exm_Process *process);
 
-HANDLE exm_process_get(const Exm_Process *process);
+EXM_API const Exm_List *exm_process_dep_names_get(const Exm_Process *process);
 
-const char *exm_process_filename_get(const Exm_Process *process);
+EXM_API const Exm_List *exm_process_crt_names_get(const Exm_Process *process);
 
-DWORD exm_process_id_get(const Exm_Process *process);
+EXM_API void exm_process_run(const Exm_Process *process);
 
-const Exm_List *exm_process_dep_names_get(const Exm_Process *process);
+EXM_API void exm_process_pause(const Exm_Process *process);
 
-const Exm_List *exm_process_crt_names_get(const Exm_Process *process);
+EXM_API int exm_process_entry_point_patch(Exm_Process *process);
 
-void exm_process_run(const Exm_Process *process);
+EXM_API int exm_process_entry_point_unpatch(const Exm_Process *process);
 
-void exm_process_pause(const Exm_Process *process);
-
-int exm_process_entry_point_patch(Exm_Process *process);
-
-int exm_process_entry_point_unpatch(const Exm_Process *process);
-
-int exm_process_dependencies_set(Exm_Process *process);
+EXM_API int exm_process_dependencies_set(Exm_Process *process);
 
 #endif /* EXM_PROCESS_H */

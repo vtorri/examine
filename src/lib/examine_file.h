@@ -22,14 +22,10 @@
 #ifndef EXM_FILE_H
 #define EXM_FILE_H
 
-void exm_file_path_set(void);
+EXM_API void exm_file_set(char *filename);
 
-void exm_file_set(char *filename);
+EXM_API char *exm_file_find(const char *filename);
 
-void exm_file_path_free(void);
-
-char *exm_file_find(const char *filename);
-
-unsigned long long exm_file_size_get(const char *filename);
+EXM_API unsigned long long exm_file_size_get(const char *filename);
 
 #endif /* EXM_FILE_H */

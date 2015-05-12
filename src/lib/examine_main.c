@@ -23,8 +23,9 @@
 # include <config.h>
 #endif
 
-#include "examine_main.h"
-#include "examine_file.h"
+#include "Examine.h"
+
+#include "examine_private_file.h"
 
 
 /*============================================================================*
@@ -44,7 +45,7 @@ static int _exm_init_count = 0;
  *                                   API                                      *
  *============================================================================*/
 
-int
+EXM_API int
 exm_init(void)
 {
     if (++_exm_init_count != 1)
@@ -55,7 +56,7 @@ exm_init(void)
     return _exm_init_count;
 }
 
-int
+EXM_API int
 exm_shutdown(void)
 {
     if (!--_exm_init_count != 0)

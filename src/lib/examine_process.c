@@ -41,11 +41,10 @@
 #include <psapi.h>
 #include <tlhelp32.h>
 
-#include "examine_log.h"
-#include "examine_str.h"
-#include "examine_list.h"
-#include "examine_pe.h"
-#include "examine_process.h"
+#include "Examine.h"
+
+#include "examine_private_str.h"
+#include "examine_private_process.h"
 
 
 /*============================================================================*
@@ -199,7 +198,31 @@ _exm_process_new_from_module(MODULEENTRY32 *me32)
  *============================================================================*/
 
 
-Exm_Process *
+HANDLE
+exm_process_get(const Exm_Process *process)
+{
+    return process->process;
+}
+
+const char *
+exm_process_filename_get(const Exm_Process *process)
+{
+    return process->filename;
+}
+
+DWORD
+exm_process_id_get(const Exm_Process *process)
+{
+    return process->id;
+}
+
+
+/*============================================================================*
+ *                                   API                                      *
+ *============================================================================*/
+
+
+EXM_API Exm_Process *
 exm_process_new(const char *filename, const char *args)
 {
     char buf[32768];
@@ -275,7 +298,7 @@ exm_process_new(const char *filename, const char *args)
     return NULL;
 }
 
-void
+EXM_API void
 exm_process_del(Exm_Process *process)
 {
     exm_list_free(process->dep_names, free);
@@ -287,37 +310,19 @@ exm_process_del(Exm_Process *process)
     free(process);
 }
 
-HANDLE
-exm_process_get(const Exm_Process *process)
-{
-    return process->process;
-}
-
-const char *
-exm_process_filename_get(const Exm_Process *process)
-{
-    return process->filename;
-}
-
-DWORD
-exm_process_id_get(const Exm_Process *process)
-{
-    return process->id;
-}
-
-const Exm_List *
+EXM_API const Exm_List *
 exm_process_dep_names_get(const Exm_Process *process)
 {
     return process->dep_names;
 }
 
-const Exm_List *
+EXM_API const Exm_List *
 exm_process_crt_names_get(const Exm_Process *process)
 {
     return process->crt_names;
 }
 
-void
+EXM_API void
 exm_process_run(const Exm_Process *process)
 {
     EXM_LOG_DBG("resume child process thread 0x%p",
@@ -327,7 +332,7 @@ exm_process_run(const Exm_Process *process)
     WaitForSingleObject(process->process, INFINITE);
 }
 
-void
+EXM_API void
 exm_process_pause(const Exm_Process *process)
 {
     EXM_LOG_DBG("pause child process thread 0x%p",
@@ -337,7 +342,7 @@ exm_process_pause(const Exm_Process *process)
     WaitForSingleObject(process->process, INFINITE);
 }
 
-int
+EXM_API int
 exm_process_entry_point_patch(Exm_Process *process)
 {
     CONTEXT context;
@@ -414,7 +419,7 @@ exm_process_entry_point_patch(Exm_Process *process)
     return 1;
 }
 
-int
+EXM_API int
 exm_process_entry_point_unpatch(const Exm_Process *process)
 {
     DWORD new_protect;
@@ -444,7 +449,7 @@ exm_process_entry_point_unpatch(const Exm_Process *process)
     return 1;
 }
 
-int
+EXM_API int
 exm_process_dependencies_set(Exm_Process *process)
 {
     MODULEENTRY32 me32;
@@ -518,8 +523,3 @@ exm_process_dependencies_set(Exm_Process *process)
 
     return 0;
 }
-
-
-/*============================================================================*
- *                                   API                                      *
- *============================================================================*/

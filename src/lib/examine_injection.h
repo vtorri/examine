@@ -24,12 +24,12 @@
 
 typedef struct _Exm_Injection Exm_Injection;
 
-Exm_Injection *exm_injection_new(const char *filename);
+EXM_API Exm_Injection *exm_injection_new(const char *filename);
 
-void exm_injection_del(Exm_Injection *inj);
+EXM_API void exm_injection_del(Exm_Injection *inj);
 
-int exm_injection_dll_inject(Exm_Injection *inj, const Exm_Process *proc, const char *dll_file_name);
+EXM_API int exm_injection_dll_inject(Exm_Injection *inj, const Exm_Process *proc, const char *dll_file_name);
 
-void exm_injection_dll_eject(Exm_Injection *inj, const Exm_Process *proc);
+EXM_API void exm_injection_dll_eject(Exm_Injection *inj, const Exm_Process *proc);
 
 #endif /* EXM_INJECTION_H */

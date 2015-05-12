@@ -34,19 +34,19 @@ struct _Exm_List
 typedef void (*Exm_List_Free_Cb)(void *ptr);
 typedef int (*Exm_List_Cmp_Cb)(const void *d1, const void *d2);
 
-Exm_List *exm_list_append(Exm_List *l, const void *data);
+EXM_API Exm_List *exm_list_append(Exm_List *l, const void *data);
 
-Exm_List *exm_list_prepend(Exm_List *l, const void *data);
+EXM_API Exm_List *exm_list_prepend(Exm_List *l, const void *data);
 
-unsigned char exm_list_data_is_found(const Exm_List *l, const void *data, Exm_List_Cmp_Cb cmp_cb);
+EXM_API unsigned char exm_list_data_is_found(const Exm_List *l, const void *data, Exm_List_Cmp_Cb cmp_cb);
 
-Exm_List *exm_list_append_if_new(Exm_List *l, const void *data, Exm_List_Cmp_Cb cmp_cb);
+EXM_API Exm_List *exm_list_append_if_new(Exm_List *l, const void *data, Exm_List_Cmp_Cb cmp_cb);
 
-Exm_List *exm_list_prepend_if_new(Exm_List *l, const void *data, Exm_List_Cmp_Cb cmp_cb);
+EXM_API Exm_List *exm_list_prepend_if_new(Exm_List *l, const void *data, Exm_List_Cmp_Cb cmp_cb);
 
-void exm_list_free(Exm_List *l, Exm_List_Free_Cb free_cb);
+EXM_API void exm_list_free(Exm_List *l, Exm_List_Free_Cb free_cb);
 
-int exm_list_count(const Exm_List *l);
+EXM_API int exm_list_count(const Exm_List *l);
 
 
 #endif /* EXAMINE_LIST_H */

@@ -22,9 +22,9 @@
 #ifndef EXM_MAIN_H
 #define EXM_MAIN_H
 
-int exm_init(void);
+EXM_API int exm_init(void);
 
-int exm_shutdown(void);
+EXM_API int exm_shutdown(void);
 
 #endif /* EXM_MAIN_H */
 

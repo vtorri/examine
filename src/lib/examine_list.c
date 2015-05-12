@@ -25,7 +25,7 @@
 
 #include <stdlib.h>
 
-#include "examine_list.h"
+#include "Examine.h"
 
 
 /**
@@ -61,7 +61,7 @@
  * @c NULL, this function returns @p l. To create a new list, @p l
  * must be @c NULL.
  */
-Exm_List *
+EXM_API Exm_List *
 exm_list_append(Exm_List *l, const void *data)
 {
     Exm_List *iter;
@@ -100,7 +100,7 @@ exm_list_append(Exm_List *l, const void *data)
  * @c NULL, this function returns @p l. To create a new list, @p l
  * must be @c NULL.
  */
-Exm_List *
+EXM_API Exm_List *
 exm_list_prepend(Exm_List *l, const void *data)
 {
     Exm_List *n;
@@ -129,7 +129,7 @@ exm_list_prepend(Exm_List *l, const void *data)
  * This function checks if @p data belongs to @p l. It returns 1 if it
  * belongs to @p l, 0 otherwise.
  */
-unsigned char
+EXM_API unsigned char
 exm_list_data_is_found(const Exm_List *l, const void *data, Exm_List_Cmp_Cb cmp_cb)
 {
     Exm_List *iter;
@@ -161,7 +161,7 @@ exm_list_data_is_found(const Exm_List *l, const void *data, Exm_List_Cmp_Cb cmp_
  * comparison callback @p cmp_cb. If @cmp_cb returns 0, @p data is not
  * added to @p l.
  */
-Exm_List *
+EXM_API Exm_List *
 exm_list_append_if_new(Exm_List *l, const void *data, Exm_List_Cmp_Cb cmp_cb)
 {
     Exm_List *iter;
@@ -199,7 +199,7 @@ exm_list_append_if_new(Exm_List *l, const void *data, Exm_List_Cmp_Cb cmp_cb)
  * comparison callback @p cmp_cb. If @cmp_cb returns 0, @p data is not
  * added to @p l.
  */
-Exm_List *
+EXM_API Exm_List *
 exm_list_prepend_if_new(Exm_List *l, const void *data, Exm_List_Cmp_Cb cmp_cb)
 {
     Exm_List *iter;
@@ -234,7 +234,7 @@ exm_list_prepend_if_new(Exm_List *l, const void *data, Exm_List_Cmp_Cb cmp_cb)
  * This function frees the list @l using the free callback @p free_cb
  * to free each element. If @p l is @c NULL, nothing is done.
  */
-void
+EXM_API void
 exm_list_free(Exm_List *l, Exm_List_Free_Cb free_cb)
 {
     Exm_List *iter;
@@ -264,7 +264,7 @@ exm_list_free(Exm_List *l, Exm_List_Free_Cb free_cb)
  * This function returns the number of elements of the list @p l. If
  * @p l is @c null, 0 is returned.
  */
-int
+EXM_API int
 exm_list_count(const Exm_List *l)
 {
     Exm_List *iter;

@@ -32,8 +32,8 @@
 #include <windows.h>
 #undef WIN32_LEAN_AND_MEAN
 
-#include "examine_list.h"
-#include "examine_stacktrace.h"
+#include <Examine.h>
+
 #include "examine_memcheck_overloads.h"
 
 

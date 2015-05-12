@@ -33,11 +33,9 @@
 # undef WIN32_LEAN_AND_MEAN
 #endif
 
-#include "examine_log.h"
-#include "examine_list.h"
-#include "examine_pe.h"
-#include "examine_process.h"
-#include "examine_injection.h"
+#include "Examine.h"
+
+#include "examine_private_process.h"
 
 
 /*============================================================================*
@@ -104,6 +102,7 @@ _exm_injection_symbol_get(const char *module, const char *symbol)
     return NULL;
 }
 
+
 /*============================================================================*
  *                                 Global                                     *
  *============================================================================*/
@@ -112,6 +111,7 @@ _exm_injection_symbol_get(const char *module, const char *symbol)
 /*============================================================================*
  *                                   API                                      *
  *============================================================================*/
+
 
 /**
  * @brief Create a newly allocated #Exm_Injection object.
@@ -125,7 +125,7 @@ _exm_injection_symbol_get(const char *module, const char *symbol)
  * CreateRemoteThread(), LoadLibraryA() and FreeLibrary() are
  * available. On failure, @c NULL is returned.
  */
-Exm_Injection *
+EXM_API Exm_Injection *
 exm_injection_new(const char *filename)
 {
     Exm_Injection *inj;
@@ -170,7 +170,7 @@ exm_injection_new(const char *filename)
     return NULL;
 }
 
-void
+EXM_API void
 exm_injection_del(Exm_Injection *inj)
 {
     if (!inj)
@@ -192,7 +192,7 @@ exm_injection_del(Exm_Injection *inj)
  * process @p proc, with the injection object @p inj. It returns 1 on
  * success, 0 otherwise.
  */
-int
+EXM_API int
 exm_injection_dll_inject(Exm_Injection *inj, const Exm_Process *proc, const char *dll_file_name)
 {
     char buf[MAX_PATH];
@@ -334,7 +334,7 @@ exm_injection_dll_inject(Exm_Injection *inj, const Exm_Process *proc, const char
     return 0;
 }
 
-void
+EXM_API void
 exm_injection_dll_eject(Exm_Injection *inj, const Exm_Process *proc)
 {
     HANDLE thread;

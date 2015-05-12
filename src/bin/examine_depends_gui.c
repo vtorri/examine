@@ -29,12 +29,7 @@
 
 #include <Elementary.h>
 
-#include <examine_log.h>
-#include <examine_list.h>
-#include <examine_map.h>
-#include <examine_file.h>
-#include <examine_pe.h>
-#include <examine_main.h>
+#include <Examine.h>
 
 typedef struct _Exm_List_Modules_Node Exm_List_Modules_Node;
 

@@ -33,12 +33,8 @@
 
 #include <imagehlp.h>
 
-#include "examine_log.h"
-#include "examine_list.h"
-#include "examine_file.h"
-#include "examine_map.h"
-#include "examine_pe.h"
-#include "examine_stacktrace.h"
+#include <Examine.h>
+
 #include "examine_memcheck_overloads.h"
 
 

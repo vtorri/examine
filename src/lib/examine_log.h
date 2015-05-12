@@ -48,20 +48,20 @@ typedef enum
 #define EXM_LOG_DBG(...) \
     EXM_LOG(EXM_LOG_LEVEL_DBG, __VA_ARGS__)
 
-void exm_log_print_cb_stderr(Exm_Log_Level level,
-                             const char *fmt,
-                             void *data,
-                             va_list args);
+EXM_API void exm_log_print_cb_stderr(Exm_Log_Level level,
+                                     const char *fmt,
+                                     void *data,
+                                     va_list args);
 
-void exm_log_print_cb_stdout(Exm_Log_Level level,
-                             const char *fmt,
-                             void *data,
-                             va_list args);
+EXM_API void exm_log_print_cb_stdout(Exm_Log_Level level,
+                                     const char *fmt,
+                                     void *data,
+                                     va_list args);
 
-void exm_log_print(Exm_Log_Level level, const char *fmt, ...);
+EXM_API void exm_log_print(Exm_Log_Level level, const char *fmt, ...);
 
-void exm_log_level_set(Exm_Log_Level level);
+EXM_API void exm_log_level_set(Exm_Log_Level level);
 
-Exm_Log_Level exm_log_level_get(void);
+EXM_API Exm_Log_Level exm_log_level_get(void);
 
 #endif /* EXAMINE_LOG_H */

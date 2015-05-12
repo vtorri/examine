@@ -39,8 +39,9 @@
 # include <fcntl.h>
 #endif
 
-#include "examine_log.h"
-#include "examine_map.h"
+#include "Examine.h"
+
+#include "examine_private_map.h"
 
 
 /**
@@ -51,6 +52,7 @@
  *
  * @{
  */
+
 
 /*============================================================================*
  *                                  Local                                     *
@@ -182,89 +184,6 @@ exm_map_del(Exm_Map *map)
     free(map);
 }
 
-Exm_Map_Shared *
-exm_map_shared_new(const char *name, const void *data, DWORD size)
-{
-    Exm_Map_Shared *map;
-
-    if (!name || (size <= 0))
-    {
-        EXM_LOG_ERR("Base address of the module is invalid");
-        return NULL;
-    }
-
-    map = (Exm_Map_Shared *)calloc(1, sizeof(Exm_Map_Shared));
-    if (!map)
-    {
-        EXM_LOG_ERR("Can not allocate memory for shared map");
-        return NULL;
-    }
-
-    map->handle = CreateFileMapping(INVALID_HANDLE_VALUE,
-                                    NULL, PAGE_READWRITE, 0, size, name);
-    if (!map->handle)
-    {
-        EXM_LOG_ERR("Can not allocate memory for shared map");
-        goto free_map;
-    }
-
-    map->base = MapViewOfFile(map->handle, FILE_MAP_WRITE, 0, 0, size);
-    if (!map->base)
-    {
-        EXM_LOG_ERR("Can not map memory for shared map");
-        goto close_file_mapping;
-    }
-
-    CopyMemory(map->base, data, size);
-
-    return map;
-
-  close_file_mapping:
-    CloseHandle(map->handle);
-  free_map:
-    free(map);
-
-    return NULL;
-}
-
-void
-exm_map_shared_del(Exm_Map_Shared *map)
-{
-    if (!map)
-        return;
-
-    UnmapViewOfFile(map->base);
-    CloseHandle(map->handle);
-    free(map);
-}
-
-int
-exm_map_shared_read(const char *name, DWORD size, void *data)
-{
-    HANDLE handle;
-    void *base;
-
-    handle = CreateFileMapping(INVALID_HANDLE_VALUE,
-                               NULL, PAGE_READWRITE, 0, size,
-                               name);
-    if (!handle)
-        return 0;
-
-    base = MapViewOfFile(handle, FILE_MAP_WRITE, 0, 0, size);
-    if (!base)
-    {
-        CloseHandle(handle);
-        return 0;
-    }
-
-    CopyMemory(data, base, size);
-
-    UnmapViewOfFile(base);
-    CloseHandle(handle);
-
-    return 1;
-}
-
 #else
 
 Exm_Map *
@@ -332,6 +251,94 @@ exm_map_size_get(const Exm_Map *map)
 /*============================================================================*
  *                                   API                                      *
  *============================================================================*/
+
+
+#ifdef _WIN32
+
+EXM_API Exm_Map_Shared *
+exm_map_shared_new(const char *name, const void *data, DWORD size)
+{
+    Exm_Map_Shared *map;
+
+    if (!name || (size <= 0))
+    {
+        EXM_LOG_ERR("Base address of the module is invalid");
+        return NULL;
+    }
+
+    map = (Exm_Map_Shared *)calloc(1, sizeof(Exm_Map_Shared));
+    if (!map)
+    {
+        EXM_LOG_ERR("Can not allocate memory for shared map");
+        return NULL;
+    }
+
+    map->handle = CreateFileMapping(INVALID_HANDLE_VALUE,
+                                    NULL, PAGE_READWRITE, 0, size, name);
+    if (!map->handle)
+    {
+        EXM_LOG_ERR("Can not allocate memory for shared map");
+        goto free_map;
+    }
+
+    map->base = MapViewOfFile(map->handle, FILE_MAP_WRITE, 0, 0, size);
+    if (!map->base)
+    {
+        EXM_LOG_ERR("Can not map memory for shared map");
+        goto close_file_mapping;
+    }
+
+    CopyMemory(map->base, data, size);
+
+    return map;
+
+  close_file_mapping:
+    CloseHandle(map->handle);
+  free_map:
+    free(map);
+
+    return NULL;
+}
+
+EXM_API void
+exm_map_shared_del(Exm_Map_Shared *map)
+{
+    if (!map)
+        return;
+
+    UnmapViewOfFile(map->base);
+    CloseHandle(map->handle);
+    free(map);
+}
+
+EXM_API int
+exm_map_shared_read(const char *name, DWORD size, void *data)
+{
+    HANDLE handle;
+    void *base;
+
+    handle = CreateFileMapping(INVALID_HANDLE_VALUE,
+                               NULL, PAGE_READWRITE, 0, size,
+                               name);
+    if (!handle)
+        return 0;
+
+    base = MapViewOfFile(handle, FILE_MAP_WRITE, 0, 0, size);
+    if (!base)
+    {
+        CloseHandle(handle);
+        return 0;
+    }
+
+    CopyMemory(data, base, size);
+
+    UnmapViewOfFile(base);
+    CloseHandle(handle);
+
+    return 1;
+}
+
+#endif
 
 
 /**

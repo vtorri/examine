@@ -23,8 +23,7 @@
 # include <config.h>
 #endif
 
-#include <examine_log.h>
-#include <examine_list.h>
+#include <Examine.h>
 
 #include "examine_private.h"
 

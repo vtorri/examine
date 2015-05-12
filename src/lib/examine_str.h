@@ -22,7 +22,6 @@
 #ifndef EXM_STR_H
 #define EXM_STR_H
 
-void exm_str_append(char *buf, const char *str);
-void exm_str_append_with_quotes(char *buf, const char *str);
+EXM_API void exm_str_append(char *buf, const char *str);
 
 #endif /* EXM_STR_H */

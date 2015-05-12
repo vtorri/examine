@@ -25,7 +25,10 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-#include <libgen.h>
+
+#ifdef  HAVE_LIBGEN_H
+# include <libgen.h>
+#endif
 
 #ifdef _WIN32
 # ifndef WIN32_LEAN_AND_MEAN
@@ -35,14 +38,7 @@
 # undef WIN32_LEAN_AND_MEAN
 #endif
 
-#include <examine_log.h>
-#include <examine_str.h>
-#include <examine_list.h>
-#include <examine_file.h>
-#include <examine_map.h>
-#include <examine_pe.h>
-#include <examine_process.h>
-
+#include <Examine.h>
 #include "examine_private.h"
 
 static unsigned int _exm_indent = 0;
@@ -74,7 +70,7 @@ _exm_depends_cmd_tree_fill(Exm_List *list, const char *filename)
             char *name;
             unsigned int i;
 
-            name = strdup(exm_pe_import_descriptor_file_name_get(pe, iter_import));
+            name = _strdup(exm_pe_import_descriptor_file_name_get(pe, iter_import));
             if (!name)
             {
                 EXM_LOG_ERR("Can not allocate memory for filename");
@@ -107,7 +103,7 @@ _exm_depends_cmd_tree_fill(Exm_List *list, const char *filename)
             char *name;
             unsigned int i;
 
-            name = strdup(exm_pe_delayload_descriptor_file_name_get(pe, iter_delayload));
+            name = _strdup(exm_pe_delayload_descriptor_file_name_get(pe, iter_delayload));
             if (!name)
             {
                 EXM_LOG_ERR("Can not allocate memory for filename");
@@ -145,14 +141,14 @@ _exm_depends_cmd_tree_run(Exm_Pe *pe)
     Exm_List *list = NULL;
     char *tmp;
 
-    tmp = strdup(exm_pe_filename_get(pe));
+    tmp = _strdup(exm_pe_filename_get(pe));
     if (!tmp)
     {
         EXM_LOG_ERR("Can not allocate memory for file name %s", exm_pe_filename_get(pe));
         return;
     }
 
-    list = exm_list_append(list, strdup(exm_pe_filename_get(pe)));
+    list = exm_list_append(list, _strdup(exm_pe_filename_get(pe)));
     printf("%s\n", basename(tmp));
     free(tmp);
     list = _exm_depends_cmd_tree_fill(list, exm_pe_filename_get(pe));
@@ -176,7 +172,7 @@ _exm_depends_cmd_list_fill(Exm_List *list, const Exm_Pe *pe)
         {
             char *name;
 
-            name = strdup(exm_pe_import_descriptor_file_name_get(pe, iter_import));
+            name = _strdup(exm_pe_import_descriptor_file_name_get(pe, iter_import));
             if (!exm_list_data_is_found(list, name, _exm_depends_cmd_cmp_cb))
             {
                 Exm_Pe *p;
@@ -203,7 +199,7 @@ _exm_depends_cmd_list_fill(Exm_List *list, const Exm_Pe *pe)
         {
             char *name;
 
-            name = strdup(exm_pe_delayload_descriptor_file_name_get(pe, iter_delayload));
+            name = _strdup(exm_pe_delayload_descriptor_file_name_get(pe, iter_delayload));
             if (!exm_list_data_is_found(list, name, _exm_depends_cmd_cmp_cb))
             {
                 Exm_Pe *p;
@@ -232,7 +228,7 @@ _exm_depends_cmd_list_run(const Exm_Pe *pe)
     Exm_List *list = NULL;
     char *tmp;
 
-    tmp = strdup(exm_pe_filename_get(pe));
+    tmp = _strdup(exm_pe_filename_get(pe));
     if (!tmp)
     {
         EXM_LOG_ERR("Can not allocate memory for file name %s", exm_pe_filename_get(pe));
@@ -241,7 +237,7 @@ _exm_depends_cmd_list_run(const Exm_Pe *pe)
 
     printf("   %s => %s\n", basename(tmp), exm_pe_filename_get(pe));
     free(tmp);
-    list = exm_list_append(list, strdup(exm_pe_filename_get(pe)));
+    list = exm_list_append(list, _strdup(exm_pe_filename_get(pe)));
     list = _exm_depends_cmd_list_fill(list, pe);
 
     exm_list_free(list, free);

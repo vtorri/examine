@@ -28,48 +28,48 @@
 
 typedef struct _Exm_Pe Exm_Pe;
 
-Exm_Pe *exm_pe_new(const char *filename);
+EXM_API Exm_Pe *exm_pe_new(const char *filename);
 
-Exm_Pe *exm_pe_new_from_base(const char *filename, const void *base, DWORD size);
+EXM_API Exm_Pe *exm_pe_new_from_base(const char *filename, const void *base, DWORD size);
 
-void exm_pe_free(Exm_Pe *pe);
+EXM_API void exm_pe_free(Exm_Pe *pe);
 
-const char *exm_pe_filename_get(const Exm_Pe *pe);
+EXM_API const char *exm_pe_filename_get(const Exm_Pe *pe);
 
-signed char exm_pe_is_64bits(const Exm_Pe *pe);
+EXM_API signed char exm_pe_is_64bits(const Exm_Pe *pe);
 
-unsigned char exm_pe_is_dll(Exm_Pe *pe);
+EXM_API unsigned char exm_pe_is_dll(Exm_Pe *pe);
 
-const IMAGE_DOS_HEADER *exm_pe_dos_header_get(const Exm_Pe *pe);
+EXM_API const IMAGE_DOS_HEADER *exm_pe_dos_header_get(const Exm_Pe *pe);
 
-const IMAGE_NT_HEADERS *exm_pe_nt_header_get(const Exm_Pe *pe);
+EXM_API const IMAGE_NT_HEADERS *exm_pe_nt_header_get(const Exm_Pe *pe);
 
-const void *exm_pe_entry_point_get(const Exm_Pe *pe);
+EXM_API const void *exm_pe_entry_point_get(const Exm_Pe *pe);
 
 /* export directory */
 
-const IMAGE_EXPORT_DIRECTORY *exm_pe_export_directory_get(const Exm_Pe *pe, DWORD *count);
+EXM_API const IMAGE_EXPORT_DIRECTORY *exm_pe_export_directory_get(const Exm_Pe *pe, DWORD *count);
 
-unsigned char exm_pe_export_directory_function_ordinal_get(const Exm_Pe *pe, const IMAGE_EXPORT_DIRECTORY *ed, DWORD idx, DWORD *ordinal);
+EXM_API unsigned char exm_pe_export_directory_function_ordinal_get(const Exm_Pe *pe, const IMAGE_EXPORT_DIRECTORY *ed, DWORD idx, DWORD *ordinal);
 
-const char *exm_pe_export_directory_function_name_get(const Exm_Pe *pe, const IMAGE_EXPORT_DIRECTORY *ed, DWORD idx);
+EXM_API const char *exm_pe_export_directory_function_name_get(const Exm_Pe *pe, const IMAGE_EXPORT_DIRECTORY *ed, DWORD idx);
 
-DWORD exm_pe_export_directory_function_address_get(const Exm_Pe *pe, const IMAGE_EXPORT_DIRECTORY *ed, DWORD idx);
+EXM_API DWORD exm_pe_export_directory_function_address_get(const Exm_Pe *pe, const IMAGE_EXPORT_DIRECTORY *ed, DWORD idx);
 
 /* import descriptor */
 
-const IMAGE_IMPORT_DESCRIPTOR *exm_pe_import_descriptor_get(const Exm_Pe *pe, DWORD *count);
+EXM_API const IMAGE_IMPORT_DESCRIPTOR *exm_pe_import_descriptor_get(const Exm_Pe *pe, DWORD *count);
 
-const char *exm_pe_import_descriptor_file_name_get(const Exm_Pe *pe, const IMAGE_IMPORT_DESCRIPTOR *id);
+EXM_API const char *exm_pe_import_descriptor_file_name_get(const Exm_Pe *pe, const IMAGE_IMPORT_DESCRIPTOR *id);
 
 /* debug directory */
 
-const IMAGE_DEBUG_DIRECTORY *exm_pe_debug_directory_get(const Exm_Pe *pe, DWORD *count);
+EXM_API const IMAGE_DEBUG_DIRECTORY *exm_pe_debug_directory_get(const Exm_Pe *pe, DWORD *count);
 
 /* delayload directory */
 
-const IMAGE_DELAYLOAD_DESCRIPTOR *exm_pe_delayload_descriptor_get(const Exm_Pe *pe, DWORD *count);
+EXM_API const IMAGE_DELAYLOAD_DESCRIPTOR *exm_pe_delayload_descriptor_get(const Exm_Pe *pe, DWORD *count);
 
-const char *exm_pe_delayload_descriptor_file_name_get(const Exm_Pe *pe, const IMAGE_DELAYLOAD_DESCRIPTOR *dd);
+EXM_API const char *exm_pe_delayload_descriptor_file_name_get(const Exm_Pe *pe, const IMAGE_DELAYLOAD_DESCRIPTOR *dd);
 
 #endif /* EXM_PE_H */
