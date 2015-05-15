@@ -241,7 +241,7 @@ _exm_depends_list_modules_node_new(Exm_Pe *pe)
         node->exported_fct[i].address = exm_pe_export_directory_function_address_get(pe, ed, i);
         for (j = 0; j < ed->NumberOfNames; j++)
         {
-            WORD ordinal;
+            DWORD ordinal;
 
             if (exm_pe_export_directory_function_ordinal_get(pe, ed, j, &ordinal))
             {
@@ -843,7 +843,7 @@ _exm_depends_export_functions_fill(Exm_Depends *exm)
 
     for (i = 0; i < ed->NumberOfNames; i++)
     {
-        WORD ordinal;
+        DWORD ordinal;
 
         o = elm_label_add(exm->gui.win);
         if (exm_pe_export_directory_function_ordinal_get(exm->pe.pe, ed, i, &ordinal))
