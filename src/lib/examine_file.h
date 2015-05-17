@@ -28,4 +28,6 @@ EXM_API char *exm_file_find(const char *filename);
 
 EXM_API unsigned long long exm_file_size_get(const char *filename);
 
+EXM_API void exm_file_base_dir_name_get(const char *filename, char **dir_name, char **base_name);
+
 #endif /* EXM_FILE_H */

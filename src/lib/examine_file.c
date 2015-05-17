@@ -65,41 +65,6 @@ _exm_file_name_strcasecmp(const void *d1, const void *d2)
     return _stricmp((const char *)d1, (const char *)d2);
 }
 
-static void
-_exm_file_base_dir_name_get(const char *filename, char **dir_name, char **base_name)
-{
-    char *idx;
-    char *res;
-
-    if (dir_name) *dir_name = NULL;
-    if (base_name) *base_name = NULL;
-
-    if (!filename)
-        return;
-
-#ifdef _WIN32
-    idx = strrchr(filename, '\\');
-#else
-    idx = strrchr(filename, '/');
-#endif
-    if (idx)
-    {
-        res = malloc((idx - filename + 2) * sizeof(char));
-        if (res)
-        {
-            /* we copy also the last path separator */
-            memcpy(res, filename, idx - filename + 1);
-            res[idx - filename + 1] = '\0';
-
-            if (dir_name) *dir_name = res;
-        }
-
-        if (base_name) *base_name = _strdup(idx + 1);
-    }
-    else
-      EXM_LOG_ERR("file %s has not an absolute path", filename);
-}
-
 static char *
 _exm_file_concat(const char *path, const char *filename)
 {
@@ -303,7 +268,7 @@ exm_file_set(char *filename)
     {
         if (_fullpath(buf, filename, sizeof(buf)))
         {
-            _exm_file_base_dir_name_get(buf, &dir_name, &base_name);
+            exm_file_base_dir_name_get(buf, &dir_name, &base_name);
             if (!dir_name || !base_name)
             {
                 EXM_LOG_ERR("Can not find base dir or base name for %s", filename);
@@ -319,7 +284,7 @@ exm_file_set(char *filename)
     {
         if (_fullpath(buf, filename, sizeof(buf)))
         {
-            _exm_file_base_dir_name_get(buf, &dir_name, &base_name);
+            exm_file_base_dir_name_get(buf, &dir_name, &base_name);
             if (!dir_name || !base_name)
             {
                 EXM_LOG_ERR("Can not find base dir or base name for %s", filename);
@@ -371,7 +336,7 @@ exm_file_find(const char *filename)
     {
         if (_fullpath(buf, filename, sizeof(buf)))
         {
-            _exm_file_base_dir_name_get(buf, NULL, &base_name);
+            exm_file_base_dir_name_get(buf, NULL, &base_name);
         }
         else
         {
@@ -382,7 +347,7 @@ exm_file_find(const char *filename)
     {
         if (_fullpath(buf, filename, sizeof(buf)))
         {
-            _exm_file_base_dir_name_get(buf, NULL, &base_name);
+            exm_file_base_dir_name_get(buf, NULL, &base_name);
         }
         else
         {
@@ -432,4 +397,39 @@ exm_file_size_get(const char *filename)
 
     return buf.st_size;
 #endif
+}
+
+EXM_API void
+exm_file_base_dir_name_get(const char *filename, char **dir_name, char **base_name)
+{
+    char *idx;
+    char *res;
+
+    if (dir_name) *dir_name = NULL;
+    if (base_name) *base_name = NULL;
+
+    if (!filename)
+        return;
+
+#ifdef _WIN32
+    idx = strrchr(filename, '\\');
+#else
+    idx = strrchr(filename, '/');
+#endif
+    if (idx)
+    {
+        res = malloc((idx - filename + 2) * sizeof(char));
+        if (res)
+        {
+            /* we copy also the last path separator */
+            memcpy(res, filename, idx - filename + 1);
+            res[idx - filename + 1] = '\0';
+
+            if (dir_name) *dir_name = res;
+        }
+
+        if (base_name) *base_name = _strdup(idx + 1);
+    }
+    else
+      EXM_LOG_ERR("file %s has not an absolute path", filename);
 }

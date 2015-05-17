@@ -26,10 +26,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#ifdef  HAVE_LIBGEN_H
-# include <libgen.h>
-#endif
-
 #ifdef _WIN32
 # ifndef WIN32_LEAN_AND_MEAN
 #  define WIN32_LEAN_AND_MEAN
@@ -139,18 +135,12 @@ static void
 _exm_depends_cmd_tree_run(Exm_Pe *pe)
 {
     Exm_List *list = NULL;
-    char *tmp;
+    char *bn;
 
-    tmp = _strdup(exm_pe_filename_get(pe));
-    if (!tmp)
-    {
-        EXM_LOG_ERR("Can not allocate memory for file name %s", exm_pe_filename_get(pe));
-        return;
-    }
+    exm_file_base_dir_name_get(exm_pe_filename_get(pe), NULL, &bn);
+    printf("%s\n", bn);
+    free(bn);
 
-    list = exm_list_append(list, _strdup(exm_pe_filename_get(pe)));
-    printf("%s\n", basename(tmp));
-    free(tmp);
     list = _exm_depends_cmd_tree_fill(list, exm_pe_filename_get(pe));
 
     exm_list_free(list, free);
@@ -226,17 +216,12 @@ static void
 _exm_depends_cmd_list_run(const Exm_Pe *pe)
 {
     Exm_List *list = NULL;
-    char *tmp;
+    char *bn;
 
-    tmp = _strdup(exm_pe_filename_get(pe));
-    if (!tmp)
-    {
-        EXM_LOG_ERR("Can not allocate memory for file name %s", exm_pe_filename_get(pe));
-        return;
-    }
+    exm_file_base_dir_name_get(exm_pe_filename_get(pe), NULL, &bn);
 
-    printf("   %s => %s\n", basename(tmp), exm_pe_filename_get(pe));
-    free(tmp);
+    printf("   %s => %s\n", bn, exm_pe_filename_get(pe));
+    free(bn);
     list = exm_list_append(list, _strdup(exm_pe_filename_get(pe)));
     list = _exm_depends_cmd_list_fill(list, pe);
 
