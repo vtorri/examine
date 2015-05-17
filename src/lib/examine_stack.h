@@ -19,21 +19,21 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef EXAMINE_STACKTRACE_H
-#define EXAMINE_STACKTRACE_H
+#ifndef EXAMINE_STACK_H
+#define EXAMINE_STACK_H
 
 
-typedef struct _Exm_Sw_Data Exm_Sw_Data;
+typedef struct _Exm_Stack_Data Exm_Stack_Data;
 
-EXM_API unsigned char exm_sw_init(void);
-EXM_API void exm_sw_shutdown(void);
+EXM_API unsigned char exm_stack_init(void);
+EXM_API void exm_stack_shutdown(void);
 
-EXM_API Exm_List *exm_sw_frames_get(void);
+EXM_API Exm_List *exm_stack_frames_get(void);
 
-EXM_API const char *exm_sw_data_filename_get(const Exm_Sw_Data *data);
-EXM_API const char *exm_sw_data_function_get(const Exm_Sw_Data *data);
-EXM_API unsigned int exm_sw_data_line_get(const Exm_Sw_Data *data);
-EXM_API void exm_sw_data_free(void *ptr);
+EXM_API const char *exm_stack_data_filename_get(const Exm_Stack_Data *data);
+EXM_API const char *exm_stack_data_function_get(const Exm_Stack_Data *data);
+EXM_API unsigned int exm_stack_data_line_get(const Exm_Stack_Data *data);
+EXM_API void exm_stack_data_free(void *ptr);
 
 
-#endif /* EXAMINE_STACKTRACE_H */
+#endif /* EXAMINE_STACK_H */

@@ -38,14 +38,14 @@
 
 #define STACKWALK_MAX_NAMELEN 1024
 
-struct _Exm_Sw_Data
+struct _Exm_Stack_Data
 {
     char *filename;
     char *function;
     unsigned int line;
 };
 
-struct _Exm_Sw
+struct _Exm_Stack
 {
     HANDLE proc;
     HANDLE thread;
@@ -80,7 +80,7 @@ static BOOL __stdcall _sw_read_memory_cb(HANDLE      hProcess,
 
 
 EXM_API unsigned char
-exm_sw_init(void)
+exm_stack_init(void)
 {
     DWORD options;
 
@@ -101,13 +101,13 @@ exm_sw_init(void)
 }
 
 EXM_API void
-exm_sw_shutdown(void)
+exm_stack_shutdown(void)
 {
     SymCleanup(_exm_stack_process);
 }
 
 EXM_API Exm_List *
-exm_sw_frames_get(void)
+exm_stack_frames_get(void)
 {
     CONTEXT context;
     STACKFRAME64 sf;
@@ -182,9 +182,9 @@ exm_sw_frames_get(void)
 
         if ((sf.AddrPC.Offset != 0) && (sf.AddrReturn.Offset != 0))
         {
-            Exm_Sw_Data *sw_data;
+            Exm_Stack_Data *sw_data;
 
-            sw_data = (Exm_Sw_Data *)calloc(1, sizeof(Exm_Sw_Data));
+            sw_data = (Exm_Stack_Data *)calloc(1, sizeof(Exm_Stack_Data));
             if (sw_data)
             {
                 DWORD64 offset_from_symbol;
@@ -226,7 +226,7 @@ exm_sw_frames_get(void)
 }
 
 EXM_API const char *
-exm_sw_data_filename_get(const Exm_Sw_Data *data)
+exm_stack_data_filename_get(const Exm_Stack_Data *data)
 {
     if (!data)
         return NULL;
@@ -235,7 +235,7 @@ exm_sw_data_filename_get(const Exm_Sw_Data *data)
 }
 
 EXM_API const char *
-exm_sw_data_function_get(const Exm_Sw_Data *data)
+exm_stack_data_function_get(const Exm_Stack_Data *data)
 {
     if (!data)
         return NULL;
@@ -244,7 +244,7 @@ exm_sw_data_function_get(const Exm_Sw_Data *data)
 }
 
 EXM_API unsigned int
-exm_sw_data_line_get(const Exm_Sw_Data *data)
+exm_stack_data_line_get(const Exm_Stack_Data *data)
 {
     if (!data)
         return 0;
@@ -253,14 +253,14 @@ exm_sw_data_line_get(const Exm_Sw_Data *data)
 }
 
 EXM_API void
-exm_sw_data_free(void *ptr)
+exm_stack_data_free(void *ptr)
 {
-    Exm_Sw_Data *data;
+    Exm_Stack_Data *data;
 
     if (!ptr)
         return;
 
-    data = (Exm_Sw_Data *)ptr;
+    data = (Exm_Stack_Data *)ptr;
     if (data->filename)
         free(data->filename);
     if (data->function)

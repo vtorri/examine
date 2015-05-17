@@ -41,9 +41,9 @@
  *============================================================================*/
 
 
-typedef struct _Exm_Sw_Find_Data Exm_Sw_Find_Data;
+typedef struct _Exm_Stack_Find_Data Exm_Stack_Find_Data;
 
-struct _Exm_Sw_Find_Data
+struct _Exm_Stack_Find_Data
 {
     char     *function;
     asymbol **symbol_table;
@@ -51,7 +51,7 @@ struct _Exm_Sw_Find_Data
     Exm_List *list;
 };
 
-struct _Exm_Sw_Data
+struct _Exm_Stack_Data
 {
     char *filename;
     char *function;
@@ -59,9 +59,9 @@ struct _Exm_Sw_Data
 };
 
 static void
-_exm_sw_find_function_name_in_section(bfd *abfd, asection *sec, void *obj)
+_exm_stack_find_function_name_in_section(bfd *abfd, asection *sec, void *obj)
 {
-    Exm_Sw_Find_Data *data;
+    Exm_Stack_Find_Data *data;
     bfd_vma vma;
     const char *func = NULL;
     const char *file = NULL;
@@ -75,7 +75,7 @@ _exm_sw_find_function_name_in_section(bfd *abfd, asection *sec, void *obj)
         return;
     }
 
-    data = (Exm_Sw_Find_Data *)obj;
+    data = (Exm_Stack_Find_Data *)obj;
     if (data->function)// && (*data->function != '\0'))
     {
         EXM_LOG_ERR("function already found : %s", data->function);
@@ -103,10 +103,10 @@ _exm_sw_find_function_name_in_section(bfd *abfd, asection *sec, void *obj)
                               data->counter - vma,
                               &file, &func, &line))
     {
-        Exm_Sw_Data *sw_data;
+        Exm_Stack_Data *sw_data;
         size_t       l;
 
-        sw_data = (Exm_Sw_Data *)calloc(1, sizeof(Exm_Sw_Data));
+        sw_data = (Exm_Stack_Data *)calloc(1, sizeof(Exm_Stack_Data));
         if (!sw_data)
             return;
 
@@ -149,7 +149,7 @@ _exm_sw_find_function_name_in_section(bfd *abfd, asection *sec, void *obj)
 
 
 EXM_API unsigned char
-exm_sw_init(void)
+exm_stack_init(void)
 {
     bfd_init();
 
@@ -157,15 +157,15 @@ exm_sw_init(void)
 }
 
 EXM_API void
-exm_sw_shutdown(void)
+exm_stack_shutdown(void)
 {
 }
 
 EXM_API Exm_List *
-exm_sw_frames_get(void)
+exm_stack_frames_get(void)
 {
 #define MAX_ENTRIES 100
-    Exm_Sw_Find_Data data;
+    Exm_Stack_Find_Data data;
     void            *frames[MAX_ENTRIES];
     unsigned short   frames_nbr;
     unsigned int     i;
@@ -274,7 +274,7 @@ exm_sw_frames_get(void)
         /* So this location might be pointing already to next line.*/
         data.counter = (bfd_vma)((char *)frames[i] - 1);
         bfd_map_over_sections(fd,
-                              &_exm_sw_find_function_name_in_section,
+                              &_exm_stack_find_function_name_in_section,
                               &data);
 
       free_symbol_table:
@@ -287,7 +287,7 @@ exm_sw_frames_get(void)
 }
 
 EXM_API const char *
-exm_sw_data_filename_get(const Exm_Sw_Data *data)
+exm_stack_data_filename_get(const Exm_Stack_Data *data)
 {
     if (!data)
         return NULL;
@@ -296,7 +296,7 @@ exm_sw_data_filename_get(const Exm_Sw_Data *data)
 }
 
 EXM_API const char *
-exm_sw_data_function_get(const Exm_Sw_Data *data)
+exm_stack_data_function_get(const Exm_Stack_Data *data)
 {
     if (!data)
         return NULL;
@@ -305,7 +305,7 @@ exm_sw_data_function_get(const Exm_Sw_Data *data)
 }
 
 EXM_API unsigned int
-exm_sw_data_line_get(const Exm_Sw_Data *data)
+exm_stack_data_line_get(const Exm_Stack_Data *data)
 {
     if (!data)
         return 0;
@@ -314,14 +314,14 @@ exm_sw_data_line_get(const Exm_Sw_Data *data)
 }
 
 EXM_API void
-exm_sw_data_free(void *ptr)
+exm_stack_data_free(void *ptr)
 {
-    Exm_Sw_Data *data;
+    Exm_Stack_Data *data;
 
     if (!ptr)
         return;
 
-    data = (Exm_Sw_Data *)ptr;
+    data = (Exm_Stack_Data *)ptr;
     if (data->filename)
         free(data->filename);
     if (data->function)

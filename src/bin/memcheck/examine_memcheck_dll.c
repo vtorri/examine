@@ -433,22 +433,22 @@ BOOL APIENTRY DllMain(HMODULE hModule EXM_UNUSED, DWORD ulReason, LPVOID lpReser
                      iter_stack = exm_overload_data_alloc_stack_get(da);
                      while (iter_stack)
                      {
-                         Exm_Sw_Data *frame;
+                         Exm_Stack_Data *frame;
 
-                         frame = (Exm_Sw_Data *)iter_stack->data;
+                         frame = (Exm_Stack_Data *)iter_stack->data;
                          if (at)
                          {
                              EXM_LOG_INFO("   at 0x00000000: %s (%s:%u)",
-                                          exm_sw_data_function_get(frame),
-                                          exm_sw_data_filename_get(frame),
-                                          exm_sw_data_line_get(frame));
+                                          exm_stack_data_function_get(frame),
+                                          exm_stack_data_filename_get(frame),
+                                          exm_stack_data_line_get(frame));
                              at = 0;
                          }
                          else
                              EXM_LOG_INFO("   by 0x00000000: %s (%s:%u)",
-                                          exm_sw_data_function_get(frame),
-                                          exm_sw_data_filename_get(frame),
-                                          exm_sw_data_line_get(frame));
+                                          exm_stack_data_function_get(frame),
+                                          exm_stack_data_filename_get(frame),
+                                          exm_stack_data_line_get(frame));
                          iter_stack = iter_stack->next;
                      }
                      EXM_LOG_INFO("");

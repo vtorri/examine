@@ -176,7 +176,7 @@ _exm_HeapAlloc(HANDLE hHeap, DWORD dwFlags, SIZE_T dwBytes)
 
     printf("HeapAlloc !!! %p\n", data);
 
-    stack = exm_sw_frames_get();
+    stack = exm_stack_frames_get();
     da = _exm_overload_data_alloc_new(EXM_OVERLOAD_FCT_HEAPALLOC, dwBytes, data, stack);
     if (da)
     {
@@ -198,7 +198,7 @@ _exm_HeapFree(HANDLE hHeap, DWORD dwFlags, LPVOID lpMem)
 
     printf("HeapFree !!! %p\n", lpMem);
 
-    stack = exm_sw_frames_get();
+    stack = exm_stack_frames_get();
 
     iter = _exm_overload_data.alloc;
     while (iter)
@@ -243,7 +243,7 @@ _exm_malloc(size_t size)
 
     printf("malloc !!! %p\n", data);
 
-    stack = exm_sw_frames_get();
+    stack = exm_stack_frames_get();
     da = _exm_overload_data_alloc_new(EXM_OVERLOAD_FCT_MALLOC, size, data, stack);
     if (da)
     {
@@ -264,7 +264,7 @@ _exm_free(void *memblock)
 
     printf("free !!! %p\n", memblock);
 
-    stack = exm_sw_frames_get();
+    stack = exm_stack_frames_get();
 
     iter = _exm_overload_data.alloc;
     while (iter)
@@ -321,7 +321,7 @@ exm_overload_init(void)
     _exm_overload_set(EXM_OVERLOAD_FCT_MALLOC, "malloc", (FARPROC)_exm_malloc);
     _exm_overload_set(EXM_OVERLOAD_FCT_FREE, "free", (FARPROC)_exm_free);
 
-    exm_sw_init();
+    exm_stack_init();
 
     return 1;
 }
@@ -329,7 +329,7 @@ exm_overload_init(void)
 void
 exm_overload_shutdown(void)
 {
-    exm_sw_shutdown();
+    exm_stack_shutdown();
     exm_list_free(_exm_overload_data.free, _exm_overload_data_free_del);
     exm_list_free(_exm_overload_data.alloc, _exm_overload_data_alloc_del);
     free(_exm_overloads_instance);

@@ -301,7 +301,7 @@ exm_memcheck_run(Exm_List *options, char *filename, char *args)
         goto unpatch_process;
     }
 
-    if (!exm_injection_dll_inject(inj, process, "examine_dll.dll"))
+    if (!exm_injection_dll_inject(inj, process, "libexamine_memcheck.dll"))
     {
         EXM_LOG_ERR("injection failed");
         goto del_injection;
