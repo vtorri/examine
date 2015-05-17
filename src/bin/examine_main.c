@@ -134,7 +134,7 @@ int main(int argc, char *argv[])
                     lvl = 1;
                     log_level = argv[i][0] - '0';
                     exm_str_append(buf, argv[i]);
-                    options = exm_list_append(options, strdup(buf));
+                    options = exm_list_append(options, _strdup(buf));
                 }
                 else
                 {
@@ -161,7 +161,7 @@ int main(int argc, char *argv[])
             {
                 lvl = 1;
                 log_level = ll[0] - '0';
-                options = exm_list_append(options, strdup(argv[i]));
+                options = exm_list_append(options, _strdup(argv[i]));
             }
             else
             {
@@ -174,57 +174,57 @@ int main(int argc, char *argv[])
         {
             verbose = 1;
             log_level = EXM_LOG_LEVEL_DBG;
-            options = exm_list_append(options, strdup(argv[i]));
+            options = exm_list_append(options, _strdup(argv[i]));
         }
         else if ((strcmp(argv[i], "-q") == 0) || (strcmp(argv[i], "--quiet") == 0))
         {
             quiet = 1;
             log_level = EXM_LOG_LEVEL_ERR;
-            options = exm_list_append(options, strdup(argv[i]));
+            options = exm_list_append(options, _strdup(argv[i]));
         }
         else if (memcmp(argv[i], "--tool=", sizeof("--tool=") - 1) == 0)
         {
             if (strcmp(argv[i], "--tool=memcheck") == 0)
             {
                 tool = 0;
-                options = exm_list_append(options, strdup(argv[i]));
+                options = exm_list_append(options, _strdup(argv[i]));
             }
             else if (strcmp(argv[i], "--tool=trace") == 0)
             {
                 tool = 1;
-                options = exm_list_append(options, strdup(argv[i]));
+                options = exm_list_append(options, _strdup(argv[i]));
             }
             else if (strcmp(argv[i], "--tool=depends") == 0)
             {
                 tool = 2;
-                options = exm_list_append(options, strdup(argv[i]));
+                options = exm_list_append(options, _strdup(argv[i]));
                 if ((i + 1) < argc)
                 {
                     if (strcmp(argv[i + 1], "--gui") == 0)
                     {
                         depends_gui = 1;
                         i++;
-                        options = exm_list_append(options, strdup(argv[i]));
+                        options = exm_list_append(options, _strdup(argv[i]));
                     }
                     else if (strcmp(argv[i + 1], "--list") == 0)
                     {
                         depends_list = 1;
                         i++;
-                        options = exm_list_append(options, strdup(argv[i]));
+                        options = exm_list_append(options, _strdup(argv[i]));
                     }
                 }
             }
             else if (strcmp(argv[i], "--tool=view") == 0)
             {
                 tool = 3;
-                options = exm_list_append(options, strdup(argv[i]));
+                options = exm_list_append(options, _strdup(argv[i]));
                 if ((i + 1) < argc)
                 {
                     if (strcmp(argv[i + 1], "--gui") == 0)
                     {
                         view_gui = 1;
                         i++;
-                        options = exm_list_append(options, strdup(argv[i]));
+                        options = exm_list_append(options, _strdup(argv[i]));
                     }
                 }
             }
@@ -238,7 +238,7 @@ int main(int argc, char *argv[])
         {
             if (!module)
             {
-                module = strdup(argv[i]);
+                module = _strdup(argv[i]);
                 if (!module)
                 {
                     EXM_LOG_ERR("memory allocation error");
@@ -249,7 +249,7 @@ int main(int argc, char *argv[])
             {
                 if (!args)
                 {
-                    args = strdup(argv[i]);
+                    args = _strdup(argv[i]);
                     if (!args)
                     {
                         EXM_LOG_ERR("memory allocation error");
