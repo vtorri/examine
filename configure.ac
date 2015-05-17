@@ -88,12 +88,9 @@ AM_CONDITIONAL([HAVE_GUI], [test "x${have_gui}" = "xyes"])
 
 ### Checks for header files
 
-AC_CHECK_HEADERS([libgen.h])
-
 ### Checks for types
 
 AC_CHECK_SIZEOF([void *])
-
 
 ### Checks for structures
 

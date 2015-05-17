@@ -34,10 +34,6 @@
 # undef WIN32_LEAN_AND_MEAN
 #endif
 
-#ifdef HAVE_LIBGEN_H
-# include <libgen.h>
-#endif
-
 #include <psapi.h>
 #include <tlhelp32.h>
 
