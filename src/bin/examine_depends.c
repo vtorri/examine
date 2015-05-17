@@ -273,7 +273,7 @@ _exm_depends_gui_run(Exm_Pe *pe, Exm_Log_Level log_level)
                              &log_level, sizeof(Exm_Log_Level));
     if (!map)
     {
-        EXM_LOG_ERR("Can not map shared memory to pass to depends GUI");
+        EXM_LOG_ERR("Can not map shared memory to pass to Examine Depends GUI");
         exm_process_del(process);
         return;
     }
