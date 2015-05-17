@@ -465,11 +465,11 @@ _exm_view_cmd_run(Exm_Pe *pe)
 }
 
 static void
-_exm_view_gui_run(Exm_Pe *pe)
+_exm_view_gui_run(Exm_Pe *pe, Exm_Log_Level log_level)
 {
-    char buf[MAX_PATH];
-    STARTUPINFO si;
-    PROCESS_INFORMATION pi;
+    char args[32768];
+    Exm_Process *process;
+    Exm_Map_Shared *map;
     char *cmd_gui;
 
     cmd_gui = exm_file_find("examine_view.exe");
@@ -479,35 +479,33 @@ _exm_view_gui_run(Exm_Pe *pe)
         return;
     }
 
-    snprintf(buf, sizeof(buf), "\"%s\" \"%s\"",
-             cmd_gui, exm_pe_filename_get(pe));
+    args[0] = '\0';
+    exm_str_append(args, exm_pe_filename_get(pe));
 
-    ZeroMemory(&si, sizeof(si));
-    si.cb = sizeof(si);
-    ZeroMemory(&pi, sizeof(pi));
-
-    if (!CreateProcess(NULL, buf,
-                       NULL, NULL, FALSE,
-                       NORMAL_PRIORITY_CLASS,
-                       NULL, NULL,
-                       &si, &pi))
+    process = exm_process_new(cmd_gui, args);
+    free(cmd_gui);
+    if (!process)
     {
-        EXM_LOG_ERR("Can not create process for %s %s %ld",
-                    cmd_gui, exm_pe_filename_get(pe),
-                    GetLastError());
-        free(cmd_gui);
+        EXM_LOG_ERR("Creation of process %s %s failed", cmd_gui, args);
         return;
     }
 
-    WaitForSingleObject(pi.hProcess, INFINITE);
+    map = exm_map_shared_new("exm_view_gui_shared",
+                             &log_level, sizeof(Exm_Log_Level));
+    if (!map)
+    {
+        EXM_LOG_ERR("Can not map shared memory to pass to Examine View GUI");
+        exm_process_del(process);
+        return;
+    }
 
-    CloseHandle(pi.hProcess);
-    CloseHandle(pi.hThread);
-    free(cmd_gui);
+    exm_process_run(process);
+    exm_map_shared_del(map);
+    exm_process_del(process);
 }
 
 void
-exm_view_run(Exm_List *options, char *module, unsigned char gui)
+exm_view_run(Exm_List *options, char *module, unsigned char gui, Exm_Log_Level log_level)
 {
     Exm_Pe *pe;
     Exm_List *option;
@@ -530,7 +528,7 @@ exm_view_run(Exm_List *options, char *module, unsigned char gui)
     }
 
     if (gui)
-        _exm_view_gui_run(pe);
+        _exm_view_gui_run(pe, log_level);
     else
         _exm_view_cmd_run(pe);
 

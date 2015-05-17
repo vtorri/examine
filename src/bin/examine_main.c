@@ -330,7 +330,7 @@ int main(int argc, char *argv[])
         case EXM_TOOL_VIEW:
             if (args)
                 free(args);
-            exm_view_run(options, module, view_gui);
+            exm_view_run(options, module, view_gui, log_level);
             break;
         default:
             EXM_LOG_ERR("unknown tool");

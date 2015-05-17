@@ -77,6 +77,7 @@ elm_main(int argc, char **argv)
     Exm_View *exm;
     Exm_List *iter_list;
     char *module;
+    Exm_Log_Level log_level;
     int i;
     Evas_Object *o;
     Evas_Object *box;
@@ -113,6 +114,16 @@ elm_main(int argc, char **argv)
             break;
         }
     }
+
+    if (!exm_map_shared_read("exm_view_gui_shared",
+                             sizeof(Exm_Log_Level), &log_level))
+    {
+        EXM_LOG_ERR("Can not retrieve shared lengths data");
+        free(module);
+        return -1;
+    }
+
+    exm_log_level_set(log_level);
 
     if (!exm_init())
     {
