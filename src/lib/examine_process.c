@@ -276,13 +276,16 @@ exm_process_new(const char *filename, const char *args)
     if (!CreateProcess(NULL, buf, NULL, NULL, TRUE,
                        CREATE_SUSPENDED, NULL, NULL, &si, &pi))
     {
-        EXM_LOG_ERR("creation of child process %s failed", filename);
+        EXM_LOG_ERR("Creation of child process %s failed", filename);
         goto free_filename;
     }
 
     process->process = pi.hProcess;
     process->thread = pi.hThread;
     process->id = pi.dwProcessId;
+
+    EXM_LOG_DBG("Process 0x%p created (thread: 0x%p thread ID: %ld)",
+                process->process, process->thread, process->id);
 
     return process;
 
@@ -350,9 +353,42 @@ exm_process_entry_point_patch(Exm_Process *process)
     if (!VirtualProtectEx(process->process, process->entry_point,
                           2, PAGE_EXECUTE_READWRITE, &process->old_protection))
     {
-        EXM_LOG_ERR("can not protect page 0x%p in process handle 0x%p failed",
-                    process->entry_point,
-                    process->process);
+        char *disp = NULL;
+        char *msg;
+        DWORD err;
+
+        err = GetLastError();
+        if (FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+                           NULL,
+                           err,
+                           0, /* Default language */
+                           (LPSTR)&msg,
+                           0,
+                           NULL))
+        {
+            disp = (char *)malloc((strlen(msg) + strlen("(00000) ") + 1) * sizeof(char));
+            if (disp)
+            {
+                _snprintf(disp, strlen(msg) + strlen("(00000) ") + 1,
+                          "(%5ld) %s", err, msg);
+            }
+
+            LocalFree(msg);
+        }
+
+        if (disp)
+        {
+            EXM_LOG_ERR("can not protect page 0x%p in process handle 0x%p failed: %s",
+                        process->entry_point,
+                        process->process,
+                        disp);
+            free(disp);
+        }
+        else
+            EXM_LOG_ERR("can not protect page 0x%p in process handle 0x%p failed",
+                        process->entry_point,
+                        process->process);
+
         return 0;
     }
 
