@@ -276,6 +276,9 @@ exm_pe_free(Exm_Pe *pe)
 EXM_API const char *
 exm_pe_filename_get(const Exm_Pe *pe)
 {
+    if (!pe)
+        return NULL;
+
     return pe->filename;
 }
 
@@ -291,6 +294,9 @@ exm_pe_filename_get(const Exm_Pe *pe)
 EXM_API signed char
 exm_pe_is_64bits(const Exm_Pe *pe)
 {
+    if (!pe)
+        return -1;
+
     if (pe->nt_header->OptionalHeader.Magic == IMAGE_NT_OPTIONAL_HDR64_MAGIC)
         return 1;
     else if (pe->nt_header->OptionalHeader.Magic == IMAGE_NT_OPTIONAL_HDR32_MAGIC)
@@ -310,6 +316,9 @@ exm_pe_is_64bits(const Exm_Pe *pe)
 EXM_API unsigned char
 exm_pe_is_dll(Exm_Pe *pe)
 {
+    if (!pe)
+        return 0;
+
     return (pe->nt_header->FileHeader.Characteristics & IMAGE_FILE_DLL) == IMAGE_FILE_DLL;
 }
 
@@ -339,7 +348,7 @@ EXM_API const IMAGE_NT_HEADERS *
 exm_pe_nt_header_get(const Exm_Pe *pe)
 
 {
-  return pe->nt_header;
+    return pe->nt_header;
 }
 
 /**
