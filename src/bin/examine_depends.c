@@ -167,11 +167,15 @@ _exm_depends_cmd_list_fill(Exm_List *list, const Exm_Pe *pe)
             {
                 Exm_Pe *p;
                 Exm_List *tmp;
+                const char *fullname;
 
-                printf("   %s", name);
                 list = exm_list_append(list, name);
                 p = exm_pe_new(name);
-                printf(" => %s\n", exm_pe_filename_get(p));
+                fullname = exm_pe_filename_get(p);
+                printf("   %s", name);
+                if (fullname)
+                    printf(" => %s", fullname);
+                printf("\n");
                 tmp = _exm_depends_cmd_list_fill(list, p);
                 exm_pe_free(p);
                 if (tmp)
@@ -194,11 +198,15 @@ _exm_depends_cmd_list_fill(Exm_List *list, const Exm_Pe *pe)
             {
                 Exm_Pe *p;
                 Exm_List *tmp;
+                const char *fullname;
 
-                printf("   %s", name);
                 list = exm_list_append(list, name);
                 p = exm_pe_new(name);
-                printf(" => %s\n", exm_pe_filename_get(p));
+                fullname = exm_pe_filename_get(p);
+                printf("   %s", name);
+                if (fullname)
+                    printf(" => %s", fullname);
+                printf("\n");
                 tmp = _exm_depends_cmd_list_fill(list, p);
                 exm_pe_free(p);
                 if (tmp)
