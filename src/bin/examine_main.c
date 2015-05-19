@@ -312,7 +312,7 @@ int main(int argc, char *argv[])
     {
         case EXM_TOOL_MEMCHECK:
 #ifdef _WIN32
-            exm_memcheck_run(options, module, args);
+            exm_mc_run(options, module, args);
             if (args)
                 free(args);
 #else

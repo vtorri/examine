@@ -44,10 +44,10 @@ typedef struct
     Exm_List *dep_names;
 } Exm_Memcheck;
 
-static Exm_Memcheck _exm_memcheck_instance = { NULL, NULL };
+static Exm_Memcheck _exm_mc_instance = { NULL, NULL };
 
 static int
-_exm_memcheck_dll_init(void)
+_exm_mc_dll_init(void)
 {
     int lens[2];
     int *vals;
@@ -145,8 +145,8 @@ _exm_memcheck_dll_init(void)
     free(names);
     free(vals);
 
-    _exm_memcheck_instance.crt_names =  crt_names;
-    _exm_memcheck_instance.dep_names =  dep_names;
+    _exm_mc_instance.crt_names =  crt_names;
+    _exm_mc_instance.dep_names =  dep_names;
 
     if (!exm_overload_init())
     {
@@ -165,15 +165,15 @@ _exm_memcheck_dll_init(void)
 }
 
 static void
-_exm_memcheck_dll_shutdown(void)
+_exm_mc_dll_shutdown(void)
 {
     exm_overload_shutdown();
-    exm_list_free(_exm_memcheck_instance.dep_names, free);
-    exm_list_free(_exm_memcheck_instance.crt_names, free);
+    exm_list_free(_exm_mc_instance.dep_names, free);
+    exm_list_free(_exm_mc_instance.crt_names, free);
 }
 
 static void
-_exm_memcheck_module_hook_set(HMODULE module, const char *lib_name, PROC old_function_proc, PROC new_function_proc)
+_exm_mc_module_hook_set(HMODULE module, const char *lib_name, PROC old_function_proc, PROC new_function_proc)
 {
     PIMAGE_IMPORT_DESCRIPTOR iid;
     PIMAGE_THUNK_DATA        thunk;
@@ -221,7 +221,7 @@ _exm_memcheck_module_hook_set(HMODULE module, const char *lib_name, PROC old_fun
 }
 
 static void
-_exm_memcheck_modules_hook(const char *lib_name, int crt)
+_exm_mc_modules_hook(const char *lib_name, int crt)
 {
     HMODULE lib_module;
     Exm_List *iter;
@@ -260,7 +260,7 @@ _exm_memcheck_modules_hook(const char *lib_name, int crt)
 
     FreeLibrary(lib_module);
 
-    iter = _exm_memcheck_instance.dep_names;
+    iter = _exm_mc_instance.dep_names;
     while (iter)
     {
         HMODULE mod;
@@ -269,23 +269,23 @@ _exm_memcheck_modules_hook(const char *lib_name, int crt)
         if (mod)
         {
             for (i = start; i < end; i++)
-                _exm_memcheck_module_hook_set(mod, lib_name,
-                                              exm_overload_func_proc_old_get(i),
-                                              exm_overload_func_proc_new_get(i));
+                _exm_mc_module_hook_set(mod, lib_name,
+                                        exm_overload_func_proc_old_get(i),
+                                        exm_overload_func_proc_new_get(i));
         }
         iter = iter->next;
     }
 }
 
 static void
-_exm_memcheck_dll_hook(void)
+_exm_mc_dll_hook(void)
 {
     Exm_List *iter;
 
     EXM_LOG_DBG("Hooking kernel32.dll");
-    _exm_memcheck_modules_hook("kernel32.dll", 0);
+    _exm_mc_modules_hook("kernel32.dll", 0);
 
-    iter = _exm_memcheck_instance.crt_names;
+    iter = _exm_mc_instance.crt_names;
     while (iter)
     {
         char *crt_basename;
@@ -295,14 +295,14 @@ _exm_memcheck_dll_hook(void)
         {
             crt_basename++;
             EXM_LOG_DBG("Hooking %s", crt_basename);
-            _exm_memcheck_modules_hook(crt_basename, 1);
+            _exm_mc_modules_hook(crt_basename, 1);
         }
         iter = iter->next;
     }
 }
 
 static void
-_exm_memcheck_modules_unhook(const char *lib_name, int crt)
+_exm_mc_modules_unhook(const char *lib_name, int crt)
 {
     Exm_List *iter;
     unsigned int i;
@@ -320,7 +320,7 @@ _exm_memcheck_modules_unhook(const char *lib_name, int crt)
         end = EXM_OVERLOAD_COUNT_CRT;
     }
 
-    iter = _exm_memcheck_instance.dep_names;
+    iter = _exm_mc_instance.dep_names;
     while (iter)
     {
         HMODULE mod;
@@ -329,23 +329,23 @@ _exm_memcheck_modules_unhook(const char *lib_name, int crt)
         if (mod)
         {
             for (i = start; i < end; i++)
-                _exm_memcheck_module_hook_set(mod, lib_name,
-                                              exm_overload_func_proc_new_get(i),
-                                              exm_overload_func_proc_old_get(i));
+                _exm_mc_module_hook_set(mod, lib_name,
+                                        exm_overload_func_proc_new_get(i),
+                                        exm_overload_func_proc_old_get(i));
         }
         iter = iter->next;
     }
 }
 
 static void
-_exm_memcheck_dll_unhook(void)
+_exm_mc_dll_unhook(void)
 {
     Exm_List *iter;
 
     EXM_LOG_DBG("Unhooking kernel32.dll");
-    _exm_memcheck_modules_unhook("kernel32.dll", 0);
+    _exm_mc_modules_unhook("kernel32.dll", 0);
 
-    iter = _exm_memcheck_instance.crt_names;
+    iter = _exm_mc_instance.crt_names;
     while (iter)
     {
         char *crt_basename;
@@ -355,7 +355,7 @@ _exm_memcheck_dll_unhook(void)
         {
             crt_basename++;
             EXM_LOG_DBG("Unhooking %s", crt_basename);
-            _exm_memcheck_modules_unhook(crt_basename, 1);
+            _exm_mc_modules_unhook(crt_basename, 1);
         }
         iter = iter->next;
     }
@@ -368,7 +368,7 @@ BOOL APIENTRY DllMain(HMODULE hModule EXM_UNUSED, DWORD ulReason, LPVOID lpReser
     switch (ulReason)
     {
      case DLL_PROCESS_ATTACH:
-         if (!_exm_memcheck_dll_init())
+         if (!_exm_mc_dll_init())
          {
              EXM_LOG_ERR("Can not initialize DLL");
              return FALSE;
@@ -376,7 +376,7 @@ BOOL APIENTRY DllMain(HMODULE hModule EXM_UNUSED, DWORD ulReason, LPVOID lpReser
 
          EXM_LOG_DBG("process attach");
 
-         _exm_memcheck_dll_hook();
+         _exm_mc_dll_hook();
 
          break;
      case DLL_THREAD_ATTACH:
@@ -470,8 +470,8 @@ BOOL APIENTRY DllMain(HMODULE hModule EXM_UNUSED, DWORD ulReason, LPVOID lpReser
                       bytes_allocated - bytes_freed,
                       nbr_alloc - nbr_free);
 
-         _exm_memcheck_dll_unhook();
-         _exm_memcheck_dll_shutdown();
+         _exm_mc_dll_unhook();
+         _exm_mc_dll_shutdown();
          break;
      }
     }

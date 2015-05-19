@@ -241,7 +241,7 @@ _exm_map(Exm *exm, Exm_Process *process)
 
 
 void
-exm_memcheck_run(Exm_List *options, char *filename, char *args)
+exm_mc_run(Exm_List *options, char *filename, char *args)
 {
     char buf[32768];
     Exm *exm;
