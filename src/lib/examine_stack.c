@@ -104,7 +104,8 @@ _exm_stack_find_function_name_in_section(bfd *abfd, asection *sec, void *obj)
                               &file, &func, &line))
     {
         Exm_Stack_Data *sw_data;
-        size_t       l;
+        size_t l;
+        char *iter;
 
         sw_data = (Exm_Stack_Data *)calloc(1, sizeof(Exm_Stack_Data));
         if (!sw_data)
@@ -117,7 +118,14 @@ _exm_stack_find_function_name_in_section(bfd *abfd, asection *sec, void *obj)
             free(sw_data);
             return;
         }
+
         memcpy(sw_data->filename, file, l);
+        iter = sw_data->filename;
+        while (*iter)
+        {
+            if (*iter == '/') *iter = '\\';
+            iter++;
+        }
 
         if (func)
         {
