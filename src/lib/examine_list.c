@@ -118,6 +118,94 @@ exm_list_prepend(Exm_List *l, const void *data)
     return n;
 }
 
+EXM_API Exm_List *
+exm_list_insert(Exm_List *l, const void *data, Exm_List_Cmp_Cb cmp_cb)
+{
+    Exm_List *n;
+    Exm_List *iter;
+
+    if (!data)
+        return l;
+
+    /* empty list ? we just append the item */
+    if (!l)
+        return exm_list_append(l, data);
+
+    /* data is the smallest ? we prepend the item */
+    if (cmp_cb(data, l->data) <= 0)
+        return exm_list_prepend(l, data);
+
+    iter = l;
+    while (iter)
+    {
+        if ((iter->next) && (cmp_cb(data, iter->next->data) < 0))
+            break;
+
+        iter = iter->next;
+    }
+
+    if (!iter)
+        return exm_list_append(l, data);
+
+    n = (Exm_List *)malloc(sizeof(Exm_List));
+    if (!n)
+        return l;
+
+    n->data = (void *)data;
+    n->next = iter->next;
+    iter->next = n;
+
+    return l;
+}
+
+EXM_API Exm_List *
+exm_list_remove(Exm_List *l, void *data, Exm_List_Free_Cb free_cb)
+{
+    Exm_List *iter;
+
+    if (!l)
+        return NULL;
+
+    if (!data)
+        return l;
+
+    /* First case : data is the first element */
+    if (l->data == data)
+    {
+        Exm_List *res;
+
+        res = l->next;
+        free_cb(l->data);
+        free(l);
+
+        return res;
+    }
+
+    /* Second case: it is not the first element ! */
+    iter = l;
+    while (iter)
+    {
+        if (iter->next)
+        {
+            if (iter->next->data == data)
+            {
+                Exm_List *n;
+
+                n = iter->next->next;
+                free_cb(iter->next->data);
+                free(iter->next);
+                iter->next = n;
+
+                return l;
+            }
+        }
+
+        iter = iter->next;
+    }
+
+    return l;
+}
+
 /**
  * @brief Check if the given data already belongs to the given list.
  *
@@ -247,7 +335,7 @@ exm_list_free(Exm_List *l, Exm_List_Free_Cb free_cb)
     {
         Exm_List *n;
 
-        if (iter->data)
+        if (iter->data && free_cb)
             free_cb(iter->data);
         n = iter->next;
         free(iter);

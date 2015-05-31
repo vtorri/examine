@@ -38,6 +38,10 @@ EXM_API Exm_List *exm_list_append(Exm_List *l, const void *data);
 
 EXM_API Exm_List *exm_list_prepend(Exm_List *l, const void *data);
 
+EXM_API Exm_List *exm_list_insert(Exm_List *l, const void *data, Exm_List_Cmp_Cb cmp_cb);
+
+EXM_API Exm_List *exm_list_remove(Exm_List *l, void *data, Exm_List_Free_Cb free_cb);
+
 EXM_API unsigned char exm_list_data_is_found(const Exm_List *l, const void *data, Exm_List_Cmp_Cb cmp_cb);
 
 EXM_API Exm_List *exm_list_append_if_new(Exm_List *l, const void *data, Exm_List_Cmp_Cb cmp_cb);
