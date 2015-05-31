@@ -35,7 +35,7 @@
 
 #include <Examine.h>
 
-#include "examine_memcheck_overloads.h"
+#include "examine_memcheck_hook.h"
 
 
 typedef struct
@@ -148,9 +148,9 @@ _exm_mc_dll_init(void)
     _exm_mc_instance.crt_names =  crt_names;
     _exm_mc_instance.dep_names =  dep_names;
 
-    if (!exm_overload_init())
+    if (!exm_hook_init(crt_names, dep_names))
     {
-        EXM_LOG_ERR("Can not initialize overload system");
+        EXM_LOG_ERR("Can not initialize hook system");
         goto free_dep_names;
     }
 
@@ -167,198 +167,107 @@ _exm_mc_dll_init(void)
 static void
 _exm_mc_dll_shutdown(void)
 {
-    exm_overload_shutdown();
+    exm_hook_shutdown(_exm_mc_instance.crt_names, _exm_mc_instance.dep_names);
     exm_list_free(_exm_mc_instance.dep_names, free);
     exm_list_free(_exm_mc_instance.crt_names, free);
 }
 
-static void
-_exm_mc_module_hook_set(HMODULE module, const char *lib_name, PROC old_function_proc, PROC new_function_proc)
+static int
+_exm_mc_leaks_cmp(const void *d1, const void *d2)
 {
-    PIMAGE_IMPORT_DESCRIPTOR iid;
-    PIMAGE_THUNK_DATA        thunk;
-    ULONG                    size;
+    const Exm_Hook_Data_Alloc *da1 = d1;
+    const Exm_Hook_Data_Alloc *da2 = d2;
 
-    iid = (PIMAGE_IMPORT_DESCRIPTOR)ImageDirectoryEntryToData(module, TRUE, IMAGE_DIRECTORY_ENTRY_IMPORT, &size);
-    if (!iid)
-        return;
-
-    while (iid->Name)
-    {
-        PSTR module_name;
-
-        module_name = (PSTR)((PBYTE) module + iid->Name);
-        if (_stricmp(module_name, lib_name) == 0)
-            break;
-        iid++;
-    }
-
-    if (!iid->Name)
-        return;
-
-    thunk = (PIMAGE_THUNK_DATA)((PBYTE)module + iid->FirstThunk );
-    while (thunk->u1.Function)
-    {
-        PROC *func;
-
-        func = (PROC *)&thunk->u1.Function;
-        if (*func == old_function_proc)
-        {
-            MEMORY_BASIC_INFORMATION mbi;
-            DWORD dwOldProtect;
-
-            VirtualQuery(func, &mbi, sizeof(MEMORY_BASIC_INFORMATION));
-
-            if (!VirtualProtect(mbi.BaseAddress, mbi.RegionSize, PAGE_READWRITE, &mbi.Protect))
-                return;
-
-            *func = *new_function_proc;
-            VirtualProtect(mbi.BaseAddress, mbi.RegionSize, mbi.Protect, &dwOldProtect);
-            break;
-        }
-        thunk++;
-    }
-}
-
-static void
-_exm_mc_modules_hook(const char *lib_name, int crt)
-{
-    HMODULE lib_module;
-    Exm_List *iter;
-    unsigned int i;
-    unsigned int start;
-    unsigned int end;
-
-    if (!crt)
-    {
-        start = 0;
-        end = EXM_OVERLOAD_COUNT;
-    }
+    if (da1->size < da2->size)
+        return -1;
+    else if (da1->size > da2->size)
+        return 1;
     else
-    {
-        start = EXM_OVERLOAD_COUNT;
-        end = EXM_OVERLOAD_COUNT_CRT;
-    }
-
-    lib_module = LoadLibrary(lib_name);
-
-    for (i = start; i < end; i++)
-    {
-        exm_overload_func_proc_old_set(i, lib_module);
-        if (!exm_overload_func_proc_old_get(i))
-        {
-            char buf[MAX_PATH];
-
-            GetModuleFileName(lib_module, buf, sizeof(buf));
-            EXM_LOG_ERR("Can not take address of %s in module %s %p [%s]",
-                        exm_overload_func_proc_old_get(i),
-                        lib_name,
-                        lib_module,
-                        buf);
-        }
-    }
-
-    FreeLibrary(lib_module);
-
-    iter = _exm_mc_instance.dep_names;
-    while (iter)
-    {
-        HMODULE mod;
-
-        mod = GetModuleHandle((char *)iter->data);
-        if (mod)
-        {
-            for (i = start; i < end; i++)
-                _exm_mc_module_hook_set(mod, lib_name,
-                                        exm_overload_func_proc_old_get(i),
-                                        exm_overload_func_proc_new_get(i));
-        }
-        iter = iter->next;
-    }
+        return 0;
 }
 
 static void
-_exm_mc_dll_hook(void)
+_exm_mc_output(void)
 {
+    Exm_List *leaks = NULL;
     Exm_List *iter;
+    size_t bytes_at_exit = 0;
+    size_t blocks_at_exit = 0;
+    int records;
+    int record;
 
-    EXM_LOG_DBG("Hooking kernel32.dll");
-    _exm_mc_modules_hook("kernel32.dll", 0);
-
-    iter = _exm_mc_instance.crt_names;
+    iter = exm_hook_allocations;
     while (iter)
     {
-        char *crt_basename;
+        Exm_Hook_Data_Alloc *da;
 
-        crt_basename = strrchr(iter->data, '\\');
-        if (crt_basename)
+        da = (Exm_Hook_Data_Alloc *)iter->data;
+        if (da->nbr_frees > 0)
         {
-            crt_basename++;
-            EXM_LOG_DBG("Hooking %s", crt_basename);
-            _exm_mc_modules_hook(crt_basename, 1);
         }
+        else
+        {
+            bytes_at_exit += da->size;
+            blocks_at_exit++;
+            leaks = exm_list_insert(leaks, da, _exm_mc_leaks_cmp);
+        }
+
         iter = iter->next;
     }
-}
 
-static void
-_exm_mc_modules_unhook(const char *lib_name, int crt)
-{
-    Exm_List *iter;
-    unsigned int i;
-    unsigned int start;
-    unsigned int end;
+    EXM_LOG_INFO("");
+    EXM_LOG_INFO("HEAP SUMMARY:");
+    EXM_LOG_INFO("    in use at exit: %Iu bytes in %Iu blocks",
+                 bytes_at_exit, blocks_at_exit);
+    EXM_LOG_INFO("  total heap usage: %d allocs, %d frees, %Iu bytes allocated",
+                 exm_hook_summary.total_count_allocs,
+                 exm_hook_summary.total_count_frees,
+                 exm_hook_summary.total_bytes_allocated);
+    EXM_LOG_INFO("");
+    EXM_LOG_INFO("Searching for pointer to %Iu not-freed blocks", blocks_at_exit);
 
-    if (!crt)
-    {
-        start = 0;
-        end = EXM_OVERLOAD_COUNT;
-    }
-    else
-    {
-        start = EXM_OVERLOAD_COUNT;
-        end = EXM_OVERLOAD_COUNT_CRT;
-    }
-
-    iter = _exm_mc_instance.dep_names;
+    records = exm_list_count(leaks);
+    record = 1;
+    iter = leaks;
     while (iter)
     {
-        HMODULE mod;
+        Exm_Hook_Data_Alloc *da;
+        Exm_List *iter_stack;
+        int at = 1;
 
-        mod = GetModuleHandle((char *)iter->data);
-        if (mod)
+        da = (Exm_Hook_Data_Alloc *)iter->data;
+        EXM_LOG_INFO("%Iu bytes in 1 block(s) are definitely lost [%d/%d]",
+                     da->size, record, records);
+        iter_stack = da->stack;
+        while (iter_stack)
         {
-            for (i = start; i < end; i++)
-                _exm_mc_module_hook_set(mod, lib_name,
-                                        exm_overload_func_proc_new_get(i),
-                                        exm_overload_func_proc_old_get(i));
+            Exm_Stack_Data *frame;
+
+            frame = (Exm_Stack_Data *)iter_stack->data;
+            if (at)
+            {
+                EXM_LOG_INFO("   at 0x00000000: %s (%s:%u)",
+                             exm_stack_data_function_get(frame),
+                             exm_stack_data_filename_get(frame),
+                             exm_stack_data_line_get(frame));
+                at = 0;
+            }
+            else
+                EXM_LOG_INFO("   by 0x00000000: %s (%s:%u)",
+                             exm_stack_data_function_get(frame),
+                             exm_stack_data_filename_get(frame),
+                             exm_stack_data_line_get(frame));
+            iter_stack = iter_stack->next;
         }
+        EXM_LOG_INFO("");
+        record++;
         iter = iter->next;
     }
-}
 
-static void
-_exm_mc_dll_unhook(void)
-{
-    Exm_List *iter;
-
-    EXM_LOG_DBG("Unhooking kernel32.dll");
-    _exm_mc_modules_unhook("kernel32.dll", 0);
-
-    iter = _exm_mc_instance.crt_names;
-    while (iter)
-    {
-        char *crt_basename;
-
-        crt_basename = strrchr(iter->data, '\\');
-        if (crt_basename)
-        {
-            crt_basename++;
-            EXM_LOG_DBG("Unhooking %s", crt_basename);
-            _exm_mc_modules_unhook(crt_basename, 1);
-        }
-        iter = iter->next;
-    }
+    EXM_LOG_INFO("");
+    EXM_LOG_INFO("LEAK SUMMARY:");
+    EXM_LOG_INFO("   definitely lost: %Iu bytes in %d blocks",
+                 bytes_at_exit, blocks_at_exit);
 }
 
 BOOL APIENTRY DllMain(HMODULE hModule EXM_UNUSED, DWORD ulReason, LPVOID lpReserved EXM_UNUSED);
@@ -376,8 +285,6 @@ BOOL APIENTRY DllMain(HMODULE hModule EXM_UNUSED, DWORD ulReason, LPVOID lpReser
 
          EXM_LOG_DBG("process attach");
 
-         _exm_mc_dll_hook();
-
          break;
      case DLL_THREAD_ATTACH:
          EXM_LOG_DBG("thread attach");
@@ -387,91 +294,12 @@ BOOL APIENTRY DllMain(HMODULE hModule EXM_UNUSED, DWORD ulReason, LPVOID lpReser
          break;
      case DLL_PROCESS_DETACH:
      {
-         Exm_List *iter;
-         int nbr_alloc;
-         int nbr_free;
-         size_t bytes_allocated;
-         size_t bytes_freed;
-
          EXM_LOG_DBG("process detach [%p]", lpReserved);
-         nbr_alloc = exm_overload_data_alloc_list_count();
-         nbr_free = exm_overload_data_free_list_count();
-         bytes_allocated = 0;
-         iter = exm_overload_data_alloc_list();
-         while (iter)
-         {
-             bytes_allocated += exm_overload_data_alloc_size_get((Exm_Overload_Data_Alloc *)iter->data);
-             iter = iter->next;
-         }
-         bytes_freed = 0;
-         iter = exm_overload_data_free_list();
-         while (iter)
-         {
-           bytes_freed += exm_overload_data_free_size_get((Exm_Overload_Data_Free *)iter->data);
-             iter = iter->next;
-         }
 
-         if (nbr_alloc != nbr_free)
-         {
-             int records;
-             int record;
+         _exm_mc_output();
 
-             records = nbr_alloc - nbr_free;
-             record = 1;
-             iter = exm_overload_data_alloc_list();
-             while (iter)
-             {
-                 Exm_Overload_Data_Alloc * da;
-                 Exm_List *iter_stack;
-
-                 da = (Exm_Overload_Data_Alloc *)iter->data;
-                 if (exm_overload_data_alloc_nbr_free_get(da) != 0)
-                 {
-                     int at = 1;
-                     EXM_LOG_INFO("%Iu bytes in 1 block(s) are definitely lost [%d/%d]",
-                                  exm_overload_data_alloc_size_get(da), record, records);
-                     iter_stack = exm_overload_data_alloc_stack_get(da);
-                     while (iter_stack)
-                     {
-                         Exm_Stack_Data *frame;
-
-                         frame = (Exm_Stack_Data *)iter_stack->data;
-                         if (at)
-                         {
-                             EXM_LOG_INFO("   at 0x00000000: %s (%s:%u)",
-                                          exm_stack_data_function_get(frame),
-                                          exm_stack_data_filename_get(frame),
-                                          exm_stack_data_line_get(frame));
-                             at = 0;
-                         }
-                         else
-                             EXM_LOG_INFO("   by 0x00000000: %s (%s:%u)",
-                                          exm_stack_data_function_get(frame),
-                                          exm_stack_data_filename_get(frame),
-                                          exm_stack_data_line_get(frame));
-                         iter_stack = iter_stack->next;
-                     }
-                     EXM_LOG_INFO("");
-                     record++;
-                 }
-                 iter = iter->next;
-             }
-         }
-
-         EXM_LOG_INFO("HEAP SUMMARY:");
-         EXM_LOG_INFO("    in use at exit: %Iu bytes in %d blocks",
-                      bytes_allocated - bytes_freed,
-                      nbr_alloc - nbr_free);
-         EXM_LOG_INFO("  total heap usage: %d allocs, %d frees, %Iu bytes allocated",
-                      nbr_alloc, nbr_free, bytes_allocated);
-         EXM_LOG_INFO("");
-         EXM_LOG_INFO("LEAK SUMMARY:");
-         EXM_LOG_INFO("   definitely lost: %Iu bytes in %d blocks",
-                      bytes_allocated - bytes_freed,
-                      nbr_alloc - nbr_free);
-
-         _exm_mc_dll_unhook();
          _exm_mc_dll_shutdown();
+
          break;
      }
     }
