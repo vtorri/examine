@@ -247,7 +247,6 @@ exm_mc_run(Exm_List *options, char *filename, char *args)
     Exm *exm;
     Exm_Process *process;
     Exm_Injection *inj;
-    Exm_List *option;
 
     buf[0] = '\0';
     exm_str_append(buf, filename);
@@ -255,12 +254,17 @@ exm_mc_run(Exm_List *options, char *filename, char *args)
 
     EXM_LOG_INFO("Command : %s", buf);
     EXM_LOG_INFO("");
-    EXM_LOG_INFO("Examine options:");
-    option = options;
-    while (option)
+    if (exm_list_count(options) > 0)
     {
-        EXM_LOG_INFO("   %s", (char *)option->data);
-        option = option->next;
+        Exm_List *option;
+
+        EXM_LOG_INFO("Examine options:");
+        option = options;
+        while (option)
+        {
+            EXM_LOG_INFO("   %s", (char *)option->data);
+            option = option->next;
+        }
     }
 
     exm = _exm_new(filename);
