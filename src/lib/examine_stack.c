@@ -63,6 +63,7 @@ _exm_stack_find_function_name_in_section(bfd *abfd, asection *sec, void *obj)
 {
     Exm_Stack_Find_Data *data;
     bfd_vma vma;
+    const char *fct;
     const char *func = NULL;
     const char *file = NULL;
     unsigned int line = 0;
@@ -107,11 +108,27 @@ _exm_stack_find_function_name_in_section(bfd *abfd, asection *sec, void *obj)
         size_t l;
         char *iter;
 
+        iter = (char *)file;
+        while (*iter)
+        {
+            if (*iter == '/') *iter = '\\';
+            iter++;
+        }
+
+        iter = strrchr(file, '\\');
+        if (iter)
+            iter++;
+        else
+            iter = (char *)file;
+
+        if (strcmp(iter, "examine_stack.c") == 0)
+            return;
+
         sw_data = (Exm_Stack_Data *)calloc(1, sizeof(Exm_Stack_Data));
         if (!sw_data)
             return;
 
-        l = strlen(file) + 1;
+        l = strlen(iter) + 1;
         sw_data->filename = (char *)malloc(l * sizeof(char));
         if (!sw_data->filename)
         {
@@ -119,26 +136,18 @@ _exm_stack_find_function_name_in_section(bfd *abfd, asection *sec, void *obj)
             return;
         }
 
-        memcpy(sw_data->filename, file, l);
-        iter = sw_data->filename;
-        while (*iter)
-        {
-            if (*iter == '/') *iter = '\\';
-            iter++;
-        }
+        memcpy(sw_data->filename, iter, l);
 
-        if (func)
+        fct = func ? func : "???";
+        l = strlen(fct) + 1;
+        sw_data->function = (char *)malloc(l * sizeof(char));
+        if (!sw_data->function)
         {
-            l = strlen(func) + 1;
-            sw_data->function = (char *)malloc(l * sizeof(char));
-            if (!sw_data->function)
-            {
-                free(sw_data->filename);
-                free(sw_data);
-                return;
-            }
-            memcpy(sw_data->function, func, l);
+            free(sw_data->filename);
+            free(sw_data);
+            return;
         }
+        memcpy(sw_data->function, fct, l);
 
         sw_data->line = line;
         data->list = exm_list_append(data->list, sw_data);
