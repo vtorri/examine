@@ -31,6 +31,8 @@
 # endif
 # include <windows.h>
 # undef WIN32_LEAN_AND_MEAN
+#else
+# include <inttypes.h>
 #endif
 
 #include "Examine.h"

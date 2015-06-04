@@ -34,6 +34,8 @@
 # endif
 # include <windows.h>
 # undef WIN32_LEAN_AND_MEAN
+#else
+# include <limits.h>
 #endif
 
 #include "Examine.h"
@@ -59,11 +61,13 @@ _exm_file_name_strcmp(const void *d1, const void *d2)
 }
 #endif
 
+#ifdef _WIN32
 static int
 _exm_file_name_strcasecmp(const void *d1, const void *d2)
 {
     return _stricmp((const char *)d1, (const char *)d2);
 }
+#endif
 
 static char *
 _exm_file_concat(const char *path, const char *filename)
@@ -141,10 +145,10 @@ _exm_file_exists(const char *path, const char *filename)
     return 1;
 }
 
+#ifdef _WIN32
 static void
 _exm_file_backslash_final_set(char *filename)
 {
-#ifdef _WIN32
     size_t length;
 
     length = strlen(filename);
@@ -153,8 +157,8 @@ _exm_file_backslash_final_set(char *filename)
         filename[length] = '\\';
         filename[length + 1] = '\0';
     }
-#endif
 }
+#endif
 
 
 /*============================================================================*
@@ -307,6 +311,7 @@ exm_file_set(char *filename)
         free(dir_name);
 #else
     char buf[PATH_MAX];
+    char *dir_name;
 
     /* directory of absolute path in filename */
 
@@ -314,9 +319,19 @@ exm_file_set(char *filename)
     if (!_exm_file_path_is_absolute(filename))
         filename = realpath(filename, buf);
 
-    _exm_file_path = exm_list_prependif_new(_exm_file_path,
-                                            _exm_file_basedir_get(filename),
-                                            _exm_file_name_strcmp);
+    exm_file_base_dir_name_get(buf, &dir_name, NULL);
+    if (!dir_name)
+    {
+        EXM_LOG_ERR("Can not find base dir or base name for %s", filename);
+        return;
+    }
+    else
+    {
+        _exm_file_path = exm_list_prepend_if_new(_exm_file_path,
+                                                 dir_name,
+                                                 _exm_file_name_strcmp);
+        free(dir_name);
+    }
 #endif
 }
 

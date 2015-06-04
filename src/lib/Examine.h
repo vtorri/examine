@@ -66,6 +66,9 @@ extern "C" {
 #include "examine_process.h"
 #include "examine_injection.h"
 #include "examine_stack.h"
+#ifndef _WIN32
+# include "examine_pe_unix.h"
+#endif
 
 #ifdef __cplusplus
 }
