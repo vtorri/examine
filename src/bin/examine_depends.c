@@ -25,6 +25,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 
 #ifdef _WIN32
 # ifndef WIN32_LEAN_AND_MEAN
@@ -236,6 +237,7 @@ _exm_depends_cmd_list_run(const Exm_Pe *pe)
     exm_list_free(list, free);
 }
 
+#ifdef _WIN32
 static void
 _exm_depends_gui_run(Exm_Pe *pe, Exm_Log_Level log_level)
 {
@@ -275,6 +277,7 @@ _exm_depends_gui_run(Exm_Pe *pe, Exm_Log_Level log_level)
     exm_map_shared_del(map);
     exm_process_del(process);
 }
+#endif
 
 void
 exm_depends_run(Exm_List *options, char *module, unsigned char display_list, unsigned char gui, Exm_Log_Level log_level)
@@ -303,9 +306,11 @@ exm_depends_run(Exm_List *options, char *module, unsigned char display_list, uns
         return;
     }
 
+#ifdef _WIN32
     if (gui)
       _exm_depends_gui_run(pe, log_level);
     else
+#endif
     {
         if (display_list)
             _exm_depends_cmd_list_run(pe);

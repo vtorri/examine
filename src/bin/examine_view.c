@@ -464,6 +464,7 @@ _exm_view_cmd_run(Exm_Pe *pe)
     _exm_view_cmd_directory_entry_delayload_display(pe);
 }
 
+#ifdef _WIN32
 static void
 _exm_view_gui_run(Exm_Pe *pe, Exm_Log_Level log_level)
 {
@@ -503,6 +504,7 @@ _exm_view_gui_run(Exm_Pe *pe, Exm_Log_Level log_level)
     exm_map_shared_del(map);
     exm_process_del(process);
 }
+#endif
 
 void
 exm_view_run(Exm_List *options, char *module, unsigned char gui, Exm_Log_Level log_level)
@@ -531,9 +533,11 @@ exm_view_run(Exm_List *options, char *module, unsigned char gui, Exm_Log_Level l
         return;
     }
 
+#ifdef _WIN32
     if (gui)
         _exm_view_gui_run(pe, log_level);
     else
+#endif
         _exm_view_cmd_run(pe);
 
     exm_pe_free(pe);
