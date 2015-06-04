@@ -35,6 +35,8 @@ typedef enum
     EXM_HOOK_FCT_COUNT = EXM_HOOK_FCT_LIBC_END
 } Exm_Hook_Fct;
 
+typedef struct _Exm_Hook_Error_Data Exm_Hook_Error_Data;
+
 typedef struct
 {
     Exm_Hook_Fct fct;
@@ -57,5 +59,7 @@ extern Exm_Hook_Summary exm_hook_summary;
 
 unsigned char exm_hook_init(const Exm_List *crt_names, const Exm_List *dep_names);
 void exm_hook_shutdown(const Exm_List *crt_names, const Exm_List *dep_names);
+
+void exm_hook_error_disp(Exm_Hook_Error_Data *data);
 
 #endif /* EXAMINE_HOOK_H */

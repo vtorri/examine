@@ -42,6 +42,115 @@
  *                                  Local                                     *
  *============================================================================*/
 
+typedef enum
+{
+    EXM_HOOK_ERROR_FREE_WITHOUT_ALLOC,
+    EXM_HOOK_ERROR_MULTIPLE_FREES,
+    EXM_HOOK_ERROR_MISMATCHED_FREE
+} Exm_Hook_Error;
+
+struct _Exm_Hook_Error_Data
+{
+    Exm_Hook_Error error_type;
+    union
+    {
+        struct
+        {
+            Exm_List *stack_free;
+        } free_without_alloc;
+        struct
+        {
+            Exm_List *stack_free;
+            Exm_List *stack_alloc;
+            void *address_alloc;
+            size_t size_alloc;
+        } multiple_frees;
+        struct
+        {
+            Exm_List *stack_free;
+            Exm_List *stack_alloc;
+            void *address_alloc;
+            size_t size_alloc;
+        } mismatched_free;
+
+    } error;
+};
+
+static Exm_Hook_Error_Data*
+_exm_hook_error_data_free_without_alloc_new(Exm_List *stack_free)
+{
+    Exm_Hook_Error_Data *data;
+
+    data = (Exm_Hook_Error_Data *)calloc(1, sizeof(Exm_Hook_Error_Data));
+    if (!data)
+        return NULL;
+
+    data->error_type = EXM_HOOK_ERROR_FREE_WITHOUT_ALLOC;
+    data->error.free_without_alloc.stack_free = stack_free;
+
+    return data;
+}
+
+static Exm_Hook_Error_Data*
+_exm_hook_error_data_multiple_frees_new(Exm_List *stack_free, Exm_Hook_Data_Alloc *da)
+{
+    Exm_Hook_Error_Data *data;
+
+    data = (Exm_Hook_Error_Data *)calloc(1, sizeof(Exm_Hook_Error_Data));
+    if (!data)
+        return NULL;
+
+    data->error_type = EXM_HOOK_ERROR_MULTIPLE_FREES;
+    data->error.multiple_frees.stack_free = stack_free;
+    data->error.multiple_frees.stack_alloc = da->stack;
+    data->error.multiple_frees.address_alloc = da->data;
+    data->error.multiple_frees.size_alloc = da->size;
+
+    return data;
+}
+
+static Exm_Hook_Error_Data*
+_exm_hook_error_data_mismatched_free_new(Exm_List *stack_free, Exm_Hook_Data_Alloc *da)
+{
+    Exm_Hook_Error_Data *data;
+
+    data = (Exm_Hook_Error_Data *)calloc(1, sizeof(Exm_Hook_Error_Data));
+    if (!data)
+        return NULL;
+
+    data->error_type = EXM_HOOK_ERROR_MISMATCHED_FREE;
+    data->error.mismatched_free.stack_free = stack_free;
+    data->error.mismatched_free.stack_alloc = da->stack;
+    data->error.mismatched_free.address_alloc = da->data;
+    data->error.mismatched_free.size_alloc = da->size;
+
+    return data;
+}
+
+static void
+_exm_hook_error_data_del(void *ptr)
+{
+    Exm_Hook_Error_Data *data;
+
+    if (!ptr)
+        return;
+
+    data = (Exm_Hook_Error_Data *)ptr;
+    switch(data->error_type)
+    {
+        case EXM_HOOK_ERROR_FREE_WITHOUT_ALLOC:
+            exm_list_free(data->error.free_without_alloc.stack_free, exm_stack_data_free);
+            break;
+        case EXM_HOOK_ERROR_MULTIPLE_FREES:
+            exm_list_free(data->error.multiple_frees.stack_free, exm_stack_data_free);
+            break;
+        case EXM_HOOK_ERROR_MISMATCHED_FREE:
+            exm_list_free(data->error.mismatched_free.stack_free, exm_stack_data_free);
+            break;
+        default:
+            break;
+    }
+}
 
 typedef struct _Exm_Hook Exm_Hook;
 
@@ -218,8 +327,10 @@ _exm_hook_free(void *memblock)
 {
     typedef void (*exm_free_t)(void *memblock);
     exm_free_t f;
-    Exm_List *stack;
+    Exm_Hook_Error_Data *data = NULL;
     Exm_List *iter_alloc;
+    unsigned char alloc_not_found = 1;
+    unsigned char no_free_error = 1;
 
     EXM_LOG_WARN("free !!!");
 
@@ -231,15 +342,44 @@ _exm_hook_free(void *memblock)
         da = (Exm_Hook_Data_Alloc *)iter_alloc->data;
         if (da->data == memblock)
         {
+            alloc_not_found = 0;
             da->nbr_frees++;
+
+            /* multiple frees */
+            if (da->nbr_frees > 1)
+            {
+                data = _exm_hook_error_data_multiple_frees_new(exm_stack_frames_get(),
+                                                               da);
+                exm_hook_error_disp(data);
+                exm_hook_errors = exm_list_append(exm_hook_errors, data);
+                no_free_error = 0;
+            }
+
+            /* mismatched alloc / free */
+            if (da->fct != EXM_HOOK_FCT_MALLOC)
+            {
+                data = _exm_hook_error_data_mismatched_free_new(exm_stack_frames_get(),
+                                                                da);
+                exm_hook_error_disp(data);
+                exm_hook_errors = exm_list_append(exm_hook_errors, data);
+            }
+
+            break;
         }
         iter_alloc = iter_alloc->next;
     }
 
-    stack = exm_stack_frames_get();
+    if (alloc_not_found)
+    {
+        data = _exm_hook_error_data_free_without_alloc_new(exm_stack_frames_get());
+        no_free_error = 0;
+    }
 
-    f = (exm_free_t)_exm_hook_instance[EXM_HOOK_FCT_FREE].fct_proc_old;
-    f(memblock);
+    if (no_free_error)
+    {
+        f = (exm_free_t)_exm_hook_instance[EXM_HOOK_FCT_FREE].fct_proc_old;
+        f(memblock);
+    }
 
     exm_hook_summary.total_count_frees++;
 }
@@ -441,8 +581,7 @@ exm_hook_shutdown(const Exm_List *crt_names, const Exm_List *dep_names)
     const Exm_List *iter_crt;
     char *mod_name;
 
-    /* FIXME: free the 2 lists */
-    /* exm_list_free(exm_hook_errors, _exm_hook_data_error_del); */
+    exm_list_free(exm_hook_errors, _exm_hook_error_data_del);
     exm_list_free(exm_hook_allocations, _exm_hook_data_alloc_del);
 
     exm_stack_shutdown();
@@ -465,4 +604,39 @@ exm_hook_shutdown(const Exm_List *crt_names, const Exm_List *dep_names)
 
         iter_crt = iter_crt->next;
     }
+}
+
+void
+exm_hook_error_disp(Exm_Hook_Error_Data *data)
+{
+    if (!data)
+        return;
+
+    switch (data->error_type)
+    {
+        case EXM_HOOK_ERROR_FREE_WITHOUT_ALLOC:
+            EXM_LOG_INFO("Invalid memory free without allocation");
+            exm_stack_disp(data->error.multiple_frees.stack_free);
+            break;
+        case EXM_HOOK_ERROR_MULTIPLE_FREES:
+            EXM_LOG_INFO("Multiple frees");
+            exm_stack_disp(data->error.multiple_frees.stack_free);
+            EXM_LOG_INFO("Address 0xp is 0 bytes inside a block of size %zu free'd",
+                         data->error.multiple_frees.address_alloc,
+                         data->error.multiple_frees.size_alloc);
+            exm_stack_disp(data->error.multiple_frees.stack_alloc);
+            break;
+        case EXM_HOOK_ERROR_MISMATCHED_FREE:
+            EXM_LOG_INFO("Mismatched free / allocation");
+            exm_stack_disp(data->error.multiple_frees.stack_free);
+            EXM_LOG_INFO("Address 0xp is 0 bytes inside a block of size %zu free'd",
+                         data->error.multiple_frees.address_alloc,
+                         data->error.multiple_frees.size_alloc);
+            exm_stack_disp(data->error.multiple_frees.stack_alloc);
+            break;
+        default:
+            break;
+    }
+
+    EXM_LOG_INFO("");
 }

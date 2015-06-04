@@ -32,6 +32,7 @@ int main(void)
 {
     HANDLE hDefaultProcessHeap;
     void *data;
+    void *data2;
 
     printf ("process launched...\n");
 
@@ -44,13 +45,15 @@ int main(void)
     }
     HeapFree(hDefaultProcessHeap, 0, data);
 
+    free(data);
     data = malloc(10);
     if (!data)
     {
         printf ("no malloc...\n");
         return -1;
     }
-    /* free(data); */
+    free(data);
+    free(data);
 
     /* test with a DLL dependency */
 

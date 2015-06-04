@@ -34,6 +34,7 @@ EXM_API const char *exm_stack_data_filename_get(const Exm_Stack_Data *data);
 EXM_API const char *exm_stack_data_function_get(const Exm_Stack_Data *data);
 EXM_API unsigned int exm_stack_data_line_get(const Exm_Stack_Data *data);
 EXM_API void exm_stack_data_free(void *ptr);
+EXM_API void exm_stack_disp(const Exm_List *stack);
 
 
 #endif /* EXAMINE_STACK_H */

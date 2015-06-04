@@ -193,7 +193,8 @@ _exm_mc_output(void)
     Exm_List *iter;
     size_t bytes_at_exit = 0;
     size_t blocks_at_exit = 0;
-    int records;
+    int alloc_records;
+    int error_records;
     int record;
 
     iter = exm_hook_allocations;
@@ -224,50 +225,62 @@ _exm_mc_output(void)
                  exm_hook_summary.total_count_frees,
                  exm_hook_summary.total_bytes_allocated);
     EXM_LOG_INFO("");
-    EXM_LOG_INFO("Searching for pointer to %Iu not-freed blocks", blocks_at_exit);
 
-    records = exm_list_count(leaks);
-    record = 1;
-    iter = leaks;
-    while (iter)
+    alloc_records = exm_list_count(leaks);
+    if (blocks_at_exit > 0)
     {
-        Exm_Hook_Data_Alloc *da;
-        Exm_List *iter_stack;
-        int at = 1;
+        EXM_LOG_INFO("Searching for pointer to %Iu not-freed blocks", blocks_at_exit);
 
-        da = (Exm_Hook_Data_Alloc *)iter->data;
-        EXM_LOG_INFO("%Iu bytes in 1 block(s) are definitely lost [%d/%d]",
-                     da->size, record, records);
-        iter_stack = da->stack;
-        while (iter_stack)
+        record = 1;
+        iter = leaks;
+        while (iter)
         {
-            Exm_Stack_Data *frame;
+            Exm_Hook_Data_Alloc *da;
 
-            frame = (Exm_Stack_Data *)iter_stack->data;
-            if (at)
-            {
-                EXM_LOG_INFO("   at 0x00000000: %s (%s:%u)",
-                             exm_stack_data_function_get(frame),
-                             exm_stack_data_filename_get(frame),
-                             exm_stack_data_line_get(frame));
-                at = 0;
-            }
-            else
-                EXM_LOG_INFO("   by 0x00000000: %s (%s:%u)",
-                             exm_stack_data_function_get(frame),
-                             exm_stack_data_filename_get(frame),
-                             exm_stack_data_line_get(frame));
-            iter_stack = iter_stack->next;
+            da = (Exm_Hook_Data_Alloc *)iter->data;
+            EXM_LOG_INFO("%Iu bytes in 1 block(s) are definitely lost [%d/%d]",
+                         da->size, record, alloc_records);
+            exm_stack_disp(da->stack);
+            EXM_LOG_INFO("");
+            record++;
+            iter = iter->next;
         }
+
         EXM_LOG_INFO("");
-        record++;
-        iter = iter->next;
+        EXM_LOG_INFO("LEAK SUMMARY:");
+        EXM_LOG_INFO("   definitely lost: %Iu bytes in %d blocks",
+                     bytes_at_exit, blocks_at_exit);
+    }
+    else
+    {
+        EXM_LOG_INFO("All heap blocks were freed -- no leaks are possible");
     }
 
     EXM_LOG_INFO("");
-    EXM_LOG_INFO("LEAK SUMMARY:");
-    EXM_LOG_INFO("   definitely lost: %Iu bytes in %d blocks",
-                 bytes_at_exit, blocks_at_exit);
+
+    error_records = exm_list_count(exm_hook_errors);
+    if (error_records > 0)
+    {
+        EXM_LOG_INFO("ERROR SUMMARY: %d errors from %d contexts",
+                     error_records, error_records + alloc_records);
+        EXM_LOG_INFO("");
+
+        iter = exm_hook_errors;
+        record = 1;
+        while (iter)
+        {
+            EXM_LOG_INFO("1 error in context %d of %d",
+                         record, error_records + alloc_records);
+            exm_hook_error_disp(iter->data);
+            record++;
+            iter = iter->next;
+        }
+    }
+    else
+    {
+        EXM_LOG_INFO("ERROR SUMMARY: 0 errors from %d contexts",
+            error_records + alloc_records);
+    }
 }
 
 BOOL APIENTRY DllMain(HMODULE hModule EXM_UNUSED, DWORD ulReason, LPVOID lpReserved EXM_UNUSED);

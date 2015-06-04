@@ -267,3 +267,34 @@ exm_stack_data_free(void *ptr)
         free(data->function);
     free(data);
 }
+
+EXM_API void
+exm_stack_disp(const Exm_List *stack)
+{
+    const Exm_List *iter;
+    unsigned char at = 1;
+
+    iter = stack;
+    while (iter)
+    {
+        Exm_Stack_Data *frame;
+
+        frame = (Exm_Stack_Data *)iter->data;
+        if (at)
+        {
+            EXM_LOG_INFO("   at 0x00000000: %s (%s:%u)",
+                         exm_stack_data_function_get(frame),
+                         exm_stack_data_filename_get(frame),
+                         exm_stack_data_line_get(frame));
+            at = 0;
+        }
+        else
+            EXM_LOG_INFO("   by 0x00000000: %s (%s:%u)",
+                         exm_stack_data_function_get(frame),
+                         exm_stack_data_filename_get(frame),
+                         exm_stack_data_line_get(frame));
+        iter = iter->next;
+    }
+
+    EXM_LOG_INFO("");
+}
