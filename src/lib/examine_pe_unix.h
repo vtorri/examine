@@ -34,6 +34,8 @@
 
 #define IMAGE_DIRECTORY_ENTRY_EXPORT 0
 #define IMAGE_DIRECTORY_ENTRY_IMPORT 1
+#define IMAGE_DIRECTORY_ENTRY_DEBUG 6
+#define IMAGE_DIRECTORY_ENTRY_DELAY_IMPORT 13
 
 #define IMAGE_FILE_DLL 0x2000
 
@@ -168,6 +170,10 @@ typedef struct
     IMAGE_DATA_DIRECTORY DataDirectory[IMAGE_NUMBEROF_DIRECTORY_ENTRIES];
 } IMAGE_OPTIONAL_HEADER64;
 
+#define IMAGE_NT_OPTIONAL_HDR32_MAGIC 0x10b
+#define IMAGE_NT_OPTIONAL_HDR64_MAGIC 0x20b
+#define IMAGE_ROM_OPTIONAL_HDR_MAGIC 0x107
+
 typedef struct
 {
     DWORD Signature;
@@ -254,7 +260,7 @@ typedef struct _IMAGE_DELAYLOAD_DESCRIPTOR
         {
             DWORD RvaBased : 1;
             DWORD ReservedAttributes : 31;
-        };
+        } r;
     } Attributes;
     DWORD DllNameRVA;
     DWORD ModuleHandleRVA;
