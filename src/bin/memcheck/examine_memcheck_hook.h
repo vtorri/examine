@@ -50,7 +50,7 @@ typedef struct
 {
     unsigned int total_count_allocs;
     unsigned int total_count_frees;
-    unsigned int total_bytes_allocated;
+    size_t total_bytes_allocated;
 } Exm_Hook_Summary;
 
 extern Exm_List *exm_hook_allocations;
