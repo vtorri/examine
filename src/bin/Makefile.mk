@@ -53,6 +53,8 @@ endif
 
 # examine_view
 
+if HAVE_WIN32
+
 bin_PROGRAMS += src/bin/examine_view
 
 src_bin_examine_view_SOURCES = \
@@ -69,5 +71,7 @@ src_bin_examine_view_CPPFLAGS = \
 src_bin_examine_view_LDADD = \
 src/lib/libexamine.la \
 @EXM_GUI_LIBS@
+
+endif
 
 endif

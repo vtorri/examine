@@ -182,6 +182,9 @@ exm_pe_new(const char *filename)
     return NULL;
 }
 
+#warning port exm_pe_new_from_base() to UNIX
+/* FIXME: port exm_pe_new_from_base() to UNIX */
+#if 0
 /**
  * @brief Return a new #Exm_Pe object from a loaded module.
  *
@@ -248,6 +251,7 @@ exm_pe_new_from_base(const char *filename, const void *base, DWORD size)
 
     return NULL;
 }
+#endif
 
 /**
  * @Brief Free the given PE file.
