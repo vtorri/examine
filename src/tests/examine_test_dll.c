@@ -33,7 +33,7 @@ examine_test_dll(void)
     void *ptr;
     HANDLE h;
 
-    ptr = malloc(20);
+    ptr = calloc(1, 20);
     h = GetProcessHeap();
     ptr = HeapAlloc(h, 0, 40);
 }
