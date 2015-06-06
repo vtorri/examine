@@ -252,10 +252,12 @@ exm_file_path_free(void)
 EXM_API void
 exm_file_set(char *filename)
 {
-#ifdef _WIN32
     char buf[MAX_PATH];
+    Exm_List_Cmp_Cb cmp_cb;
     char *dir_name = NULL;
     char *base_name = NULL;
+
+#ifdef _WIN32
     char *iter;
 
     /* change \ separator with // */
@@ -265,6 +267,11 @@ exm_file_set(char *filename)
         if (*iter == '/') *iter = '\\';
         iter++;
     }
+
+    cmp_cb = _exm_file_name_strcasecmp;
+#else
+    cmp_cb = _exm_file_name_strcmp;
+#endif
 
     /* directory of absolute path in filename */
     EXM_LOG_DBG("Set file %s", filename);
@@ -281,7 +288,7 @@ exm_file_set(char *filename)
 
             _exm_file_path = exm_list_prepend_if_new(_exm_file_path,
                                                      dir_name,
-                                                     _exm_file_name_strcasecmp);
+                                                     cmp_cb);
         }
     }
     else
@@ -296,7 +303,7 @@ exm_file_set(char *filename)
             }
             _exm_file_path = exm_list_prepend_if_new(_exm_file_path,
                                                      dir_name,
-                                                     _exm_file_name_strcasecmp);
+                                                     cmp_cb);
         }
         else
         {
@@ -309,30 +316,6 @@ exm_file_set(char *filename)
         free(base_name);
     if (dir_name)
         free(dir_name);
-#else
-    char buf[PATH_MAX];
-    char *dir_name;
-
-    /* directory of absolute path in filename */
-
-    /* FIXME: see what is done on Windows above : dir_name and base_name */
-    if (!_exm_file_path_is_absolute(filename))
-        filename = realpath(filename, buf);
-
-    exm_file_base_dir_name_get(buf, &dir_name, NULL);
-    if (!dir_name)
-    {
-        EXM_LOG_ERR("Can not find base dir or base name for %s", filename);
-        return;
-    }
-    else
-    {
-        _exm_file_path = exm_list_prepend_if_new(_exm_file_path,
-                                                 dir_name,
-                                                 _exm_file_name_strcmp);
-        free(dir_name);
-    }
-#endif
 }
 
 EXM_API char *
