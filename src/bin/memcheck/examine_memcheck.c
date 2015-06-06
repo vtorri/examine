@@ -146,7 +146,7 @@ _exm_map(Exm *exm, Exm_Process *process)
 
         crt_len = strlen((char *)crt_names->data) + 1;
         total_len += crt_len;
-        vals[i] = crt_len;
+        vals[i] = (int)crt_len;
         i++;
         crt_names = crt_names->next;
     }
@@ -159,14 +159,14 @@ _exm_map(Exm *exm, Exm_Process *process)
 
         dep_len = strlen((char *)dep_names->data) + 1;
         total_len += dep_len;
-        vals[i] = dep_len;
+        vals[i] = (int)dep_len;
         i++;
         dep_names = dep_names->next;
     }
 
     /* fourth, we store the CRT names */
 
-    lens[1] = total_len * sizeof(char);
+    lens[1] = (int)(total_len * sizeof(char));
     names = (char *)malloc(lens[1]);
     if (!names)
     {

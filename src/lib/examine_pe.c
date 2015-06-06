@@ -182,7 +182,9 @@ exm_pe_new(const char *filename)
     return NULL;
 }
 
+#ifndef _MSC_VER
 #warning port exm_pe_new_from_base() to UNIX
+#endif
 /* FIXME: port exm_pe_new_from_base() to UNIX */
 #if 0
 /**
