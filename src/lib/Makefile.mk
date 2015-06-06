@@ -40,4 +40,4 @@ src_lib_libexamine_la_LDFLAGS = -no-undefined -version-info @version_info@
 
 src_lib_libexamine_la_LIBTOOLFLAGS = --tag=disable-static
 
-EXTRA_DIST += src/bin/memcheck/examine_stack_pdb.c
+EXTRA_DIST += src/lib/examine_stack_pdb.c
