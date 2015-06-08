@@ -11,7 +11,7 @@ m4_define([lt_cur], m4_eval(v_maj + v_min))
 m4_define([lt_rev], v_mic)
 m4_define([lt_age], v_min)
 
-AC_INIT([examine], [examine_version], [enlightenment-devel@lists.sourceforge.net])
+AC_INIT([examine], [examine_version], [vincent dot torri at gmail dot com])
 AC_PREREQ([2.60])
 AC_CONFIG_SRCDIR([configure.ac])
 AC_CONFIG_MACRO_DIR([m4])
