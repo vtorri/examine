@@ -50,21 +50,30 @@ static Exm_Log_Level _exm_log_level = EXM_LOG_LEVEL_INFO;
 #ifdef _WIN32
 
 static WORD
-_exm_log_print_level_color_get(int level)
+_exm_log_print_level_color_get(int level, WORD original_background)
 {
+    WORD foreground;
+
     switch (level)
     {
         case EXM_LOG_LEVEL_ERR:
-            return FOREGROUND_INTENSITY | FOREGROUND_RED;
+            foreground = FOREGROUND_INTENSITY | FOREGROUND_RED;
+            break;
         case EXM_LOG_LEVEL_WARN:
-            return FOREGROUND_INTENSITY | FOREGROUND_RED | FOREGROUND_GREEN;
+            foreground = FOREGROUND_INTENSITY | FOREGROUND_RED | FOREGROUND_GREEN;
+            break;
         case EXM_LOG_LEVEL_DBG:
-          return FOREGROUND_INTENSITY | FOREGROUND_GREEN;
+          foreground = FOREGROUND_INTENSITY | FOREGROUND_GREEN;
+          break;
         case EXM_LOG_LEVEL_INFO:
-            return FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE;
+            foreground = FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE;
+            break;
         default:
-            return FOREGROUND_INTENSITY | FOREGROUND_BLUE;
+            foreground = FOREGROUND_INTENSITY | FOREGROUND_BLUE;
+            break;
     }
+
+    return original_background | foreground;
 }
 
 static void
@@ -90,7 +99,9 @@ _exm_log_print_prefix_func(HANDLE std_handle, Exm_Log_Level level)
     if (s == -1)
         goto free_str;
 
-    SetConsoleTextAttribute(std_handle, _exm_log_print_level_color_get(level));
+    SetConsoleTextAttribute(std_handle,
+                            _exm_log_print_level_color_get(level,
+                                                           scbi.wAttributes & ~7));
     if (!WriteConsole(std_handle, str, s, &res, NULL))
     {
         SetConsoleTextAttribute(std_handle, scbi.wAttributes);
