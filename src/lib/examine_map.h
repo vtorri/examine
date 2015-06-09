@@ -25,16 +25,12 @@
 #ifndef EXM_MAP_H
 #define EXM_MAP_H
 
-#ifdef _WIN32
-
 typedef struct _Exm_Map_Shared Exm_Map_Shared;
 
-EXM_API Exm_Map_Shared *exm_map_shared_new(const char *name, const void *data, DWORD size);
+EXM_API Exm_Map_Shared *exm_map_shared_new(const char *name, const void *data, unsigned int size);
 
 EXM_API void exm_map_shared_del(Exm_Map_Shared *map);
 
-EXM_API int exm_map_shared_read(const char *name, DWORD size, void *data);
-
-#endif
+EXM_API unsigned char exm_map_shared_read(const char *name, unsigned int size, void *data);
 
 #endif /* EXM_MAP_H */
