@@ -36,6 +36,10 @@ endif
 
 src_lib_libexamine_la_CFLAGS = @EXM_CFLAGS@
 
+if ! HAVE_WIN32
+src_lib_libexamine_la_LIBADD = -lrt
+endif
+
 src_lib_libexamine_la_LDFLAGS = -no-undefined -version-info @version_info@
 
 src_lib_libexamine_la_LIBTOOLFLAGS = --tag=disable-static

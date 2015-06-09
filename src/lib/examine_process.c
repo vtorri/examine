@@ -32,10 +32,9 @@
 # endif
 # include <windows.h>
 # undef WIN32_LEAN_AND_MEAN
-#endif
-
 #include <psapi.h>
 #include <tlhelp32.h>
+#endif
 
 #include "Examine.h"
 
