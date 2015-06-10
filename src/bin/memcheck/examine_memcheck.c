@@ -62,6 +62,12 @@ _exm_new(const char *filename)
 {
     Exm *exm;
 
+    if (!filename)
+    {
+        EXM_LOG_ERR("No valid filename");
+        return NULL;
+    }
+
     exm = (Exm *)calloc(1, sizeof(Exm));
     if (!exm)
         return NULL;
@@ -241,7 +247,7 @@ _exm_map(Exm *exm, Exm_Process *process)
 
 
 void
-exm_mc_run(Exm_List *options, char *filename, char *args)
+exm_mc_run(Exm_List *options, const char *filename, char *args)
 {
     char buf[32768];
     Exm *exm;
@@ -267,7 +273,7 @@ exm_mc_run(Exm_List *options, char *filename, char *args)
         }
     }
 
-    exm = _exm_new(filename);
+    exm = _exm_new(exm_file_find(filename));
     if (!exm)
         return;
 

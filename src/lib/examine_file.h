@@ -22,7 +22,7 @@
 #ifndef EXM_FILE_H
 #define EXM_FILE_H
 
-EXM_API void exm_file_set(char *filename);
+EXM_API char *exm_file_set(const char *filename);
 
 EXM_API char *exm_file_find(const char *filename);
 

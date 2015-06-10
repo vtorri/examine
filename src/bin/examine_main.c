@@ -87,12 +87,13 @@ _exm_usage(void)
 
 int main(int argc, char *argv[])
 {
-    char *module = NULL;
+    char *module;
     char *args = NULL;
     Exm_List *options = NULL;
     int i;
     Exm_Tool tool = EXM_TOOL_MEMCHECK;
     Exm_Log_Level log_level = EXM_LOG_LEVEL_INFO;
+    int argv_idx = -1;
     unsigned char lvl = 0;
     unsigned char verbose = 0;
     unsigned char quiet = 0;
@@ -236,14 +237,9 @@ int main(int argc, char *argv[])
         }
         else
         {
-            if (!module)
+            if (argv_idx < 0)
             {
-                module = _strdup(argv[i]);
-                if (!module)
-                {
-                    EXM_LOG_ERR("memory allocation error");
-                    return -1;
-                }
+                argv_idx = i;
             }
             else
             {
@@ -253,7 +249,6 @@ int main(int argc, char *argv[])
                     if (!args)
                     {
                         EXM_LOG_ERR("memory allocation error");
-                        free(module);
                         return -1;
                     }
                 }
@@ -268,7 +263,6 @@ int main(int argc, char *argv[])
                     if (!args)
                     {
                         EXM_LOG_ERR("memory allocation error");
-                        free(module);
                         return -1;
                     }
                     args[l1] = ' ';
@@ -276,6 +270,15 @@ int main(int argc, char *argv[])
                 }
             }
         }
+    }
+
+    if (argv_idx < 0)
+    {
+        EXM_LOG_ERR("No file name is provided");
+        _exm_usage();
+        if (args)
+            free(args);
+        return -1;
     }
 
     if ((verbose && quiet) ||
@@ -286,7 +289,6 @@ int main(int argc, char *argv[])
         _exm_usage();
         if (args)
             free(args);
-        free(module);
         return -1;
     }
 
@@ -297,11 +299,17 @@ int main(int argc, char *argv[])
         EXM_LOG_ERR("can not initialise Examine. Exiting...");
         if (args)
             free(args);
-        free(module);
         return -1;
     }
 
-    exm_file_set(module);
+    module = exm_file_set(argv[argv_idx]);
+    if (!module)
+    {
+        EXM_LOG_ERR("Can not retrieve base name of %s. Exiting...", argv[argv_idx]);
+        if (args)
+            free(args);
+        return -1;
+    }
 
     EXM_LOG_INFO("Examine, a memory leak detector, function and I/O tracer, and PE file viewer");
     EXM_LOG_INFO("Copyright (c) 2012-2015, and GNU LGPL3'd, by Vincent Torri");
@@ -313,8 +321,6 @@ int main(int argc, char *argv[])
         case EXM_TOOL_MEMCHECK:
 #ifdef _WIN32
             exm_mc_run(options, module, args);
-            if (args)
-                free(args);
 #else
             EXM_LOG_ERR("memcheck tool not available on UNIX");
 #endif
@@ -323,19 +329,19 @@ int main(int argc, char *argv[])
             exm_trace_run(options, module, args);
             break;
         case EXM_TOOL_DEPENDS:
-            if (args)
-                free(args);
             exm_depends_run(options, module, depends_list, depends_gui, log_level);
             break;
         case EXM_TOOL_VIEW:
-            if (args)
-                free(args);
             exm_view_run(options, module, view_gui, log_level);
             break;
         default:
             EXM_LOG_ERR("unknown tool");
             break;
     }
+
+    if (args)
+        free(args);
+    free(module);
 
     exm_list_free(options, free);
 

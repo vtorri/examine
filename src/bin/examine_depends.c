@@ -280,7 +280,7 @@ _exm_depends_gui_run(Exm_Pe *pe, Exm_Log_Level log_level)
 #endif
 
 void
-exm_depends_run(Exm_List *options, char *module, unsigned char display_list, unsigned char gui, Exm_Log_Level log_level)
+exm_depends_run(Exm_List *options, const char *module, unsigned char display_list, unsigned char gui, Exm_Log_Level log_level)
 {
     Exm_Pe *pe;
 
@@ -319,8 +319,6 @@ exm_depends_run(Exm_List *options, char *module, unsigned char display_list, uns
     }
 
     exm_pe_free(pe);
-
-    free(module);
 
     EXM_LOG_DBG("resources freed");
 }

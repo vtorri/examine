@@ -249,8 +249,8 @@ exm_file_path_free(void)
  *============================================================================*/
 
 
-EXM_API void
-exm_file_set(char *filename)
+EXM_API char *
+exm_file_set(const char *filename)
 {
     char buf[MAX_PATH];
     Exm_List_Cmp_Cb cmp_cb;
@@ -261,7 +261,7 @@ exm_file_set(char *filename)
     char *iter;
 
     /* change \ separator with // */
-    iter = filename;
+    iter = (char *)filename;
     while (*iter)
     {
         if (*iter == '/') *iter = '\\';
@@ -283,7 +283,7 @@ exm_file_set(char *filename)
             if (!dir_name || !base_name)
             {
                 EXM_LOG_ERR("Can not find base dir or base name for %s", filename);
-                goto free_base;
+                goto free_names;
             }
 
             _exm_file_path = exm_list_prepend_if_new(_exm_file_path,
@@ -299,7 +299,7 @@ exm_file_set(char *filename)
             if (!dir_name || !base_name)
             {
                 EXM_LOG_ERR("Can not find base dir or base name for %s", filename);
-                goto free_base;
+                goto free_names;
             }
             _exm_file_path = exm_list_prepend_if_new(_exm_file_path,
                                                      dir_name,
@@ -311,11 +311,18 @@ exm_file_set(char *filename)
         }
     }
 
-  free_base:
+    if (dir_name)
+        free(dir_name);
+
+    return base_name;
+
+  free_names:
     if (base_name)
         free(base_name);
     if (dir_name)
         free(dir_name);
+
+    return NULL;
 }
 
 EXM_API char *

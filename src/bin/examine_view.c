@@ -523,7 +523,7 @@ _exm_view_gui_run(Exm_Pe *pe, Exm_Log_Level log_level)
 #endif
 
 void
-exm_view_run(Exm_List *options, char *module, unsigned char gui, Exm_Log_Level log_level)
+exm_view_run(Exm_List *options, const char *module, unsigned char gui, Exm_Log_Level log_level)
 {
     Exm_Pe *pe;
 
@@ -557,8 +557,6 @@ exm_view_run(Exm_List *options, char *module, unsigned char gui, Exm_Log_Level l
         _exm_view_cmd_run(pe);
 
     exm_pe_free(pe);
-
-    free(module);
 
     EXM_LOG_DBG("resources freed");
 }

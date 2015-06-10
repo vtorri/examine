@@ -1309,6 +1309,7 @@ elm_main(int argc, char **argv)
     Exm_List *iter_list;
     char *module;
     Exm_Log_Level log_level;
+    int argv_idx = -1;
     int i;
     Evas_Object *o;
     Evas_Object *bg;
@@ -1340,12 +1341,7 @@ elm_main(int argc, char **argv)
         }
         else
         {
-            module = strdup(argv[i]);
-            if (!module)
-            {
-                EXM_LOG_ERR("memory allocation error");
-                return -1;
-            }
+            argv_idx = i;
             break;
         }
     }
@@ -1354,7 +1350,6 @@ elm_main(int argc, char **argv)
                              sizeof(Exm_Log_Level), &log_level))
     {
         EXM_LOG_ERR("Can not retrieve shared lengths data");
-        free(module);
         return -1;
     }
 
@@ -1363,11 +1358,10 @@ elm_main(int argc, char **argv)
     if (!exm_init())
     {
         EXM_LOG_ERR("can not initialise Examine. Exiting...");
-        free(module);
         return -1;
     }
 
-    exm_file_set(module);
+    module = exm_file_set(argv[argv_idx]);
 
     exm = (Exm_Depends *)calloc(1, sizeof(Exm_Depends));
     if (!exm)
@@ -1380,13 +1374,15 @@ elm_main(int argc, char **argv)
     exm->pe.pe = exm_pe_new(module);
     t2 = _exm_time_get();
     printf("pe new : %E\n", t2 - t1);
-    free(module);
     if (!exm->pe.pe)
     {
         EXM_LOG_ERR("%s is not a binary nor a DLL.", module);
+        free(module);
         free(exm);
         return -1;
     }
+
+    free(module);
 
     t1 = _exm_time_get();
     _exm_depends_tree_modules_get(exm->pe.pe, &exm->pe.tree_modules, &exm->pe.list_modules);
