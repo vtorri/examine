@@ -87,13 +87,13 @@ _exm_usage(void)
 
 int main(int argc, char *argv[])
 {
+    char buf_args[32768];
     char *module;
-    char *args = NULL;
     Exm_List *options = NULL;
     int i;
     Exm_Tool tool = EXM_TOOL_MEMCHECK;
     Exm_Log_Level log_level = EXM_LOG_LEVEL_INFO;
-    int argv_idx = -1;
+    unsigned int argv_idx = 0;
     unsigned char lvl = 0;
     unsigned char verbose = 0;
     unsigned char quiet = 0;
@@ -107,177 +107,183 @@ int main(int argc, char *argv[])
         return -1;
     }
 
+    buf_args[0] = '\0';
     for (i = 1; i < argc; i++)
     {
         if ((strcmp(argv[i], "-h") == 0) || (strcmp(argv[i], "--help") == 0))
         {
-            _exm_usage();
-            return 0;
+            if (argv_idx == 0)
+            {
+                _exm_usage();
+                return 0;
+            }
+            else
+                exm_str_append(buf_args, argv[i]);
         }
         else if ((strcmp(argv[i], "-V") == 0) || (strcmp(argv[i], "--version") == 0))
         {
-            printf("%s\n", PACKAGE_STRING);
-            return 0;
+            if (argv_idx == 0)
+            {
+                printf("%s\n", PACKAGE_STRING);
+                return 0;
+            }
+            else
+                exm_str_append(buf_args, argv[i]);
         }
         else if (strcmp(argv[i], "-l") == 0)
         {
-            char buf[8];
-
-            buf[0] = '\0';
-            exm_str_append(buf, "-l");
-            if ((i + 1) < argc)
+            if (argv_idx == 0)
             {
-                i++;
-                if ((argv[i][0] >= '0') &&
-                    (argv[i][0] <= '3') &&
-                    (argv[i][1] == '\0'))
+                char buf[8];
+
+                buf[0] = '\0';
+                exm_str_append(buf, "-l");
+                if ((i + 1) < argc)
                 {
-                    lvl = 1;
-                    log_level = argv[i][0] - '0';
-                    exm_str_append(buf, argv[i]);
-                    options = exm_list_append(options, _strdup(buf));
+                    i++;
+                    if ((argv[i][0] >= '0') &&
+                        (argv[i][0] <= '3') &&
+                        (argv[i][1] == '\0'))
+                    {
+                        lvl = 1;
+                        log_level = argv[i][0] - '0';
+                        exm_str_append(buf, argv[i]);
+                        options = exm_list_append(options, _strdup(buf));
+                    }
+                    else
+                    {
+                        EXM_LOG_ERR("-l option must be followed by a number between 0 and 3");
+                        _exm_usage();
+                        return 0;
+                    }
                 }
                 else
                 {
-                    EXM_LOG_ERR("-l option must be followed by a number between 0 and 3");
+                    EXM_LOG_ERR("-l option must be followed by a number");
                     _exm_usage();
                     return 0;
                 }
             }
             else
-            {
-                EXM_LOG_ERR("-l option must be followed by a number");
-                _exm_usage();
-                return 0;
-            }
+                exm_str_append(buf_args, argv[i]);
         }
         else if (strncmp(argv[i], "--log-level=", sizeof("--log-level=") - 1) == 0)
         {
-            char *ll;
-
-            ll = argv[i] +  sizeof("--log-level=") - 1;
-            if ((ll[0] >= '0') &&
-                (ll[0] <= '3') &&
-                (ll[1] == '\0'))
+            if (argv_idx == 0)
             {
-                lvl = 1;
-                log_level = ll[0] - '0';
-                options = exm_list_append(options, _strdup(argv[i]));
+                char *ll;
+
+                ll = argv[i] +  sizeof("--log-level=") - 1;
+                if ((ll[0] >= '0') &&
+                    (ll[0] <= '3') &&
+                    (ll[1] == '\0'))
+                {
+                    lvl = 1;
+                    log_level = ll[0] - '0';
+                    options = exm_list_append(options, _strdup(argv[i]));
+                }
+                else
+                {
+                    EXM_LOG_ERR("--log-level option must be followed by a number");
+                    _exm_usage();
+                    return 0;
+                }
             }
             else
-            {
-                EXM_LOG_ERR("--log-level option must be followed by a number");
-                _exm_usage();
-                return 0;
-            }
+                exm_str_append(buf_args, argv[i]);
         }
         else if ((strcmp(argv[i], "-v") == 0) || (strcmp(argv[i], "--verbose") == 0))
         {
-            verbose = 1;
-            log_level = EXM_LOG_LEVEL_DBG;
-            options = exm_list_append(options, _strdup(argv[i]));
+            if (argv_idx == 0)
+            {
+                verbose = 1;
+                log_level = EXM_LOG_LEVEL_DBG;
+                options = exm_list_append(options, _strdup(argv[i]));
+            }
+            else
+                exm_str_append(buf_args, argv[i]);
         }
         else if ((strcmp(argv[i], "-q") == 0) || (strcmp(argv[i], "--quiet") == 0))
         {
-            quiet = 1;
-            log_level = EXM_LOG_LEVEL_ERR;
-            options = exm_list_append(options, _strdup(argv[i]));
+            if (argv_idx == 0)
+            {
+                quiet = 1;
+                log_level = EXM_LOG_LEVEL_ERR;
+                options = exm_list_append(options, _strdup(argv[i]));
+            }
+            else
+                exm_str_append(buf_args, argv[i]);
         }
         else if (memcmp(argv[i], "--tool=", sizeof("--tool=") - 1) == 0)
         {
-            if (strcmp(argv[i], "--tool=memcheck") == 0)
+            if (argv_idx == 0)
             {
-                tool = 0;
-                options = exm_list_append(options, _strdup(argv[i]));
-            }
-            else if (strcmp(argv[i], "--tool=trace") == 0)
-            {
-                tool = 1;
-                options = exm_list_append(options, _strdup(argv[i]));
-            }
-            else if (strcmp(argv[i], "--tool=depends") == 0)
-            {
-                tool = 2;
-                options = exm_list_append(options, _strdup(argv[i]));
-                if ((i + 1) < argc)
+                if (strcmp(argv[i], "--tool=memcheck") == 0)
                 {
-                    if (strcmp(argv[i + 1], "--gui") == 0)
+                    tool = 0;
+                    options = exm_list_append(options, _strdup(argv[i]));
+                }
+                else if (strcmp(argv[i], "--tool=trace") == 0)
+                {
+                    tool = 1;
+                    options = exm_list_append(options, _strdup(argv[i]));
+                }
+                else if (strcmp(argv[i], "--tool=depends") == 0)
+                {
+                    tool = 2;
+                    options = exm_list_append(options, _strdup(argv[i]));
+                    if ((i + 1) < argc)
                     {
-                        depends_gui = 1;
-                        i++;
-                        options = exm_list_append(options, _strdup(argv[i]));
-                    }
-                    else if (strcmp(argv[i + 1], "--list") == 0)
-                    {
-                        depends_list = 1;
-                        i++;
-                        options = exm_list_append(options, _strdup(argv[i]));
+                        if (strcmp(argv[i + 1], "--gui") == 0)
+                        {
+                            depends_gui = 1;
+                            i++;
+                            options = exm_list_append(options, _strdup(argv[i]));
+                        }
+                        else if (strcmp(argv[i + 1], "--list") == 0)
+                        {
+                            depends_list = 1;
+                            i++;
+                            options = exm_list_append(options, _strdup(argv[i]));
+                        }
                     }
                 }
-            }
-            else if (strcmp(argv[i], "--tool=view") == 0)
-            {
-                tool = 3;
-                options = exm_list_append(options, _strdup(argv[i]));
-                if ((i + 1) < argc)
+                else if (strcmp(argv[i], "--tool=view") == 0)
                 {
-                    if (strcmp(argv[i + 1], "--gui") == 0)
+                    tool = 3;
+                    options = exm_list_append(options, _strdup(argv[i]));
+                    if ((i + 1) < argc)
                     {
-                        view_gui = 1;
-                        i++;
-                        options = exm_list_append(options, _strdup(argv[i]));
-                    }
-                }
-            }
-            else
-            {
-                _exm_usage();
-                return -1;
-            }
-        }
-        else
-        {
-            if (argv_idx < 0)
-            {
-                argv_idx = i;
-            }
-            else
-            {
-                if (!args)
-                {
-                    args = _strdup(argv[i]);
-                    if (!args)
-                    {
-                        EXM_LOG_ERR("memory allocation error");
-                        return -1;
+                        if (strcmp(argv[i + 1], "--gui") == 0)
+                        {
+                            view_gui = 1;
+                            i++;
+                            options = exm_list_append(options, _strdup(argv[i]));
+                        }
                     }
                 }
                 else
                 {
-                    size_t l1;
-                    size_t l2;
-
-                    l1 = strlen(args);
-                    l2 = strlen(argv[i]);
-                    args = realloc(args, l1 + l2 + 2);
-                    if (!args)
-                    {
-                        EXM_LOG_ERR("memory allocation error");
-                        return -1;
-                    }
-                    args[l1] = ' ';
-                    memcpy(args + l1 + 1, argv[i], l2 + 1);
+                    _exm_usage();
+                    return -1;
                 }
             }
+            else
+                exm_str_append(buf_args, argv[i]);
+        }
+        else
+        {
+            if (argv_idx == 0)
+                argv_idx = i;
+            else
+                exm_str_append(buf_args, argv[i]);
         }
     }
 
-    if (argv_idx < 0)
+    if (argv_idx == 0)
     {
         EXM_LOG_ERR("No file name is provided");
         _exm_usage();
-        if (args)
-            free(args);
         return -1;
     }
 
@@ -287,8 +293,6 @@ int main(int argc, char *argv[])
     {
         EXM_LOG_ERR("can not pass log level, verbose or quiet options at the same time");
         _exm_usage();
-        if (args)
-            free(args);
         return -1;
     }
 
@@ -297,8 +301,6 @@ int main(int argc, char *argv[])
     if (!exm_init())
     {
         EXM_LOG_ERR("can not initialise Examine. Exiting...");
-        if (args)
-            free(args);
         return -1;
     }
 
@@ -306,8 +308,6 @@ int main(int argc, char *argv[])
     if (!module)
     {
         EXM_LOG_ERR("Can not retrieve base name of %s. Exiting...", argv[argv_idx]);
-        if (args)
-            free(args);
         return -1;
     }
 
@@ -320,13 +320,13 @@ int main(int argc, char *argv[])
     {
         case EXM_TOOL_MEMCHECK:
 #ifdef _WIN32
-            exm_mc_run(options, module, args);
+            exm_mc_run(options, module, buf_args);
 #else
             EXM_LOG_ERR("memcheck tool not available on UNIX");
 #endif
             break;
         case EXM_TOOL_TRACE:
-            exm_trace_run(options, module, args);
+            exm_trace_run(options, module, buf_args);
             break;
         case EXM_TOOL_DEPENDS:
             exm_depends_run(options, module, depends_list, depends_gui, log_level);
@@ -338,9 +338,6 @@ int main(int argc, char *argv[])
             EXM_LOG_ERR("unknown tool");
             break;
     }
-
-    if (args)
-        free(args);
     free(module);
 
     exm_list_free(options, free);
