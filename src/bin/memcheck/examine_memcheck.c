@@ -277,24 +277,24 @@ exm_mc_run(Exm_List *options, const char *filename, char *args)
     if (!exm)
         return;
 
-    process = exm_process_new(filename, args);
+    process = exm_process_new(exm->filename, args);
     if (!process)
     {
-        EXM_LOG_ERR("Creation of process %s %s failed", filename, args);
+        EXM_LOG_ERR("Creation of process %s %s failed", exm->filename, args);
         goto del_exm;
     }
 
     if (!exm_process_entry_point_patch(process))
     {
         EXM_LOG_ERR("can not patch entry point of the process %s",
-                    filename);
+                    exm->filename);
         goto del_process;
     }
 
     if (!exm_process_dependencies_set(process))
     {
         EXM_LOG_ERR("can not find dependencies of the process %s",
-                    filename);
+                    exm->filename);
         goto unpatch_process;
     }
 
@@ -304,7 +304,7 @@ exm_mc_run(Exm_List *options, const char *filename, char *args)
         goto unpatch_process;
     }
 
-    inj = exm_injection_new(filename);
+    inj = exm_injection_new(exm->filename);
     if (!inj)
     {
         EXM_LOG_ERR("Can not create initialise injection");
@@ -320,7 +320,7 @@ exm_mc_run(Exm_List *options, const char *filename, char *args)
     if (!exm_process_entry_point_unpatch(process))
     {
         EXM_LOG_ERR("can not patch entry point of the process %s",
-                    filename);
+                    exm->filename);
         goto dll_eject;
     }
 
