@@ -46,6 +46,7 @@ typedef struct
     void *data;
     unsigned int nbr_frees;
     Exm_List *stack;
+    Exm_List *stack_first_free;
 } Exm_Hook_Data_Alloc;
 
 typedef struct

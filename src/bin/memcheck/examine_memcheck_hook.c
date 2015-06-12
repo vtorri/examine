@@ -62,6 +62,7 @@ struct _Exm_Hook_Error_Data
         {
             Exm_List *stack_free;
             Exm_List *stack_alloc;
+            Exm_List *stack_first_free;
             void *address_alloc;
             size_t size_alloc;
         } multiple_frees;
@@ -103,6 +104,7 @@ _exm_hook_error_data_multiple_frees_new(Exm_List *stack_free, Exm_Hook_Data_Allo
     data->error_type = EXM_HOOK_ERROR_MULTIPLE_FREES;
     data->error.multiple_frees.stack_free = stack_free;
     data->error.multiple_frees.stack_alloc = da->stack;
+    data->error.multiple_frees.stack_first_free = da->stack_first_free;
     data->error.multiple_frees.address_alloc = da->data;
     data->error.multiple_frees.size_alloc = da->size;
 
@@ -171,7 +173,7 @@ _exm_hook_data_alloc_new(Exm_Hook_Fct fct, size_t size, void *data, Exm_List *st
     if (!stack)
         return NULL;
 
-    da = (Exm_Hook_Data_Alloc *)malloc(sizeof(Exm_Hook_Data_Alloc));
+    da = (Exm_Hook_Data_Alloc *)calloc(1, sizeof(Exm_Hook_Data_Alloc));
     if (!da)
       return NULL;
 
@@ -180,6 +182,7 @@ _exm_hook_data_alloc_new(Exm_Hook_Fct fct, size_t size, void *data, Exm_List *st
     da->data = data;
     da->nbr_frees = 0;
     da->stack = stack;
+    da->stack_first_free = NULL;
 
     return da;
 }
@@ -289,6 +292,8 @@ _exm_hook_HeapFree(HANDLE hHeap, DWORD dwFlags, LPVOID lpMem)
                 exm_hook_errors = exm_list_append(exm_hook_errors, data);
                 no_free_error = 0;
             }
+            else
+                da->stack_first_free = exm_stack_frames_get();
 
             /* mismatched alloc / free */
             if (da->fct != EXM_HOOK_FCT_HEAPALLOC)
@@ -437,6 +442,8 @@ _exm_hook_free(void *memblock)
                 exm_hook_errors = exm_list_append(exm_hook_errors, data);
                 no_free_error = 0;
             }
+            else
+                da->stack_first_free = exm_stack_frames_get();
 
             /* mismatched alloc / free */
             if ((da->fct != EXM_HOOK_FCT_MALLOC) &&
@@ -712,6 +719,8 @@ exm_hook_error_disp(Exm_Hook_Error_Data *data)
                          data->error.multiple_frees.address_alloc,
                          data->error.multiple_frees.size_alloc);
             exm_stack_disp(data->error.multiple_frees.stack_alloc);
+            EXM_LOG_INFO("First free");
+            exm_stack_disp(data->error.multiple_frees.stack_first_free);
             break;
         case EXM_HOOK_ERROR_MISMATCHED_FREE:
             EXM_LOG_INFO("Mismatched free / allocation");
