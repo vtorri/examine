@@ -34,3 +34,12 @@ m4/lt~obsolete.m4
 missing
 stamp-h1
 src/bin/examine
+visual_studio/Release/
+visual_studio/examine.opensdf
+visual_studio/examine.sdf
+visual_studio/examine.v12.suo
+visual_studio/examine/Release/
+visual_studio/examine_test/Release/
+visual_studio/libexamine/Release/
+visual_studio/libexamine_memcheck/Release/
+visual_studio/libexamine_test/Release/
