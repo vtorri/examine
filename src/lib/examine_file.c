@@ -412,7 +412,6 @@ EXM_API void
 exm_file_base_dir_name_get(const char *filename, char **dir_name, char **base_name)
 {
     char *idx;
-    char *res;
 
     if (dir_name) *dir_name = NULL;
     if (base_name) *base_name = NULL;
@@ -427,14 +426,14 @@ exm_file_base_dir_name_get(const char *filename, char **dir_name, char **base_na
 #endif
     if (idx)
     {
-        res = malloc((idx - filename + 2) * sizeof(char));
-        if (res)
+        if (dir_name)
         {
-            /* we copy also the last path separator */
-            memcpy(res, filename, idx - filename + 1);
-            res[idx - filename + 1] = '\0';
-
-            if (dir_name) *dir_name = res;
+            *dir_name = malloc((idx - filename + 2) * sizeof(char));
+            if (*dir_name)
+            {
+                memcpy(*dir_name, filename, idx - filename + 1);
+                *dir_name[idx - filename + 1] = '\0';
+            }
         }
 
         if (base_name) *base_name = _strdup(idx + 1);
