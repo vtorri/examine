@@ -318,9 +318,6 @@ exm_file_set(const char *filename)
         }
     }
 
-    if (dir_name)
-        free(dir_name);
-
     return base_name;
 
   free_names:
