@@ -124,25 +124,31 @@ _exm_file_path_is_absolute(const char *filename)
     return 0;
 }
 
-static int
+static unsigned char
 _exm_file_exists(const char *path, const char *filename)
 {
     char *tmp;
 #ifdef _WIN32
     struct _stati64 buf;
-
-    tmp = _exm_file_concat(path, filename);
-    if (_stati64(tmp, &buf) != 0)
-        return 0;
 #else
     struct stat buf;
+#endif
+    unsigned char res = 1;
 
     tmp = _exm_file_concat(path, filename);
-    if (stat(tmp, &buf) != 0)
+    if (!tmp)
         return 0;
-#endif
 
-    return 1;
+#ifdef _WIN32
+    if (_stati64(tmp, &buf) != 0)
+        res = 0;
+#else
+    if (stat(tmp, &buf) != 0)
+        res = 0;
+#endif
+    free(tmp);
+
+    return res;
 }
 
 #ifdef _WIN32
@@ -301,6 +307,7 @@ exm_file_set(const char *filename)
                 EXM_LOG_ERR("Can not find base dir or base name for %s", filename);
                 goto free_names;
             }
+
             _exm_file_path = exm_list_prepend_if_new(_exm_file_path,
                                                      dir_name,
                                                      cmp_cb);
