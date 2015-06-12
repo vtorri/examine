@@ -708,7 +708,7 @@ exm_hook_error_disp(Exm_Hook_Error_Data *data)
         case EXM_HOOK_ERROR_MULTIPLE_FREES:
             EXM_LOG_INFO("Multiple frees");
             exm_stack_disp(data->error.multiple_frees.stack_free);
-            EXM_LOG_INFO("Address 0xp is 0 bytes inside a block of size %zu free'd",
+            EXM_LOG_INFO("Address 0x%p is 0 bytes inside a block of size %zu free'd",
                          data->error.multiple_frees.address_alloc,
                          data->error.multiple_frees.size_alloc);
             exm_stack_disp(data->error.multiple_frees.stack_alloc);
@@ -716,7 +716,7 @@ exm_hook_error_disp(Exm_Hook_Error_Data *data)
         case EXM_HOOK_ERROR_MISMATCHED_FREE:
             EXM_LOG_INFO("Mismatched free / allocation");
             exm_stack_disp(data->error.multiple_frees.stack_free);
-            EXM_LOG_INFO("Address 0xp is 0 bytes inside a block of size %zu free'd",
+            EXM_LOG_INFO("Address 0x%p is 0 bytes inside a block of size %zu free'd",
                          data->error.multiple_frees.address_alloc,
                          data->error.multiple_frees.size_alloc);
             exm_stack_disp(data->error.multiple_frees.stack_alloc);
