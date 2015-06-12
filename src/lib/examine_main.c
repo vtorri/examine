@@ -59,7 +59,7 @@ exm_init(void)
 EXM_API int
 exm_shutdown(void)
 {
-    if (!--_exm_init_count != 0)
+    if (--_exm_init_count != 0)
         return _exm_init_count;
 
     exm_file_path_free();
