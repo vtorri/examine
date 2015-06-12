@@ -428,11 +428,14 @@ exm_file_base_dir_name_get(const char *filename, char **dir_name, char **base_na
     {
         if (dir_name)
         {
-            *dir_name = malloc((idx - filename + 2) * sizeof(char));
-            if (*dir_name)
+            char *dn;
+
+            dn = malloc((idx - filename + 2) * sizeof(char));
+            if (dn)
             {
-                memcpy(*dir_name, filename, idx - filename + 1);
-                *dir_name[idx - filename + 1] = '\0';
+                memcpy(dn, filename, idx - filename + 1);
+                dn[idx - filename + 1] = '\0';
+                *dir_name = dn;
             }
         }
 
