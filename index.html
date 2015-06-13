@@ -1,46 +1,128 @@
 <!doctype html>
 <html>
-  <head>
-    <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="chrome=1">
-    <title>Examine by vtorri</title>
+  
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="chrome=1">
+  <title>Examine by vtorri</title>
 
-    <link rel="stylesheet" href="stylesheets/styles.css">
-    <link rel="stylesheet" href="stylesheets/github-dark.css">
-    <script src="javascripts/scale.fix.js"></script>
-    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+  <link rel="stylesheet" href="stylesheets/styles.css">
+  <link rel="stylesheet" href="stylesheets/github-dark.css">
+  <script src="javascripts/scale.fix.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
 
-    <!--[if lt IE 9]>
-    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
-    <![endif]-->
-  </head>
-  <body>
-    <div class="wrapper">
-      <header>
-        <h1>Examine</h1>
-        <p>Examine, a memory leak checker on Windows</p>
-        <p class="view"><a href="https://github.com/vtorri/examine">View the Project on GitHub <small>vtorri/examine</small></a></p>
-        <ul>
-          <li><a href="https://github.com/vtorri/examine/zipball/master">Download <strong>ZIP File</strong></a></li>
-          <li><a href="https://github.com/vtorri/examine/tarball/master">Download <strong>TAR Ball</strong></a></li>
-          <li><a href="https://github.com/vtorri/examine">View On <strong>GitHub</strong></a></li>
-        </ul>
-      </header>
-      <section>
-        <h3>
-<a id="welcome-to-examine" class="anchor" href="#welcome-to-examine" aria-hidden="true"><span class="octicon octicon-link"></span></a>Welcome to Examine.</h3>
+  <!--[if lt IE 9]>
+  <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+  <![endif]-->
+</head>
 
-<p>Examine is a memory leak detector for Windows.</p>
+<body>
+  <div class="wrapper">
+    <header>
+      <h1>Examine</h1>
+      <p>Examine, a memory leak detector on Windows</p>
+      <p class="view"><a href="https://github.com/vtorri/examine">View the Project on GitHub <small>vtorri/examine</small></a></p>
+      <ul>
+        <li><a href="https://github.com/vtorri/examine/zipball/master">Download <strong>ZIP File</strong></a></li>
+        <li><a href="https://github.com/vtorri/examine/tarball/master">Download <strong>TAR Ball</strong></a></li>
+        <li><a href="https://github.com/vtorri/examine">View On <strong>GitHub</strong></a></li>
+      </ul>
+    </header>
+    <section>
+      <h3>
+	<a id="welcome-to-examine" class="anchor"
+	href="#welcome-to-examine"
+	aria-hidden="true"><span class="octicon
+	octicon-link"></span></a>Welcome to Examine.
+      </h3>
 
-<h3>
-<a id="test" class="anchor" href="#test" aria-hidden="true"><span class="octicon octicon-link"></span></a>test</h3>
-      </section>
-    </div>
-    <footer>
-      <p>Project maintained by <a href="https://github.com/vtorri">vtorri</a></p>
-      <p>Hosted on GitHub Pages &mdash; Theme by <a href="https://github.com/orderedlist">orderedlist</a></p>
-    </footer>
-    <!--[if !IE]><script>fixScale(document);</script><![endif]-->
+      <p>Examine is a memory leak detector for Windows and PE file viewer.</p>
+
+      <h3>
+	<a id="test" class="anchor" href="#test"
+	aria-hidden="true">
+	  <span class="octicon octicon-link"></span>
+	</a>
+	Installation
+      </h3>
+
+      <h4>Windows - Visual Studio 2013</h4>
+
+      Examine comes with a Visual Studio 2013 solution. It has been
+      created with Visual Studio 2013 community. Download the source
+      code (GIT repository or TAR ball links at the top of that
+      page). Open the file examine.sln which is in the visual_studio
+      sub-directory with Visual Studio 2013. The solution has been
+      configured for win32 and x64 flavor, in both Debug or Release
+      mode.
+
+      <h4>Windows - MSYS with GCC</h4>
+
+      Install MSYS (1 or 2). Install Win-Builds in /opt. Download the
+      source code (GIT repository or TAR ball links at the top of that
+      page). Then, for x86_64:
+
+      <div>
+	<code>
+	  ./configure --prefix=/path/of/installation --host=x86_64-w64-mingw32 --disable-static --with-libbfd-prefix=/opt/windows_64
+	<code>
+      </div>
+
+      or for i686:
+
+      <div>
+	<code>
+	  ./configure --prefix=/path/of/installation --host=i686-w64-mingw32 --disable-static --with-libbfd-prefix=/opt/windows_64
+	<code>
+      </div>
+
+      and finally:
+
+      <div>
+	</code>
+	  make && make install
+	</code>
+      </div>
+
+      <h4>Linux</h4>
+
+      A Linux build is possible but only the tools 'depends' and
+      'view' are available. Download the source code (GIT repository
+      or TAR ball links at the top of that page). You have to
+      configure, then compile the program.
+
+      The commands must be run in a terminal.
+
+      <div>
+	<code>
+	  ./configure --prefix=/path/of/installation
+	<code>
+      </div>
+      <div>
+	</code>
+	  make && make install
+	</code>
+      </div>
+
+      Replace ./configure by ./autogen.sh the first time you configure using
+      the GIT repository. You may need to be root if you install
+      Examine in a PATH where you don't have the requested
+      permissions.
+
+      <h3>
+	<a id="test" class="anchor" href="#test" aria-hidden="true">
+	  <span class="octicon octicon-link"></span>
+	</a>
+	Tools
+      </h3>
+    </section>
+  </div>
+  <footer>
+    <p>Project maintained by <a href="https://github.com/vtorri">vtorri</a></p>
+    <p>Hosted on GitHub Pages &mdash; Theme by <a href="https://github.com/orderedlist">orderedlist</a></p>
+  </footer>
+  <!--[if !IE]><script>fixScale(document);</script><![endif]-->
     
-  </body>
+</body>
+
 </html>
