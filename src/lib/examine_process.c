@@ -509,7 +509,8 @@ exm_process_dependencies_set(Exm_Process *process)
         size_t i;
         unsigned char is_found;
 
-        EXM_LOG_DBG("Finding process %s in %s", me32.szExePath, process->filename);
+        EXM_LOG_DBG("Finding module %s in process %s",
+                    me32.szExePath, strrchr(process->filename, '\\') + 1);
 
         for (i = 0; i < (sizeof(_exm_process_crt_names) / sizeof(const char *)); i++)
         {
