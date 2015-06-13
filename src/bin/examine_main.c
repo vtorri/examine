@@ -85,7 +85,7 @@ _exm_usage(void)
     printf("\n");
 }
 
-int main(int argc, char *argv[])
+static int main2(int argc, char *argv[])
 {
     char buf_args[32768];
     char *module;
@@ -345,4 +345,34 @@ int main(int argc, char *argv[])
     exm_shutdown();
 
     return 0;
+}
+
+int main(int argc, char *argv[])
+{
+#if defined(_MSC_VER) && defined(_DEBUG)
+    _CrtMemState last_state;
+    _HFILE file;
+    int mode;
+    int flags;
+#endif
+    int ret;
+
+#if defined(_MSC_VER) && defined(_DEBUG)
+    file  = _CRTDBG_FILE_STDOUT;
+    mode  = _CRTDBG_MODE_FILE;
+    flags = _CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF | _CRTDBG_DELAY_FREE_MEM_DF;
+
+    _CrtSetReportFile (_CRT_WARN, file);
+    _CrtSetReportMode (_CRT_WARN, mode);
+    _CrtSetDbgFlag (flags);
+    _CrtMemCheckpoint (&last_state);
+#endif
+
+    ret = main2(argc, argv);
+
+#if defined(_MSC_VER) && defined(_DEBUG)
+    _CrtMemDumpAllObjectsSince (&last_state);
+#endif
+
+    return ret;
 }
