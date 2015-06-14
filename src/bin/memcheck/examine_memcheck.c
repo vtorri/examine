@@ -247,31 +247,11 @@ _exm_map(Exm *exm, Exm_Process *process)
 
 
 void
-exm_mc_run(Exm_List *options, const char *filename, char *args)
+exm_mc_run(const char *filename, char *args)
 {
-    char buf[32768];
     Exm *exm;
     Exm_Process *process;
     Exm_Injection *inj;
-
-    buf[0] = '\0';
-    exm_str_append(buf, filename);
-    exm_str_append(buf, args);
-
-    EXM_LOG_INFO("Command : %s", buf);
-    EXM_LOG_INFO("");
-    if (exm_list_count(options) > 0)
-    {
-        Exm_List *option;
-
-        EXM_LOG_INFO("Examine options:");
-        option = options;
-        while (option)
-        {
-            EXM_LOG_INFO("   %s", (char *)option->data);
-            option = option->next;
-        }
-    }
 
     exm = _exm_new(exm_file_find(filename));
     if (!exm)

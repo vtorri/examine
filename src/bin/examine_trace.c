@@ -28,22 +28,9 @@
 #include "examine_private.h"
 
 void
-exm_trace_run(Exm_List *options, const char *filename, char *args)
+exm_trace_run(const char *filename, char *args)
 {
-    EXM_LOG_INFO("Command : %s %s", filename, args);
-    EXM_LOG_INFO("");
-    if (exm_list_count(options) > 0)
-    {
-        Exm_List *option;
-
-        EXM_LOG_INFO("Examine options:");
-        option = options;
-        while (option)
-        {
-            EXM_LOG_INFO("   %s", (char *)option->data);
-            option = option->next;
-        }
-    }
-
     EXM_LOG_ERR("trace tool not done yet");
+    (void)filename;
+    (void)args;
 }

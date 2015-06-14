@@ -87,6 +87,7 @@ _exm_usage(void)
 
 static int main2(int argc, char *argv[])
 {
+    char buf_command[32768];
     char buf_args[32768];
     char *module;
     Exm_List *options = NULL;
@@ -284,6 +285,7 @@ static int main2(int argc, char *argv[])
     {
         EXM_LOG_ERR("No file name is provided");
         _exm_usage();
+        exm_list_free(options, free);
         return -1;
     }
 
@@ -293,8 +295,42 @@ static int main2(int argc, char *argv[])
     {
         EXM_LOG_ERR("can not pass log level, verbose or quiet options at the same time");
         _exm_usage();
+        exm_list_free(options, free);
         return -1;
     }
+
+    buf_command[0] = '\0';
+    exm_str_append(buf_command, argv[argv_idx]);
+    switch (tool)
+    {
+        case EXM_TOOL_MEMCHECK:
+        case EXM_TOOL_TRACE:
+            exm_str_append(buf_command, buf_args);
+            break;
+        default:
+            break;
+    }
+
+    EXM_LOG_INFO("Examine, a memory leak detector, function and I/O tracer, and PE file viewer");
+    EXM_LOG_INFO("Copyright (c) 2012-2015, and GNU LGPL3'd, by Vincent Torri");
+    EXM_LOG_INFO("Using %s; rerun with -h for help and copyright notice", PACKAGE_STRING);
+    EXM_LOG_INFO("");
+    EXM_LOG_INFO("Command : %s", buf_command);
+    EXM_LOG_INFO("");
+    if (exm_list_count(options) > 0)
+    {
+        Exm_List *option;
+
+        EXM_LOG_INFO("Examine options:");
+        option = options;
+        while (option)
+        {
+            EXM_LOG_INFO("   %s", (char *)option->data);
+            option = option->next;
+        }
+    }
+
+    exm_list_free(options, free);
 
     exm_log_level_set(log_level);
 
@@ -311,36 +347,31 @@ static int main2(int argc, char *argv[])
         return -1;
     }
 
-    EXM_LOG_INFO("Examine, a memory leak detector, function and I/O tracer, and PE file viewer");
-    EXM_LOG_INFO("Copyright (c) 2012-2015, and GNU LGPL3'd, by Vincent Torri");
-    EXM_LOG_INFO("Using %s; rerun with -h for help and copyright notice", PACKAGE_STRING);
-    EXM_LOG_INFO("");
-
     switch (tool)
     {
         case EXM_TOOL_MEMCHECK:
+        {
 #ifdef _WIN32
-            exm_mc_run(options, module, buf_args);
+            exm_mc_run(module, buf_args);
 #else
             EXM_LOG_ERR("memcheck tool not available on UNIX");
 #endif
             break;
+        }
         case EXM_TOOL_TRACE:
-            exm_trace_run(options, module, buf_args);
+            exm_trace_run(module, buf_args);
             break;
         case EXM_TOOL_DEPENDS:
-            exm_depends_run(options, module, depends_list, depends_gui, log_level);
+            exm_depends_run(module, depends_list, depends_gui, log_level);
             break;
         case EXM_TOOL_VIEW:
-            exm_view_run(options, module, view_gui, log_level);
+            exm_view_run(module, view_gui, log_level);
             break;
         default:
             EXM_LOG_ERR("unknown tool");
             break;
     }
     free(module);
-
-    exm_list_free(options, free);
 
     exm_shutdown();
 

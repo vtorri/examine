@@ -280,24 +280,9 @@ _exm_depends_gui_run(Exm_Pe *pe, Exm_Log_Level log_level)
 #endif
 
 void
-exm_depends_run(Exm_List *options, const char *module, unsigned char display_list, unsigned char gui, Exm_Log_Level log_level)
+exm_depends_run(const char *module, unsigned char display_list, unsigned char gui, Exm_Log_Level log_level)
 {
     Exm_Pe *pe;
-
-    EXM_LOG_INFO("Command : %s", module);
-    EXM_LOG_INFO("");
-    if (exm_list_count(options) > 0)
-    {
-        Exm_List *option;
-
-        EXM_LOG_INFO("Examine options:");
-        option = options;
-        while (option)
-        {
-            EXM_LOG_INFO("   %s", (char *)option->data);
-            option = option->next;
-        }
-    }
 
     pe = exm_pe_new(module);
     if (!pe)
