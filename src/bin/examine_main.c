@@ -358,7 +358,7 @@ int main(int argc, char *argv[])
     int ret;
 
 #if defined(_MSC_VER) && defined(_DEBUG)
-    file  = _CRTDBG_FILE_STDOUT;
+    file  = _CRTDBG_FILE_STDERR;
     mode  = _CRTDBG_MODE_FILE;
     flags = _CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF | _CRTDBG_DELAY_FREE_MEM_DF;
 
