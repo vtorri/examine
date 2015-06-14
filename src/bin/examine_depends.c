@@ -86,7 +86,10 @@ _exm_depends_cmd_tree_fill(Exm_List *list, const char *filename)
                 list = _exm_depends_cmd_tree_fill(list, name);
             }
             else
+            {
                 printf(" (f)\n");
+                free(name);
+            }
 
             iter_import++;
         }
@@ -119,7 +122,10 @@ _exm_depends_cmd_tree_fill(Exm_List *list, const char *filename)
                 list = _exm_depends_cmd_tree_fill(list, name);
             }
             else
+            {
                 printf(" (dl, f)\n");
+                free(name);
+            }
 
             iter_delayload++;
         }
