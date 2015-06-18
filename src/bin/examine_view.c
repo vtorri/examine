@@ -500,12 +500,12 @@ _exm_view_gui_run(Exm_Pe *pe, Exm_Log_Level log_level)
     exm_str_append(args, exm_pe_filename_get(pe));
 
     process = exm_process_new(cmd_gui, args);
-    free(cmd_gui);
     if (!process)
     {
         EXM_LOG_ERR("Creation of process %s %s failed", cmd_gui, args);
         return;
     }
+    free(cmd_gui);
 
     map = exm_map_shared_new("exm_view_gui_shared",
                              &log_level, sizeof(Exm_Log_Level));
