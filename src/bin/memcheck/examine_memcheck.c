@@ -226,6 +226,9 @@ _exm_map(Exm *exm, Exm_Process *process)
         goto del_map_vals;
     }
 
+    free(names);
+    free(vals);
+
     return 1;
 
   del_map_vals:
