@@ -1,6 +1,6 @@
 <!doctype html>
 <html>
-  
+
 <head>
   <meta charset="utf-8">
   <meta http-equiv="X-UA-Compatible" content="chrome=1">
@@ -58,31 +58,103 @@
 
       <h4>Windows - MSYS with GCC</h4>
 
-      Install MSYS (1 or 2). Install Win-Builds in /opt. Download the
-      source code (GIT repository or TAR ball links at the top of that
-      page). Then, for x86_64:
+      <h5>Installation of MSYS2</h5>
 
-      <div>
-	<code>
-	  ./configure --prefix=/path/of/installation --host=x86_64-w64-mingw32 --disable-static --with-libbfd-prefix=/opt/windows_64
-	<code>
-      </div>
+      <ul>
+        <li>
+          Download MSYS2 <a href="http://msys2.github.io/">here</a>,
+          choosing the target you want (either i686 or x86_64). The x86_64
+          target will be installed in that tutorial, but the i686 one is
+          exactly the same (notes will be added for its installation).
+        <li>
+          Follow instructions 1. to 7. (Instruction 8. is useless)
+          with the 2 following modifications:
+          <ul>
+            <li>
+              Instructions 3.: The installation directory for this
+              tutorial will be <b>D:\MSYS2</b>
+            <li>
+              Instruction 6.: The command will be
 
-      or for i686:
+              <div>
+	        <code>
+	          pacman -Syu
+	        </code>
+              </div>
+            <li>
+              Instruction 7.: The command will be
 
-      <div>
-	<code>
-	  ./configure --prefix=/path/of/installation --host=i686-w64-mingw32 --disable-static --with-libbfd-prefix=/opt/windows_64
-	<code>
-      </div>
+              <div>
+	        <code>
+	          pacman -S git make autoconf automake libtool gettext-devel
+	        </code>
+              </div>
+          </ul>
+      </ul>
 
-      and finally:
+      <h5>Installation of GCC and MinGW-64 with Win-Builds</h5>
 
-      <div>
-	</code>
-	  make && make install
-	</code>
-      </div>
+      <ul>
+        <li>
+          Download Win-Builds <a href="http://win-builds.org/doku.php/download_and_installation_from_windows">here</a>.
+        <li> In the GUI window, select:
+          <ul>
+            <li> Cygwin or MSYS
+            <li> x86_64 (if you want i686, let the selection as is)
+            <li> Use the mirror that is proposed:
+            http://win-builds.org/1.5.0
+            <li> The installation directory is the one chosen for
+            MSYS2 in the previous paragraph, instruction 3. of the
+            MSYS2 instructions (for this
+            tutorial, <b>D:\MSYS2</b>). By default, MinGW-64 will be
+            installed in <b>D:\MSYS2\opt\windows_64</b>
+            (or <b>D:\MSYS2\opt\windows_32</b> for i686) and the
+            binaries in  <b>D:\MSYS2\opt\windows_64\bin</b>.
+            <li> Click on OK then on Process in the new UI window.
+          </ul>
+        <li> Post installation
+          <ul>
+            <li> In MSYS2 terminal, open /etc/profile with your
+            favorite editor, add to PATH <b>/opt/windows_64/bin</b>, and
+            export PKG_CONFIG_PATH
+            to <b>/opt/windows_64/lib64/pkgconfig</b>
+            (or <b>/opt/windows_32/lib/pkgconfig</b> for i686).
+          </ul>
+      </ul>
+
+      <h5>Compilation of Examine</h5>
+
+      Download the source code (GIT repository or TAR ball links at
+      the top of that page). You have to configure, then compile the
+      program.
+
+      The commands must be run in a MSYS2 terminal.
+
+      <ul>
+        <li> For x86_64:
+
+          <div>
+	    <code>
+	      ./configure --prefix=/path/of/installation --host=x86_64-w64-mingw32 --disable-static --with-libbfd-prefix=/opt/windows_64
+	      </code>
+          </div>
+        <li> For i686:
+
+          <div>
+	    <code>
+	      ./configure --prefix=/path/of/installation --host=i686-w64-mingw32 --disable-static --with-libbfd-prefix=/opt/windows_32
+	      </code>
+          </div>
+
+          Replace ./configure by ./autogen.sh the first time you configure using
+          the GIT repository.
+        <li> Compile and install:
+          <div>
+	    <code>
+	      make && make install
+	    </code>
+          </div>
+      </ul>
 
       <h4>Linux</h4>
 
