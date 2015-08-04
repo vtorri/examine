@@ -18,6 +18,7 @@ src/lib/examine_map.h \
 src/lib/examine_pe.h \
 src/lib/examine_str.h \
 src/lib/examine_private_file.h \
+src/lib/examine_private_log.h \
 src/lib/examine_private_map.h \
 src/lib/examine_private_process.h \
 src/lib/examine_private_str.h

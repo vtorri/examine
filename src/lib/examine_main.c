@@ -25,6 +25,7 @@
 
 #include "Examine.h"
 
+#include "examine_private_log.h"
 #include "examine_private_file.h"
 
 
@@ -51,6 +52,7 @@ exm_init(void)
     if (++_exm_init_count != 1)
         return _exm_init_count;
 
+    exm_log_init();
     exm_file_path_set();
 
     return _exm_init_count;
@@ -63,6 +65,7 @@ exm_shutdown(void)
         return _exm_init_count;
 
     exm_file_path_free();
+    exm_log_shutdown();
 
     return _exm_init_count;
 }

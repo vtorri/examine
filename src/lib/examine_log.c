@@ -32,12 +32,14 @@
 # endif
 # include <windows.h>
 # undef WIN32_LEAN_AND_MEAN
+# include <io.h>
 #else
 # include <sys/types.h>
 # include <unistd.h>
 #endif
 
 #include "Examine.h"
+#include "examine_private_log.h"
 
 
 /*============================================================================*
@@ -46,6 +48,9 @@
 
 
 static Exm_Log_Level _exm_log_level = EXM_LOG_LEVEL_INFO;
+
+static HANDLE _exm_log_handle_stdout = NULL;
+static HANDLE _exm_log_handle_stderr = NULL;
 
 #ifdef _WIN32
 
@@ -77,100 +82,74 @@ _exm_log_print_level_color_get(int level, WORD original_background)
 }
 
 static void
-_exm_log_print_prefix_func(HANDLE std_handle, Exm_Log_Level level)
+_exm_log_print_prefix_func(FILE *st, Exm_Log_Level level)
 {
-    CONSOLE_SCREEN_BUFFER_INFO scbi;
-    char *str;
-    DWORD res;
-    int s;
+    CONSOLE_SCREEN_BUFFER_INFO scbi_stdout;
+    CONSOLE_SCREEN_BUFFER_INFO scbi_stderr;
+    CONSOLE_SCREEN_BUFFER_INFO *scbi;
+    HANDLE handle;
+    WORD color;
+    BOOL use_color;
 
-    if (!GetConsoleScreenBufferInfo(std_handle, &scbi))
-        return;
-
-    s = _snprintf(NULL, 0, "==%ld==", GetCurrentProcessId());
-    if (s == -1)
-        return;
-
-    str = (char *)malloc((s + 1) * sizeof(char));
-    if (!str)
-        return;
-
-    s = _snprintf(str, s + 1, "==%ld==", GetCurrentProcessId());
-    if (s == -1)
-        goto free_str;
-
-    SetConsoleTextAttribute(std_handle,
-                            _exm_log_print_level_color_get(level,
-                                                           scbi.wAttributes & ~7));
-    if (!WriteConsole(std_handle, str, s, &res, NULL))
+    if (_exm_log_handle_stdout != INVALID_HANDLE_VALUE)
     {
-        SetConsoleTextAttribute(std_handle, scbi.wAttributes);
-        goto free_str;
+        if (!GetConsoleScreenBufferInfo(_exm_log_handle_stdout, &scbi_stdout))
+            return;
     }
 
-    free(str);
+    if (_exm_log_handle_stderr != INVALID_HANDLE_VALUE)
+    {
+        if (!GetConsoleScreenBufferInfo(_exm_log_handle_stderr, &scbi_stderr))
+            return;
+    }
 
-    if ((int)res != s)
-        fprintf(stderr, "ERROR: %s(): want to write %d bytes, %ld written\n", __FUNCTION__, s, res);
+    handle  = (st == stdout) ? _exm_log_handle_stdout : _exm_log_handle_stderr;
+    scbi = (st == stdout) ? &scbi_stdout : &scbi_stderr;
+    use_color = (_isatty(_fileno(st)) != 1) && (handle != INVALID_HANDLE_VALUE);
+    color = use_color ? _exm_log_print_level_color_get(level, scbi->wAttributes & ~7) : 0;
+    if (use_color)
+    {
+        fflush(st);
+        SetConsoleTextAttribute(handle, color);
+    }
 
-    SetConsoleTextAttribute(std_handle, scbi.wAttributes);
-
-    if (!WriteConsole(std_handle, " ", 1, &res, NULL))
-      return;
-
-    if ((int)res != 1)
-        fprintf(stderr, "ERROR: %s(): want to write %d bytes, %ld written\n", __FUNCTION__, 1, res);
-
-    return;
-
-  free_str:
-    free(str);
+    fprintf(st, "==%lu==", GetCurrentProcessId());
+    if (use_color)
+    {
+        fflush(st);
+        SetConsoleTextAttribute(handle, scbi->wAttributes);
+    }
+    fputc(' ', st);
 }
 
 static void
-_exm_log_fprint_cb(DWORD console,
+_exm_log_fprint_cb(FILE *st,
                    Exm_Log_Level level,
                    const char *fmt,
                    void *data, /* later for XML output */
                    va_list args)
 {
-    HANDLE std_handle;
     char *str;
-    DWORD res;
+    int res;
     int s;
-
-    std_handle = GetStdHandle(console);
-    if (std_handle == INVALID_HANDLE_VALUE)
-        return;
 
     s = _vsnprintf(NULL, 0, fmt, args);
     if (s == -1)
         return;
 
-    str = (char *)malloc((s + 2) * sizeof(char));
-    if (!str)
-        return;
+    str = (char *)alloca((s + 2) * sizeof(char));
 
     s = _vsnprintf(str, s + 1, fmt, args);
     if (s == -1)
-    {
-        free(str);
         return;
-    }
+
     str[s] = '\n';
     str[s + 1] = '\0';
 
-    _exm_log_print_prefix_func(std_handle, level);
-    if (!WriteConsole(std_handle, str, s + 1, &res, NULL))
-    {
-        free(str);
-        return;
-    }
-
-    free(str);
-
-    if ((int)res != (s + 1))
-        fprintf(stderr, "ERROR: %s(): want to write %d bytes, %ld written\n", __FUNCTION__, s + 1, res);
+    _exm_log_print_prefix_func(st, level);
+    res = fprintf(st, str, s + 1);
+    if (res != (s + 1))
+        fprintf(stderr, "ERROR: %s(): want to write %d bytes, %d written\n", __FUNCTION__, s + 1, res);
 }
 
 #else /* !_WIN32 */
@@ -215,6 +194,19 @@ _exm_log_fprint_cb(FILE *st,
  *============================================================================*/
 
 
+void
+exm_log_init(void)
+{
+    _exm_log_handle_stdout = GetStdHandle(STD_OUTPUT_HANDLE);
+    _exm_log_handle_stderr = GetStdHandle(STD_ERROR_HANDLE);
+}
+
+void
+exm_log_shutdown(void)
+{
+}
+
+
 /*============================================================================*
  *                                   API                                      *
  *============================================================================*/
@@ -226,11 +218,7 @@ exm_log_print_cb_stderr(Exm_Log_Level level,
                         void *data,
                         va_list args)
 {
-#ifdef _WIN32
-    _exm_log_fprint_cb(STD_ERROR_HANDLE, level, fmt, data, args);
-#else
     _exm_log_fprint_cb(stderr, level, fmt, data, args);
-#endif
 }
 
 EXM_API void
@@ -239,11 +227,7 @@ exm_log_print_cb_stdout(Exm_Log_Level level,
                         void *data,
                         va_list args)
 {
-#ifdef _WIN32
-    _exm_log_fprint_cb(STD_OUTPUT_HANDLE, level, fmt, data, args);
-#else
     _exm_log_fprint_cb(stdout, level, fmt, data, args);
-#endif
 }
 
 EXM_API void
