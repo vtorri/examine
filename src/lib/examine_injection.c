@@ -321,6 +321,7 @@ exm_injection_dll_inject(Exm_Injection *inj, const Exm_Process *proc, const char
 
     CloseHandle(remote_thread);
     VirtualFreeEx(process, remote_string, 0, MEM_RELEASE);
+    free(dll_full_file_name);
 
     return 1;
 
