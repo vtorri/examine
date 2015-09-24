@@ -312,8 +312,12 @@ exm_mc_run(const char *filename, char *args)
     EXM_LOG_DBG("end of process");
 
     exm_injection_dll_eject(inj, process);
+    exm_injection_del(inj);
+
+    exm_process_del(process);
 
     _exm_del(exm);
+
     EXM_LOG_DBG("resources freed");
 
     return;
