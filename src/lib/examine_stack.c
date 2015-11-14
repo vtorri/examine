@@ -289,7 +289,7 @@ exm_stack_frames_get(void)
         /* we substract 1 because (From Kai Tietz) : */
         /* the back-trace address collected is the return-address of the call. */
         /* So this location might be pointing already to next line.*/
-        data.counter = (bfd_vma)((char *)frames[i] - 1);
+        data.counter = (bfd_vma)(uintptr_t)((char *)frames[i] - 1);
         bfd_map_over_sections(fd,
                               &_exm_stack_find_function_name_in_section,
                               &data);
