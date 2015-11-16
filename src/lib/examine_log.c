@@ -49,10 +49,10 @@
 
 static Exm_Log_Level _exm_log_level = EXM_LOG_LEVEL_INFO;
 
+#ifdef _WIN32
+
 static HANDLE _exm_log_handle_stdout = NULL;
 static HANDLE _exm_log_handle_stderr = NULL;
-
-#ifdef _WIN32
 
 static WORD
 _exm_log_print_level_color_get(int level, WORD original_background)
@@ -197,8 +197,10 @@ _exm_log_fprint_cb(FILE *st,
 void
 exm_log_init(void)
 {
+#ifdef _WIN32
     _exm_log_handle_stdout = GetStdHandle(STD_OUTPUT_HANDLE);
     _exm_log_handle_stderr = GetStdHandle(STD_ERROR_HANDLE);
+#endif
 }
 
 void
