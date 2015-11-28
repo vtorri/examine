@@ -50,6 +50,92 @@
 # define FMT_LL16X "%016llx"
 #endif
 
+static char _exm_view_dllcharacteristics[4096];
+
+static const char *
+_exm_view_subsystem_get(WORD subsystem)
+{
+    switch (subsystem)
+    {
+        case IMAGE_SUBSYSTEM_UNKNOWN:
+            return "(Unknown)";
+        case IMAGE_SUBSYSTEM_NATIVE:
+            return "(Native)";
+        case IMAGE_SUBSYSTEM_WINDOWS_GUI:
+            return "(Win32 GUI)";
+        case IMAGE_SUBSYSTEM_WINDOWS_CUI:
+            return "(Win32 CUI)";
+        case IMAGE_SUBSYSTEM_OS2_CUI:
+            return "(OS/2 CUI)";
+        case IMAGE_SUBSYSTEM_POSIX_CUI:
+            return "(POSIX CUI)";
+        case IMAGE_SUBSYSTEM_WINDOWS_CE_GUI:
+            return "(WinCE CUI)";
+        case IMAGE_SUBSYSTEM_EFI_APPLICATION:
+            return "(EFI Application)";
+        case IMAGE_SUBSYSTEM_EFI_BOOT_SERVICE_DRIVER:
+            return "(EFI driver - boot service)";
+        case IMAGE_SUBSYSTEM_EFI_RUNTIME_DRIVER:
+            return "(EFI driver - runtime service)";
+        case IMAGE_SUBSYSTEM_EFI_ROM:
+            return "(EFI ROM image)";
+        case IMAGE_SUBSYSTEM_XBOX:
+            return "(XBOX)";
+        case IMAGE_SUBSYSTEM_WINDOWS_BOOT_APPLICATION:
+            return "(Boot Application)";
+        default:
+            return "";
+    }
+}
+
+#define EXM_VIEW_DLLCAR_SET(val, str) \
+do { \
+    if (dllcar & val) \
+    { \
+        if (is_first) \
+        { \
+            *ptr = ' '; \
+            ptr++; \
+            is_first = 0; \
+            *ptr = '('; \
+            ptr++; \
+        } \
+        else \
+        { \
+            *ptr = ' '; \
+            ptr++; \
+        } \
+        memcpy(ptr, str, strlen(str)); \
+        ptr += strlen(str); \
+    } \
+} while (0)
+
+static const char *
+_exm_view_dllcharacteristics_get(WORD dllcar)
+{
+    char * ptr = _exm_view_dllcharacteristics;
+    unsigned char is_first = 1;
+
+    EXM_VIEW_DLLCAR_SET(IMAGE_DLLCHARACTERISTICS_DYNAMIC_BASE, "dynamic_base");
+    EXM_VIEW_DLLCAR_SET(IMAGE_DLLCHARACTERISTICS_FORCE_INTEGRITY, "force_integrity");
+    EXM_VIEW_DLLCAR_SET(IMAGE_DLLCHARACTERISTICS_NX_COMPAT, "nx_compat");
+    EXM_VIEW_DLLCAR_SET(IMAGE_DLLCHARACTERISTICS_NO_ISOLATION, "no_isolation");
+    EXM_VIEW_DLLCAR_SET(IMAGE_DLLCHARACTERISTICS_NO_SEH, "no_seh");
+    EXM_VIEW_DLLCAR_SET(IMAGE_DLLCHARACTERISTICS_NO_BIND, "no_bind");
+    EXM_VIEW_DLLCAR_SET(IMAGE_DLLCHARACTERISTICS_WDM_DRIVER, "wdm_driver");
+    EXM_VIEW_DLLCAR_SET(IMAGE_DLLCHARACTERISTICS_TERMINAL_SERVER_AWARE, "terminal_server_aware");
+
+    if (!is_first)
+    {
+        *ptr = ')';
+        ptr++;
+    }
+
+    *ptr = '\0';
+
+    return _exm_view_dllcharacteristics;
+}
+
 static void
 _exm_view_cmd_dos_header_display(Exm_Pe *pe)
 {
@@ -123,8 +209,8 @@ _exm_view_cmd_optional_header_32_display(Exm_Pe *pe)
     printf("  SizeOfImage                 DWORD   " FMT_DWD "\n", nt_header->OptionalHeader.SizeOfImage);
     printf("  SizeOfHeaders               DWORD   " FMT_DWD "\n", nt_header->OptionalHeader.SizeOfHeaders);
     printf("  CheckSum                    DWORD   " FMT_DWD "\n", nt_header->OptionalHeader.CheckSum);
-    printf("  Subsystem                   WORD    %u\n", nt_header->OptionalHeader.Subsystem);
-    printf("  DllCharacteristics          WORD    %u\n", nt_header->OptionalHeader.DllCharacteristics);
+    printf("  Subsystem                   WORD    %u %s\n", nt_header->OptionalHeader.Subsystem, _exm_view_subsystem_get(nt_header->OptionalHeader.Subsystem));
+    printf("  DllCharacteristics          WORD    0x%x%s\n", nt_header->OptionalHeader.DllCharacteristics, _exm_view_dllcharacteristics_get(nt_header->OptionalHeader.DllCharacteristics));
     printf("  SizeOfStackReserve          DWORD   " FMT_DWD "\n", nt_header->OptionalHeader.SizeOfStackReserve);
     printf("  SizeOfStackReserve          DWORD   " FMT_DWD "\n", nt_header->OptionalHeader.SizeOfStackReserve);
     printf("  SizeOfStackCommit           DWORD   " FMT_DWD "\n", nt_header->OptionalHeader.SizeOfStackCommit);
@@ -164,8 +250,8 @@ _exm_view_cmd_optional_header_64_display(Exm_Pe *pe)
     printf("  SizeOfImage                 DWORD     0x" FMT_DWD8X "\n", nt_header->OptionalHeader.SizeOfImage);
     printf("  SizeOfHeaders               DWORD     0x" FMT_DWD8X "\n", nt_header->OptionalHeader.SizeOfHeaders);
     printf("  CheckSum                    DWORD     0x" FMT_DWD8X "\n", nt_header->OptionalHeader.CheckSum);
-    printf("  Subsystem                   WORD      %u\n", nt_header->OptionalHeader.Subsystem);
-    printf("  DllCharacteristics          WORD      %u\n", nt_header->OptionalHeader.DllCharacteristics);
+    printf("  Subsystem                   WORD      %u %s\n", nt_header->OptionalHeader.Subsystem, _exm_view_subsystem_get(nt_header->OptionalHeader.Subsystem));
+    printf("  DllCharacteristics          WORD      0x%x%s\n", nt_header->OptionalHeader.DllCharacteristics, _exm_view_dllcharacteristics_get(nt_header->OptionalHeader.DllCharacteristics));
     printf("  SizeOfStackReserve          ULONGLONG 0x" FMT_LL16X "\n", nt_header->OptionalHeader.SizeOfStackReserve);
     printf("  SizeOfStackCommit           ULONGLONG 0x" FMT_LL16X "\n", nt_header->OptionalHeader.SizeOfStackCommit);
     printf("  SizeOfHeapReserve           ULONGLONG 0x" FMT_LL16X "\n", nt_header->OptionalHeader.SizeOfHeapReserve);
