@@ -1,4 +1,9 @@
+
 TODO:
+
+Definitions:
+  [ ] Not done
+  [X] done
 
 [ ] Always look at 'TODO' and 'FIXME' in code
 
@@ -13,7 +18,7 @@ TODO:
 
    [X] Win32: HeapAlloc
    [X] Win32: HeapFree
-   [ ] Win32: HeapReAlloc
+   [X] Win32: HeapReAlloc
    [ ] Win32: HeapCreate
    [ ] Win32: HeapDestroy
    [ ] Win32: VirtualAlloc
@@ -21,16 +26,28 @@ TODO:
    [ ] Win32: VirtualAllocExNuma (>= Vista)
    [ ] Win32: VirtualFree
    [ ] Win32: VirtualFreeEx
+   [ ] Win32: GlobalAlloc
+   [ ] Win32: GlobalFree
+   [ ] Win32: GlobalReAlloc
+   [ ] Win32: LocalAlloc
+   [ ] Win32: LocalFree
+   [ ] Win32: LocalReAlloc
 
    [X] CRT: malloc
    [X] CRT: free
-   [ ] CRT: calloc
-   [ ] CRT: realloc
+   [X] CRT: calloc
+   [X] CRT: realloc
+   [ ] CRT: _expand
    [ ] CRT: valloc (deprecated)
    [ ] CRT: memalign (deprecated)
    [ ] CRT: posix_memalign
    [ ] CRT: aligned_alloc >= C11
    [ ] CRT: strdup
+
+   [ ] C++: new
+   [ ] C++: new[]
+   [ ] C++: delete
+   [ ] C++: delete[]
 
    [ ] GDI: 
 

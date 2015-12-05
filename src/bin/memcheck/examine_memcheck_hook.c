@@ -49,6 +49,17 @@ typedef enum
     EXM_HOOK_ERROR_MISMATCHED_FREE
 } Exm_Hook_Error;
 
+typedef struct _Exm_Hook Exm_Hook;
+
+struct _Exm_Hook
+{
+    Exm_Hook_Fct fct;
+    FARPROC fct_proc_old;
+    FARPROC fct_proc_new;
+};
+
+static Exm_Hook _exm_hook_instance[EXM_HOOK_FCT_COUNT];
+
 struct _Exm_Hook_Error_Data
 {
     Exm_Hook_Error error_type;
@@ -154,17 +165,6 @@ _exm_hook_error_data_del(void *ptr)
     }
 }
 
-typedef struct _Exm_Hook Exm_Hook;
-
-struct _Exm_Hook
-{
-    Exm_Hook_Fct fct;
-    FARPROC fct_proc_old;
-    FARPROC fct_proc_new;
-};
-
-static Exm_Hook _exm_hook_instance[EXM_HOOK_FCT_COUNT];
-
 static Exm_Hook_Data_Alloc *
 _exm_hook_data_alloc_new(Exm_Hook_Fct fct, size_t size, void *data, Exm_List *stack)
 {
@@ -226,201 +226,49 @@ _exm_hook_allocations_sanitize(void *data)
     }
 }
 
+typedef unsigned char (*Exm_Hook_Alloc_Free_Mismatch)(Exm_Hook_Fct fct);
 
-static LPVOID WINAPI
-_exm_hook_HeapAlloc(HANDLE hHeap, DWORD dwFlags, SIZE_T dwBytes)
+static unsigned char
+_exm_hook_heapalloc_heapfree_mismatch(Exm_Hook_Fct fct)
 {
-    typedef LPVOID (WINAPI *exm_heap_alloc_t)(HANDLE hHeap,
-                                              DWORD dwFlags,
-                                              SIZE_T dwBytes);
-    exm_heap_alloc_t ha;
-    Exm_Hook_Data_Alloc *da;
-    LPVOID data;
 
-    EXM_LOG_WARN("HeapAlloc !!!");
-
-    ha = (exm_heap_alloc_t)_exm_hook_instance[EXM_HOOK_FCT_HEAPALLOC].fct_proc_old;
-    data = ha(hHeap, dwFlags, dwBytes);
-
-    _exm_hook_allocations_sanitize(data);
-
-    da = _exm_hook_data_alloc_new(EXM_HOOK_FCT_HEAPALLOC,
-                                  dwBytes, data, exm_stack_frames_get());
-    if (da)
-    {
-        exm_hook_allocations = exm_list_append(exm_hook_allocations, da);
-    }
-
-    exm_hook_summary.total_count_allocs++;
-    exm_hook_summary.total_bytes_allocated += dwBytes;
-
-    return data;
+    return ((fct != EXM_HOOK_FCT_HEAPALLOC) &&
+            (fct != EXM_HOOK_FCT_HEAPREALLOC));
 }
 
-static BOOL WINAPI
-_exm_hook_HeapFree(HANDLE hHeap, DWORD dwFlags, LPVOID lpMem)
+static unsigned char
+_exm_hook_malloc_free_mismatch(Exm_Hook_Fct fct)
 {
-    typedef BOOL (WINAPI *exm_heap_free_t)(HANDLE hHeap,
-                                           DWORD dwFlags,
-                                           LPVOID lpMem);
-    exm_heap_free_t hf;
-    Exm_Hook_Error_Data *data = NULL;
-    Exm_List *iter_alloc;
-    unsigned char alloc_not_found = 1;
-    unsigned char no_free_error = 1;
-    BOOL res = FALSE;
 
-    EXM_LOG_WARN("HeapFree !!!");
-
-    iter_alloc = exm_hook_allocations;
-    while (iter_alloc)
-    {
-        Exm_Hook_Data_Alloc *da;
-
-        da = (Exm_Hook_Data_Alloc *)iter_alloc->data;
-        if (da->data == lpMem)
-        {
-            alloc_not_found = 0;
-            da->nbr_frees++;
-
-            /* multiple frees */
-            if (da->nbr_frees > 1)
-            {
-                data = _exm_hook_error_data_multiple_frees_new(exm_stack_frames_get(),
-                                                               da);
-                exm_hook_error_disp(data);
-                exm_hook_errors = exm_list_append(exm_hook_errors, data);
-                no_free_error = 0;
-            }
-            else
-                da->stack_first_free = exm_stack_frames_get();
-
-            /* mismatched alloc / free */
-            if (da->fct != EXM_HOOK_FCT_HEAPALLOC)
-            {
-                data = _exm_hook_error_data_mismatched_free_new(exm_stack_frames_get(),
-                                                                da);
-                exm_hook_error_disp(data);
-                exm_hook_errors = exm_list_append(exm_hook_errors, data);
-            }
-
-            break;
-        }
-        iter_alloc = iter_alloc->next;
-    }
-
-    if (alloc_not_found)
-    {
-        data = _exm_hook_error_data_free_without_alloc_new(exm_stack_frames_get());
-        no_free_error = 0;
-    }
-
-    if (no_free_error)
-    {
-        hf = (exm_heap_free_t)_exm_hook_instance[EXM_HOOK_FCT_HEAPFREE].fct_proc_old;
-        res = hf(hHeap, dwFlags, lpMem);
-    }
-
-    exm_hook_summary.total_count_frees++;
-
-    return res;
-}
-
-static void *
-_exm_hook_malloc(size_t size)
-{
-    typedef void *(*exm_malloc_t)(size_t size);
-    exm_malloc_t ma;
-    Exm_Hook_Data_Alloc *da;
-    void *data;
-
-    EXM_LOG_WARN("malloc !!!");
-
-    ma = (exm_malloc_t)_exm_hook_instance[EXM_HOOK_FCT_MALLOC].fct_proc_old;
-    data = ma(size);
-
-    _exm_hook_allocations_sanitize(data);
-
-    da = _exm_hook_data_alloc_new(EXM_HOOK_FCT_MALLOC,
-                                  size, data, exm_stack_frames_get());
-    if (da)
-    {
-        exm_hook_allocations = exm_list_append(exm_hook_allocations, da);
-    }
-
-    exm_hook_summary.total_count_allocs++;
-    exm_hook_summary.total_bytes_allocated += size;
-
-    return data;
-}
-
-static void *
-_exm_hook_calloc(size_t nmemb, size_t size)
-{
-    typedef void *(*exm_calloc_t)(size_t nmemb, size_t size);
-    exm_calloc_t ca;
-    Exm_Hook_Data_Alloc *da;
-    void *data;
-
-    EXM_LOG_WARN("calloc !!!");
-
-    ca = (exm_calloc_t)_exm_hook_instance[EXM_HOOK_FCT_CALLOC].fct_proc_old;
-    data = ca(nmemb, size);
-
-    _exm_hook_allocations_sanitize(data);
-
-    da = _exm_hook_data_alloc_new(EXM_HOOK_FCT_CALLOC,
-                                  size, data, exm_stack_frames_get());
-    if (da)
-    {
-        exm_hook_allocations = exm_list_append(exm_hook_allocations, da);
-    }
-
-    exm_hook_summary.total_count_allocs++;
-    exm_hook_summary.total_bytes_allocated += size;
-
-    return data;
-}
-
-static void *
-_exm_hook_realloc(void *ptr, size_t size)
-{
-    typedef void *(*exm_realloc_t)(void *ptr, size_t size);
-    exm_realloc_t rea;
-    Exm_Hook_Data_Alloc *da;
-    void *data;
-
-    EXM_LOG_WARN("realloc !!!");
-
-    rea = (exm_realloc_t)_exm_hook_instance[EXM_HOOK_FCT_REALLOC].fct_proc_old;
-    data = rea(ptr, size);
-
-    _exm_hook_allocations_sanitize(data);
-
-    da = _exm_hook_data_alloc_new(EXM_HOOK_FCT_REALLOC,
-                                  size, data, exm_stack_frames_get());
-    if (da)
-    {
-        exm_hook_allocations = exm_list_append(exm_hook_allocations, da);
-    }
-
-    exm_hook_summary.total_count_allocs++;
-    exm_hook_summary.total_bytes_allocated += size;
-
-    return data;
+    return ((fct != EXM_HOOK_FCT_MALLOC) &&
+            (fct != EXM_HOOK_FCT_CALLOC) &&
+            (fct != EXM_HOOK_FCT_REALLOC));
 }
 
 static void
-_exm_hook_free(void *memblock)
+_exm_hook_alloc_manage(void *data, size_t size, Exm_Hook_Fct fct)
 {
-    typedef void (*exm_free_t)(void *memblock);
-    exm_free_t f;
-    Exm_Hook_Error_Data *data = NULL;
+    Exm_Hook_Data_Alloc *da;
+
+    _exm_hook_allocations_sanitize(data);
+
+    da = _exm_hook_data_alloc_new(fct, size, data, exm_stack_frames_get());
+    if (da)
+    {
+        exm_hook_allocations = exm_list_append(exm_hook_allocations, da);
+    }
+
+    exm_hook_summary.total_count_allocs++;
+    exm_hook_summary.total_bytes_allocated += size;
+}
+
+static unsigned char
+_exm_hook_free_errors_manage(void *memblock, Exm_Hook_Alloc_Free_Mismatch mismatch_cb)
+{
+    Exm_Hook_Error_Data *err_data = NULL;
     Exm_List *iter_alloc;
     unsigned char alloc_not_found = 1;
     unsigned char no_free_error = 1;
-
-    EXM_LOG_WARN("free !!!");
 
     iter_alloc = exm_hook_allocations;
     while (iter_alloc)
@@ -436,24 +284,22 @@ _exm_hook_free(void *memblock)
             /* multiple frees */
             if (da->nbr_frees > 1)
             {
-                data = _exm_hook_error_data_multiple_frees_new(exm_stack_frames_get(),
-                                                               da);
-                exm_hook_error_disp(data);
-                exm_hook_errors = exm_list_append(exm_hook_errors, data);
+                err_data = _exm_hook_error_data_multiple_frees_new(exm_stack_frames_get(),
+                                                                   da);
+                exm_hook_error_disp(err_data);
+                exm_hook_errors = exm_list_append(exm_hook_errors, err_data);
                 no_free_error = 0;
             }
             else
                 da->stack_first_free = exm_stack_frames_get();
 
             /* mismatched alloc / free */
-            if ((da->fct != EXM_HOOK_FCT_MALLOC) &&
-                (da->fct != EXM_HOOK_FCT_CALLOC) &&
-                (da->fct != EXM_HOOK_FCT_REALLOC))
+            if (mismatch_cb(da->fct))
             {
-                data = _exm_hook_error_data_mismatched_free_new(exm_stack_frames_get(),
-                                                                da);
-                exm_hook_error_disp(data);
-                exm_hook_errors = exm_list_append(exm_hook_errors, data);
+                err_data = _exm_hook_error_data_mismatched_free_new(exm_stack_frames_get(),
+                                                                    da);
+                exm_hook_error_disp(err_data);
+                exm_hook_errors = exm_list_append(exm_hook_errors, err_data);
             }
 
             break;
@@ -463,14 +309,275 @@ _exm_hook_free(void *memblock)
 
     if (alloc_not_found)
     {
-        data = _exm_hook_error_data_free_without_alloc_new(exm_stack_frames_get());
+        err_data = _exm_hook_error_data_free_without_alloc_new(exm_stack_frames_get());
+        /* FIXME: display error ? */
         no_free_error = 0;
     }
 
-    if (no_free_error)
+    return no_free_error;
+}
+
+static LPVOID WINAPI
+_exm_hook_HeapAlloc(HANDLE hHeap, DWORD dwFlags, SIZE_T dwBytes)
+{
+    typedef LPVOID (WINAPI *exm_heap_alloc_t)(HANDLE hHeap,
+                                              DWORD dwFlags,
+                                              SIZE_T dwBytes);
+    exm_heap_alloc_t ha;
+    LPVOID data;
+
+    EXM_LOG_WARN("HeapAlloc !!!");
+
+    ha = (exm_heap_alloc_t)_exm_hook_instance[EXM_HOOK_FCT_HEAPALLOC].fct_proc_old;
+    data = ha(hHeap, dwFlags, dwBytes);
+
+    _exm_hook_alloc_manage(data, dwBytes, EXM_HOOK_FCT_HEAPALLOC);
+
+    return data;
+}
+
+static void *
+_exm_hook_HeapReAlloc(HANDLE hHeap, DWORD dwFlags, LPVOID lpMem, SIZE_T dwBytes)
+{
+    typedef LPVOID (WINAPI *exm_heap_realloc_t)(HANDLE hHeap,
+                                                DWORD dwFlags,
+                                                LPVOID lpMem,
+                                                SIZE_T dwBytes);
+    exm_heap_realloc_t rea;
+    LPVOID data;
+    Exm_List *iter_alloc;
+    size_t old_size = 0;
+    unsigned char alloc_not_found = 1;
+
+    EXM_LOG_WARN("HeapReAlloc !!!");
+
+    rea = (exm_heap_realloc_t)_exm_hook_instance[EXM_HOOK_FCT_HEAPREALLOC].fct_proc_old;
+    data = rea(hHeap, dwFlags, lpMem, dwBytes);
+
+    /* if data is NULL, we quit */
+    if (!data)
+        return NULL;
+
+    /* Search for previous allocated memory */
+    iter_alloc = exm_hook_allocations;
+    while (iter_alloc)
     {
-        f = (exm_free_t)_exm_hook_instance[EXM_HOOK_FCT_FREE].fct_proc_old;
-        f(memblock);
+        Exm_Hook_Data_Alloc *da;
+
+        da = (Exm_Hook_Data_Alloc *)iter_alloc->data;
+        if (da->data == lpMem)
+        {
+            Exm_Hook_Error_Data *err_data = NULL;
+
+            if (_exm_hook_heapalloc_heapfree_mismatch(da->fct))
+            {
+                err_data = _exm_hook_error_data_mismatched_free_new(exm_stack_frames_get(),
+                                                                    da);
+                exm_hook_error_disp(err_data);
+                exm_hook_errors = exm_list_append(exm_hook_errors, err_data);
+            }
+
+            old_size = da->size;
+            alloc_not_found = 0;
+            break;
+        }
+        iter_alloc = iter_alloc->next;
+    }
+
+    if (alloc_not_found)
+    {
+        EXM_LOG_WARN("Memory allocation not found when HeapReAlloc() is called.");
+    }
+
+    if (data == lpMem)
+    {
+        /* if data is lpMem, memory is not moved, so just update memory */
+        exm_hook_summary.total_bytes_allocated += (dwBytes - old_size);
+    }
+    else
+    {
+        /* otherwise, there is a HeapAlloc + HeapFree */
+        exm_hook_summary.total_count_allocs++;
+        exm_hook_summary.total_bytes_allocated += (dwBytes - old_size);
+        exm_hook_summary.total_count_frees++;
+    }
+
+    return data;
+}
+
+static BOOL WINAPI
+_exm_hook_HeapFree(HANDLE hHeap, DWORD dwFlags, LPVOID lpMem)
+{
+    typedef BOOL (WINAPI *exm_heap_free_t)(HANDLE hHeap,
+                                           DWORD dwFlags,
+                                           LPVOID lpMem);
+    exm_heap_free_t hf;
+    BOOL res = FALSE;
+
+    EXM_LOG_WARN("HeapFree !!!");
+
+    if (_exm_hook_free_errors_manage(lpMem,
+                                     _exm_hook_heapalloc_heapfree_mismatch))
+    {
+        hf = (exm_heap_free_t)_exm_hook_instance[EXM_HOOK_FCT_HEAPFREE].fct_proc_old;
+        res = hf(hHeap, dwFlags, lpMem);
+    }
+
+    exm_hook_summary.total_count_frees++;
+
+    return res;
+}
+
+static void *
+_exm_hook_malloc(size_t size)
+{
+    typedef void *(*exm_malloc_t)(size_t size);
+    exm_malloc_t ma;
+    void *data;
+
+    EXM_LOG_WARN("malloc !!!");
+
+    ma = (exm_malloc_t)_exm_hook_instance[EXM_HOOK_FCT_MALLOC].fct_proc_old;
+    data = ma(size);
+
+    _exm_hook_alloc_manage(data, size, EXM_HOOK_FCT_MALLOC);
+
+    return data;
+}
+
+static void *
+_exm_hook_calloc(size_t num, size_t size)
+{
+    typedef void *(*exm_calloc_t)(size_t nmemb, size_t size);
+    exm_calloc_t ca;
+    void *data;
+
+    EXM_LOG_WARN("calloc !!!");
+
+    ca = (exm_calloc_t)_exm_hook_instance[EXM_HOOK_FCT_CALLOC].fct_proc_old;
+    data = ca(num, size);
+
+    _exm_hook_alloc_manage(data, num * size, EXM_HOOK_FCT_CALLOC);
+
+    return data;
+}
+
+static void *
+_exm_hook_realloc(void *memblock, size_t size)
+{
+    typedef void *(*exm_realloc_t)(void *memblock, size_t size);
+    exm_realloc_t rea;
+
+    EXM_LOG_WARN("realloc !!!");
+
+    if (memblock == NULL)
+    {
+        void *data;
+
+        /* malloc() is actually called */
+
+        rea = (exm_realloc_t)_exm_hook_instance[EXM_HOOK_FCT_REALLOC].fct_proc_old;
+        data = rea(memblock, size);
+
+        _exm_hook_alloc_manage(data, size, EXM_HOOK_FCT_REALLOC);
+
+        return data;
+    }
+    else
+    {
+        if (size == 0)
+        {
+            void *data = NULL;
+
+            /* free() is actually called */
+
+            if (_exm_hook_free_errors_manage(memblock,
+                                             _exm_hook_malloc_free_mismatch))
+            {
+                rea = (exm_realloc_t)_exm_hook_instance[EXM_HOOK_FCT_REALLOC].fct_proc_old;
+                data = rea(memblock, size);
+            }
+
+            exm_hook_summary.total_count_frees++;
+
+            return data;
+        }
+        else
+        {
+            void *data;
+            Exm_List *iter_alloc;
+            size_t old_size = 0;
+            unsigned char alloc_not_found = 1;
+
+            rea = (exm_realloc_t)_exm_hook_instance[EXM_HOOK_FCT_REALLOC].fct_proc_old;
+            data = rea(memblock, size);
+
+            /* if data is NULL, nothing is done */
+            if (!data)
+                return NULL;
+
+            /* Search for previous allocated memory */
+            iter_alloc = exm_hook_allocations;
+            while (iter_alloc)
+            {
+                Exm_Hook_Data_Alloc *da;
+
+                da = (Exm_Hook_Data_Alloc *)iter_alloc->data;
+                if (da->data == memblock)
+                {
+                    Exm_Hook_Error_Data *err_data = NULL;
+
+                    if (_exm_hook_malloc_free_mismatch(da->fct))
+                    {
+                        err_data = _exm_hook_error_data_mismatched_free_new(exm_stack_frames_get(),
+                                                                            da);
+                        exm_hook_error_disp(err_data);
+                        exm_hook_errors = exm_list_append(exm_hook_errors, err_data);
+                    }
+
+                    old_size = da->size;
+                    alloc_not_found = 0;
+                    break;
+                }
+                iter_alloc = iter_alloc->next;
+            }
+
+            if (alloc_not_found)
+            {
+                EXM_LOG_WARN("Memory allocation not found when realloc() is called.");
+            }
+
+            if (data == memblock)
+            {
+                /* if data is memblock, memory is not moved, so just update memory */
+                exm_hook_summary.total_bytes_allocated += (size - old_size);
+            }
+            else
+            {
+                /* otherwise, there is a malloc + free */
+                exm_hook_summary.total_count_allocs++;
+                exm_hook_summary.total_bytes_allocated += (size - old_size);
+                exm_hook_summary.total_count_frees++;
+            }
+
+            return data;
+        }
+    }
+}
+
+static void
+_exm_hook_free(void *memblock)
+{
+    typedef void (*exm_free_t)(void *memblock);
+    exm_free_t fr;
+
+    EXM_LOG_WARN("free !!!");
+
+    if (_exm_hook_free_errors_manage(memblock,
+                                     _exm_hook_malloc_free_mismatch))
+    {
+        fr = (exm_free_t)_exm_hook_instance[EXM_HOOK_FCT_FREE].fct_proc_old;
+        fr(memblock);
     }
 
     exm_hook_summary.total_count_frees++;
@@ -628,6 +735,7 @@ exm_hook_init(const Exm_List *crt_names, const Exm_List *dep_names)
     if (mod)
     {
         EXM_HOOK_FCT_SET(EXM_HOOK_FCT_HEAPALLOC, mod, HeapAlloc);
+        EXM_HOOK_FCT_SET(EXM_HOOK_FCT_HEAPREALLOC, mod, HeapReAlloc);
         EXM_HOOK_FCT_SET(EXM_HOOK_FCT_HEAPFREE, mod, HeapFree);
 
         EXM_LOG_DBG("Hooking %s", mod_name);

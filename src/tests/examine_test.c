@@ -43,6 +43,7 @@ int main(void)
         printf ("no heap alloc...\n");
         return -1;
     }
+    data = HeapReAlloc(hDefaultProcessHeap, 0, data, 10);
     HeapFree(hDefaultProcessHeap, 0, data);
 
     free(data);
