@@ -27,12 +27,12 @@ Definitions:
    [ ] Win32: VirtualFree
    [ ] Win32: VirtualFreeEx
    [X] Win32: GlobalAlloc
-   [ ] Win32: GlobalReAlloc
+   [X] Win32: GlobalReAlloc
    [X] Win32: GlobalFree
    [ ] Win32: GlobalLock
    [ ] Win32: GlobalUnlock
    [X] Win32: LocalAlloc
-   [ ] Win32: LocalReAlloc
+   [X] Win32: LocalReAlloc
    [X] Win32: LocalFree
    [ ] Win32: LocalLock
    [ ] Win32: LocalUnlock
