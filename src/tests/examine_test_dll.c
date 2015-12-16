@@ -32,8 +32,11 @@ examine_test_dll(void)
 {
     void *ptr;
     HANDLE h;
+    char *str1 = "toto";
+    char *str2;
 
     ptr = calloc(1, 20);
     h = GetProcessHeap();
     ptr = HeapAlloc(h, 0, 40);
+    str2 = _strdup(str1);
 }

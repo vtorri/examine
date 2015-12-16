@@ -33,6 +33,9 @@ int main(void)
     HANDLE hDefaultProcessHeap;
     void *data;
     void *data2;
+    char buf[] = "dfghjklhgfdfg";
+    char buf2[64];
+    void *ptr;
 
     printf ("process launched...\n");
 
@@ -55,6 +58,9 @@ int main(void)
     }
     free(data);
     free(data);
+
+    ptr = memcpy(buf + 1, buf + 2, 5);
+    CopyMemory(buf + 1, buf + 2, 5);
 
     /* test with a DLL dependency */
 

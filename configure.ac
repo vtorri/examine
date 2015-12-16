@@ -105,7 +105,7 @@ fi
 
 AC_SUBST([EXM_CFLAGS])
 
-EXM_TEST_CFLAGS="${EXM_CFLAGS} -fno-omit-frame-pointer"
+EXM_TEST_CFLAGS="${EXM_CFLAGS} -g3 -ggdb3 -O0 -fno-omit-frame-pointer"
 
 AC_SUBST([EXM_TEST_CFLAGS])
 

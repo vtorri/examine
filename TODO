@@ -3,6 +3,7 @@ TODO:
 
 Definitions:
   [ ] Not done
+  [?] to be done or not ?
   [X] done
 
 [ ] Always look at 'TODO' and 'FIXME' in code
@@ -12,15 +13,15 @@ Definitions:
 
 [X] Stack trace code in the lib
 
-[ ] Better name for the overloads : exm_replace_malloc() like valgrind
+[ ] Better name for the overloads : exm_replace_malloc() like valgrind ?
 
 [ ] Add all the memory functions to overload (win32 and C Run Time, GDI, ...)
 
    [X] Win32: HeapAlloc
    [X] Win32: HeapReAlloc
    [X] Win32: HeapFree
-   [ ] Win32: HeapCreate
-   [ ] Win32: HeapDestroy
+   [?] Win32: HeapCreate
+   [?] Win32: HeapDestroy
    [ ] Win32: VirtualAlloc
    [ ] Win32: VirtualAllocEx
    [ ] Win32: VirtualAllocExNuma (>= Vista)
@@ -29,13 +30,15 @@ Definitions:
    [X] Win32: GlobalAlloc
    [X] Win32: GlobalReAlloc
    [X] Win32: GlobalFree
-   [ ] Win32: GlobalLock
-   [ ] Win32: GlobalUnlock
+   [?] Win32: GlobalLock
+   [?] Win32: GlobalUnlock
    [X] Win32: LocalAlloc
    [X] Win32: LocalReAlloc
    [X] Win32: LocalFree
-   [ ] Win32: LocalLock
-   [ ] Win32: LocalUnlock
+   [?] Win32: LocalLock
+   [?] Win32: LocalUnlock
+
+   [X] Win32: CopyMemory (it's a define of memcpy)
 
    [X] CRT: malloc
    [X] CRT: free
@@ -45,7 +48,7 @@ Definitions:
    [X] CRT: aligned_malloc
    [X] CRT: _strdup
 
-   [ ] CRT: memcpy
+   [X] CRT: memcpy
    [ ] CRT: strcpy
    [ ] CRT: strncpy
    [ ] CRT: strcat
@@ -56,7 +59,7 @@ Definitions:
    [ ] C++: delete
    [ ] C++: delete[]
 
-   [ ] GDI: 
+   [ ] GDI:
 
 [X] Add checks for other CRT DLL than msvcrt.dll, msvcr90.dll, msvcr90d.dll,...
 
@@ -75,3 +78,6 @@ Definitions:
 
 [ ] Invalid read / write ? possible ?
 
+[ ] add libssp support
+
+[ ] add resource file

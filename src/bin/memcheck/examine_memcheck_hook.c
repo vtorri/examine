@@ -46,7 +46,8 @@ typedef enum
 {
     EXM_HOOK_ERROR_FREE_WITHOUT_ALLOC,
     EXM_HOOK_ERROR_MULTIPLE_FREES,
-    EXM_HOOK_ERROR_MISMATCHED_FREE
+    EXM_HOOK_ERROR_MISMATCHED_FREE,
+    EXM_HOOK_ERROR_MEMORY_OVERLAP
 } Exm_Hook_Error;
 
 typedef struct _Exm_Hook Exm_Hook;
@@ -67,7 +68,7 @@ struct _Exm_Hook_Error_Data
     {
         struct
         {
-            Exm_List *stack_free;
+            Exm_List *stack;
         } free_without_alloc;
         struct
         {
@@ -84,12 +85,20 @@ struct _Exm_Hook_Error_Data
             void *address_alloc;
             size_t size_alloc;
         } mismatched_free;
+        struct
+        {
+            void *dst;
+            const void *src;
+            size_t size;
+            Exm_List *stack;
+            const char *name;
+        } memory_overlap;
 
     } error;
 };
 
 static Exm_Hook_Error_Data*
-_exm_hook_error_data_free_without_alloc_new(Exm_List *stack_free)
+_exm_hook_error_data_free_without_alloc_new(Exm_List *stack)
 {
     Exm_Hook_Error_Data *data;
 
@@ -98,7 +107,7 @@ _exm_hook_error_data_free_without_alloc_new(Exm_List *stack_free)
         return NULL;
 
     data->error_type = EXM_HOOK_ERROR_FREE_WITHOUT_ALLOC;
-    data->error.free_without_alloc.stack_free = stack_free;
+    data->error.free_without_alloc.stack = stack;
 
     return data;
 }
@@ -140,6 +149,25 @@ _exm_hook_error_data_mismatched_free_new(Exm_List *stack_free, Exm_Hook_Data_All
     return data;
 }
 
+static Exm_Hook_Error_Data*
+_exm_hook_error_data_memory_overlap_new(Exm_List *stack, void *dst, const void *src, size_t size, const char *name)
+{
+    Exm_Hook_Error_Data *data;
+
+    data = (Exm_Hook_Error_Data *)calloc(1, sizeof(Exm_Hook_Error_Data));
+    if (!data)
+        return NULL;
+
+    data->error_type = EXM_HOOK_ERROR_MEMORY_OVERLAP;
+    data->error.memory_overlap.dst = dst;
+    data->error.memory_overlap.src = src;
+    data->error.memory_overlap.size = size;
+    data->error.memory_overlap.stack = stack;
+    data->error.memory_overlap.name = name;
+
+    return data;
+}
+
 static void
 _exm_hook_error_data_del(void *ptr)
 {
@@ -152,13 +180,16 @@ _exm_hook_error_data_del(void *ptr)
     switch(data->error_type)
     {
         case EXM_HOOK_ERROR_FREE_WITHOUT_ALLOC:
-            exm_list_free(data->error.free_without_alloc.stack_free, exm_stack_data_free);
+            exm_list_free(data->error.free_without_alloc.stack, exm_stack_data_free);
             break;
         case EXM_HOOK_ERROR_MULTIPLE_FREES:
             exm_list_free(data->error.multiple_frees.stack_free, exm_stack_data_free);
             break;
         case EXM_HOOK_ERROR_MISMATCHED_FREE:
             exm_list_free(data->error.mismatched_free.stack_free, exm_stack_data_free);
+            break;
+        case EXM_HOOK_ERROR_MEMORY_OVERLAP:
+            exm_list_free(data->error.memory_overlap.stack, exm_stack_data_free);
             break;
         default:
             break;
@@ -327,7 +358,8 @@ _exm_hook_free_errors_manage(void *memblock, Exm_Hook_Alloc_Free_Mismatch mismat
     if (alloc_not_found)
     {
         err_data = _exm_hook_error_data_free_without_alloc_new(exm_stack_frames_get());
-        /* FIXME: display error ? */
+        exm_hook_error_disp(err_data);
+        exm_hook_errors = exm_list_append(exm_hook_errors, err_data);
         no_free_error = 0;
     }
 
@@ -723,6 +755,36 @@ _exm_hook_free(void *memblock)
     }
 }
 
+static void *
+_exm_hook_memcpy(void *dest, const void *src, size_t count)
+{
+    typedef void *(*exm_memcpy_t)(void *dest, const void *src, size_t count);
+    exm_memcpy_t mcpy;
+    void *ptr;
+    Exm_Hook_Error_Data *err_data = NULL;
+    void *dst_begin = dest;
+    void *dst_end = (char *)dest + count - 1;
+    void *src_begin = (void *)src;
+    void *src_end = (char *)src + count - 1;
+
+    EXM_LOG_WARN("memcpy !!!");
+
+    if ((dest == src) ||
+        ((src_begin < dst_begin) && (dst_begin <= src_end)) ||
+        ((dst_begin < src_begin) && (src_begin <= dst_end)))
+    {
+        EXM_LOG_WARN("memcpy overlap !!!");
+        /* They necessarly overlap */
+        err_data = _exm_hook_error_data_memory_overlap_new(exm_stack_frames_get(), dest, src, count, "memcpy");
+        exm_hook_error_disp(err_data);
+        exm_hook_errors = exm_list_append(exm_hook_errors, err_data);
+    }
+
+    mcpy = (exm_memcpy_t)_exm_hook_instance[EXM_HOOK_FCT_MEMCPY].fct_proc_old;
+    ptr = mcpy(dest, src, count);
+    return ptr;
+}
+
 static void
 _exm_hook_fct_set(HMODULE module, const char *lib_name, PROC fct_proc_old, PROC fct_proc_new)
 {
@@ -833,29 +895,32 @@ _exm_unhook_set(const char *mod_name, const Exm_List *dep_names, int idx_begin, 
 
 
 #define EXM_HOOK_FCT_SET(type, mod, sym) \
-    do \
+do \
+{ \
+    _exm_hook_instance[type].fct = type; \
+    _exm_hook_instance[type].fct_proc_old = GetProcAddress(mod, #sym); \
+    if (!_exm_hook_instance[type].fct_proc_old) \
     { \
-        _exm_hook_instance[type].fct = type; \
-        _exm_hook_instance[type].fct_proc_old = GetProcAddress(mod, #sym); \
-        if (!_exm_hook_instance[type].fct_proc_old) \
-        { \
-            EXM_LOG_WARN("REDIR: redirection of %s failed", #sym);   \
-            _exm_hook_instance[type].fct_proc_new = NULL; \
-        } \
+        EXM_LOG_WARN("REDIR: redirection of %s failed", #sym);   \
+        _exm_hook_instance[type].fct_proc_new = NULL; \
+    } \
+    else \
+    { \
+        char buf[MAX_PATH]; \
+        _exm_hook_instance[type].fct_proc_new = (FARPROC)_exm_hook_ ## sym; \
+        if (GetModuleFileName(mod, buf, sizeof(buf))) \
+            EXM_LOG_INFO("REDIR: 0x%p (%s:%s) redirected to 0x%p (%s%s)", \
+                         _exm_hook_instance[type].fct_proc_old, \
+                         strrchr(buf, '\\') + 1, #sym, \
+                         _exm_hook_instance[type].fct_proc_new, \
+                         "_exm_hook_", #sym); \
         else \
-        { \
-            char buf[MAX_PATH]; \
-            _exm_hook_instance[type].fct_proc_new = (FARPROC)_exm_hook_ ## sym; \
-            if (GetModuleFileName(mod, buf, sizeof(buf))) \
-                EXM_LOG_INFO("REDIR: 0x%p (%s:%s) redirected to 0x%p (%s%s)", \
-                             _exm_hook_instance[type].fct_proc_old, strrchr(buf, '\\') + 1, #sym, \
-                             _exm_hook_instance[type].fct_proc_new, "_exm_hook_", #sym); \
-            else \
-                EXM_LOG_INFO("REDIR: 0x%p (%s) redirected to 0x%p (%s)", \
-                             _exm_hook_instance[type].fct_proc_old, #sym, \
-                             _exm_hook_instance[type].fct_proc_new, "_exm_hook_", #sym); \
-        } \
-    } while (0)
+            EXM_LOG_INFO("REDIR: 0x%p (%s) redirected to 0x%p (%s)", \
+                         _exm_hook_instance[type].fct_proc_old, #sym, \
+                         _exm_hook_instance[type].fct_proc_new, \
+                         "_exm_hook_", #sym); \
+    } \
+} while (0)
 
 
 Exm_List *exm_hook_allocations;
@@ -906,6 +971,8 @@ exm_hook_init(const Exm_List *crt_names, const Exm_List *dep_names)
             EXM_HOOK_FCT_SET(EXM_HOOK_FCT_REALLOC, mod, realloc);
             EXM_HOOK_FCT_SET(EXM_HOOK_FCT__EXPAND, mod, _expand);
             EXM_HOOK_FCT_SET(EXM_HOOK_FCT_FREE, mod, free);
+
+            EXM_HOOK_FCT_SET(EXM_HOOK_FCT_MEMCPY, mod, memcpy);
 
             EXM_LOG_DBG("Hooking %s", strrchr(mod_name, '\\') + 1);
             mod_name = strrchr(mod_name, '\\') + 1;
@@ -967,12 +1034,12 @@ exm_hook_error_disp(Exm_Hook_Error_Data *data)
     {
         case EXM_HOOK_ERROR_FREE_WITHOUT_ALLOC:
             EXM_LOG_INFO("Invalid memory free without allocation");
-            exm_stack_disp(data->error.multiple_frees.stack_free);
+            exm_stack_disp(data->error.free_without_alloc.stack);
             break;
         case EXM_HOOK_ERROR_MULTIPLE_FREES:
             EXM_LOG_INFO("Multiple frees");
             exm_stack_disp(data->error.multiple_frees.stack_free);
-            EXM_LOG_INFO("Address 0x%p is 0 bytes inside a block of size %zu free'd",
+            EXM_LOG_INFO("Address 0x%p is 0 bytes inside a block of size %Iu free'd",
                          data->error.multiple_frees.address_alloc,
                          data->error.multiple_frees.size_alloc);
             exm_stack_disp(data->error.multiple_frees.stack_alloc);
@@ -981,11 +1048,18 @@ exm_hook_error_disp(Exm_Hook_Error_Data *data)
             break;
         case EXM_HOOK_ERROR_MISMATCHED_FREE:
             EXM_LOG_INFO("Mismatched free / allocation");
-            exm_stack_disp(data->error.multiple_frees.stack_free);
-            EXM_LOG_INFO("Address 0x%p is 0 bytes inside a block of size %zu free'd",
-                         data->error.multiple_frees.address_alloc,
-                         data->error.multiple_frees.size_alloc);
-            exm_stack_disp(data->error.multiple_frees.stack_alloc);
+            exm_stack_disp(data->error.mismatched_free.stack_free);
+            EXM_LOG_INFO("Address 0x%p is 0 bytes inside a block of size %Iu free'd",
+                         data->error.mismatched_free.address_alloc,
+                         data->error.mismatched_free.size_alloc);
+            exm_stack_disp(data->error.mismatched_free.stack_alloc);
+            break;
+        case EXM_HOOK_ERROR_MEMORY_OVERLAP:
+            EXM_LOG_INFO("Source and destination overlap in memcpy(0x%0p, 0x%p, %Iu)",
+                         data->error.memory_overlap.dst,
+                         data->error.memory_overlap.src,
+                         data->error.memory_overlap.size);
+            exm_stack_disp(data->error.memory_overlap.stack);
             break;
         default:
             break;
