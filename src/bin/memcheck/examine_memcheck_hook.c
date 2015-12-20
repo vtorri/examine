@@ -24,6 +24,8 @@
 #endif
 
 #include <stdlib.h>
+#include <string.h>
+#include <mbstring.h>
 
 #ifndef WIN32_LEAN_AND_MEAN
 # define WIN32_LEAN_AND_MEAN
@@ -89,13 +91,42 @@ struct _Exm_Hook_Error_Data
         {
             void *dst;
             const void *src;
-            size_t size;
+            size_t dst_len;
+            size_t src_len;
             Exm_List *stack;
-            const char *name;
+            Exm_Hook_Fct fct;
         } memory_overlap;
 
     } error;
 };
+
+/*
+ * Overlapping:
+ *
+ * src:  XXXXXXXXX
+ *       \___  __/
+ *           \/
+ * dst:       XXXXXXXXXX
+ *
+ * or
+ *
+ * src:       XXXXXXXXX
+ *        ___/\___
+ *       /	      \
+ * dst:  XXXXXXXXXX
+ */
+static inline unsigned char
+_exm_hook_memory_overlap(void *dst, const void *src, size_t dst_len, size_t src_len)
+{
+    if ((src_len == 0) || (dst_len == 0))
+        return 0;
+
+    if (((src <= dst) && (dst <= (void *)((unsigned char *)src + (src_len - 1)))) ||
+        ((dst <= src) && (src <= (void *)((unsigned char *)dst + (dst_len - 1)))))
+        return 1;
+
+    return 0;
+}
 
 static Exm_Hook_Error_Data*
 _exm_hook_error_data_free_without_alloc_new(Exm_List *stack)
@@ -150,7 +181,7 @@ _exm_hook_error_data_mismatched_free_new(Exm_List *stack_free, Exm_Hook_Data_All
 }
 
 static Exm_Hook_Error_Data*
-_exm_hook_error_data_memory_overlap_new(Exm_List *stack, void *dst, const void *src, size_t size, const char *name)
+_exm_hook_error_data_memory_overlap_new(Exm_List *stack, void *dst, const void *src, size_t dst_len, size_t src_len, Exm_Hook_Fct fct)
 {
     Exm_Hook_Error_Data *data;
 
@@ -161,9 +192,10 @@ _exm_hook_error_data_memory_overlap_new(Exm_List *stack, void *dst, const void *
     data->error_type = EXM_HOOK_ERROR_MEMORY_OVERLAP;
     data->error.memory_overlap.dst = dst;
     data->error.memory_overlap.src = src;
-    data->error.memory_overlap.size = size;
+    data->error.memory_overlap.dst_len = dst_len;
+    data->error.memory_overlap.src_len = src_len;
     data->error.memory_overlap.stack = stack;
-    data->error.memory_overlap.name = name;
+    data->error.memory_overlap.fct = fct;
 
     return data;
 }
@@ -760,29 +792,70 @@ _exm_hook_memcpy(void *dest, const void *src, size_t count)
 {
     typedef void *(*exm_memcpy_t)(void *dest, const void *src, size_t count);
     exm_memcpy_t mcpy;
-    void *ptr;
-    Exm_Hook_Error_Data *err_data = NULL;
-    void *dst_begin = dest;
-    void *dst_end = (char *)dest + count - 1;
-    void *src_begin = (void *)src;
-    void *src_end = (char *)src + count - 1;
 
     EXM_LOG_WARN("memcpy !!!");
 
-    if ((dest == src) ||
-        ((src_begin < dst_begin) && (dst_begin <= src_end)) ||
-        ((dst_begin < src_begin) && (src_begin <= dst_end)))
+    if (_exm_hook_memory_overlap(dest, src, count, count))
     {
-        EXM_LOG_WARN("memcpy overlap !!!");
-        /* They necessarly overlap */
-        err_data = _exm_hook_error_data_memory_overlap_new(exm_stack_frames_get(), dest, src, count, "memcpy");
+        Exm_Hook_Error_Data *err_data;
+
+        err_data = _exm_hook_error_data_memory_overlap_new(exm_stack_frames_get(), dest, src, count, count, EXM_HOOK_FCT_MEMCPY);
         exm_hook_error_disp(err_data);
         exm_hook_errors = exm_list_append(exm_hook_errors, err_data);
     }
 
     mcpy = (exm_memcpy_t)_exm_hook_instance[EXM_HOOK_FCT_MEMCPY].fct_proc_old;
-    ptr = mcpy(dest, src, count);
-    return ptr;
+    return mcpy(dest, src, count);
+}
+
+static char *
+_exm_hook_strcat(char *strDestination, const char *strSource)
+{
+    typedef char *(*exm_strcat_t)(char *strDestination, const char *strSource);
+    exm_strcat_t cat;
+    size_t dst_len;
+    size_t src_len;
+
+    EXM_LOG_WARN("strcat !!!");
+
+    dst_len = strlen(strDestination);
+    src_len = strlen(strSource);
+    if (_exm_hook_memory_overlap(strDestination, strSource, dst_len, src_len))
+    {
+        Exm_Hook_Error_Data *err_data;
+
+        err_data = _exm_hook_error_data_memory_overlap_new(exm_stack_frames_get(), strDestination, strSource, dst_len, src_len, EXM_HOOK_FCT_STRCAT);
+        exm_hook_error_disp(err_data);
+        exm_hook_errors = exm_list_append(exm_hook_errors, err_data);
+    }
+
+    cat = (exm_strcat_t)_exm_hook_instance[EXM_HOOK_FCT_STRCAT].fct_proc_old;
+    return cat(strDestination, strSource);
+}
+
+static unsigned char *
+_exm_hook__mbscat(unsigned char *strDestination, const unsigned char *strSource)
+{
+    typedef unsigned char *(*exm__mbscat_t)(unsigned char *strDestination, const unsigned char *strSource);
+    exm__mbscat_t cat;
+    size_t dst_len;
+    size_t src_len;
+
+    EXM_LOG_WARN("_mbscat !!!");
+
+    dst_len = _mbslen(strDestination);
+    src_len = _mbslen(strSource);
+    if (_exm_hook_memory_overlap(strDestination, strSource, dst_len, src_len))
+    {
+        Exm_Hook_Error_Data *err_data;
+
+        err_data = _exm_hook_error_data_memory_overlap_new(exm_stack_frames_get(), strDestination, strSource, dst_len, src_len, EXM_HOOK_FCT__MBSCAT);
+        exm_hook_error_disp(err_data);
+        exm_hook_errors = exm_list_append(exm_hook_errors, err_data);
+    }
+
+    cat = (exm__mbscat_t)_exm_hook_instance[EXM_HOOK_FCT__MBSCAT].fct_proc_old;
+    return cat(strDestination, strSource);
 }
 
 static void
@@ -973,6 +1046,8 @@ exm_hook_init(const Exm_List *crt_names, const Exm_List *dep_names)
             EXM_HOOK_FCT_SET(EXM_HOOK_FCT_FREE, mod, free);
 
             EXM_HOOK_FCT_SET(EXM_HOOK_FCT_MEMCPY, mod, memcpy);
+            EXM_HOOK_FCT_SET(EXM_HOOK_FCT_STRCAT, mod, strcat);
+            EXM_HOOK_FCT_SET(EXM_HOOK_FCT__MBSCAT, mod, _mbscat);
 
             EXM_LOG_DBG("Hooking %s", strrchr(mod_name, '\\') + 1);
             mod_name = strrchr(mod_name, '\\') + 1;
@@ -1055,12 +1130,36 @@ exm_hook_error_disp(Exm_Hook_Error_Data *data)
             exm_stack_disp(data->error.mismatched_free.stack_alloc);
             break;
         case EXM_HOOK_ERROR_MEMORY_OVERLAP:
-            EXM_LOG_INFO("Source and destination overlap in memcpy(0x%0p, 0x%p, %Iu)",
-                         data->error.memory_overlap.dst,
-                         data->error.memory_overlap.src,
-                         data->error.memory_overlap.size);
+        {
+            switch (data->error.memory_overlap.fct)
+            {
+                case EXM_HOOK_FCT_MEMCPY:
+                    EXM_LOG_INFO("Source and destination overlap in memcpy(0x%0p, 0x%p, %Iu)",
+                                 data->error.memory_overlap.dst,
+                                 data->error.memory_overlap.src,
+                                 data->error.memory_overlap.dst_len);
+                    break;
+                case EXM_HOOK_FCT_STRCAT:
+                    EXM_LOG_INFO("Source and destination overlap in strcat(0x%0p [%s], 0x%p [%s])",
+                                 data->error.memory_overlap.dst,
+                                 (char *)data->error.memory_overlap.dst,
+                                 data->error.memory_overlap.src,
+                                 (char *)data->error.memory_overlap.src);
+                    break;
+                case EXM_HOOK_FCT__MBSCAT:
+                    EXM_LOG_INFO("Source and destination overlap in _mbscat(0x%0p [%s], 0x%p [%s])",
+                                 data->error.memory_overlap.dst,
+                                 (char *)data->error.memory_overlap.dst,
+                                 data->error.memory_overlap.src,
+                                 (char *)data->error.memory_overlap.src);
+                    break;
+                default:
+                    /* should never reach this */
+                    break;
+            }
             exm_stack_disp(data->error.memory_overlap.stack);
             break;
+        }
         default:
             break;
     }

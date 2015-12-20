@@ -4,8 +4,10 @@
 m4_define([v_maj], [0])
 m4_define([v_min], [0])
 m4_define([v_mic], [2])
+m4_define([v_rev], [0])
 
 m4_define([examine_version], [v_maj.v_min.v_mic])
+m4_define([examine_version_rc], [v_maj.v_min.v_mic.v_rev])
 
 m4_define([lt_cur], m4_eval(v_maj + v_min))
 m4_define([lt_rev], v_mic)
@@ -27,6 +29,7 @@ AH_BOTTOM([
 
 AC_USE_SYSTEM_EXTENSIONS
 
+AC_DEFINE_UNQUOTED([PACKAGE_VERSION_RC], "[examine_version_rc]", [Version number of package for resource file])
 
 ### If the host is ceGCC, we exit
 

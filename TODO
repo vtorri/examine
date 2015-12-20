@@ -40,6 +40,17 @@ Definitions:
 
    [X] Win32: CopyMemory (it's a define of memcpy)
 
+   [ ] Win32 Shell: StrCat
+   [ ] Win32 Shell: StrCatBuff
+   [ ] Win32 Shell: StringCbCat
+   [ ] Win32 Shell: StringCbCatEx
+   [ ] Win32 Shell: StringCbCatN
+   [ ] Win32 Shell: StringCbCatNEx
+   [ ] Win32 Shell: StringCchCat
+   [ ] Win32 Shell: StringCchCatEx
+   [ ] Win32 Shell: StringCchCatN
+   [ ] Win32 Shell: StringCchCatNEx
+
    [X] CRT: malloc
    [X] CRT: free
    [X] CRT: calloc
@@ -51,7 +62,10 @@ Definitions:
    [X] CRT: memcpy
    [ ] CRT: strcpy
    [ ] CRT: strncpy
-   [ ] CRT: strcat
+   [X] CRT: strcat
+   [X] CRT: _mbscat
+   [ ] CRT: lstrcat (it's a define of lstrcatA)
+   [ ] CRT: lstrcatA
    [ ] CRT: strncat
 
    [ ] C++: new
