@@ -108,6 +108,12 @@ _exm_stack_find_function_name_in_section(bfd *abfd, asection *sec, void *obj)
         size_t l;
         char *iter;
 
+        if (!file)
+            file = bfd_get_filename(abfd);
+
+        if (!file)
+            file = "???";
+
         iter = (char *)file;
         while (*iter)
         {
