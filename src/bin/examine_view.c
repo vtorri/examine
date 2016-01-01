@@ -393,7 +393,7 @@ _exm_view_cmd_directory_entry_export_display(Exm_Pe *pe)
         data_dir = nt_header->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT];
     }
 
-    printf("Directory entry Import - Image Data Directory\n");
+    printf("Directory entry Export - Image Data Directory\n");
     printf("  field           type    value\n");
     printf("  VirtualAddress  DWORD   0x" FMT_DWDX "\n", data_dir.VirtualAddress);
     printf("  Size            DWORD   0x" FMT_DWDX "\n", data_dir.Size);
@@ -483,7 +483,7 @@ _exm_view_cmd_directory_entry_debug_display(Exm_Pe *pe)
         data_dir = nt_header->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_DEBUG];
     }
 
-    printf("Directory entry Import - Image Data Directory\n");
+    printf("Directory entry Debug - Image Data Directory\n");
     printf("  field           type    value\n");
     printf("  VirtualAddress  DWORD   0x" FMT_DWDX "\n", data_dir.VirtualAddress);
     printf("  Size            DWORD   0x" FMT_DWDX "\n", data_dir.Size);
