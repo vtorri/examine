@@ -17,39 +17,42 @@ Definitions:
 
 [ ] Add all the memory functions to overload (win32 and C Run Time, GDI, ...)
 
-   [X] Win32: HeapAlloc
-   [X] Win32: HeapReAlloc
-   [X] Win32: HeapFree
-   [?] Win32: HeapCreate
-   [?] Win32: HeapDestroy
-   [ ] Win32: VirtualAlloc
-   [ ] Win32: VirtualAllocEx
-   [ ] Win32: VirtualAllocExNuma (>= Vista)
-   [ ] Win32: VirtualFree
-   [ ] Win32: VirtualFreeEx
-   [X] Win32: GlobalAlloc
-   [X] Win32: GlobalReAlloc
-   [X] Win32: GlobalFree
-   [?] Win32: GlobalLock
-   [?] Win32: GlobalUnlock
-   [X] Win32: LocalAlloc
-   [X] Win32: LocalReAlloc
-   [X] Win32: LocalFree
-   [?] Win32: LocalLock
-   [?] Win32: LocalUnlock
+   [X] ntdll: RtlAllocateHeap
+   [X] ntdll: RtlFreeHeap
+
+   [X] kernel32: HeapAlloc
+   [X] kernel32: HeapReAlloc
+   [X] kernel32: HeapFree
+   [?] kernel32: HeapCreate
+   [?] kernel32: HeapDestroy
+   [ ] kernel32: VirtualAlloc
+   [ ] kernel32: VirtualAllocEx
+   [ ] kernel32: VirtualAllocExNuma (>= Vista)
+   [ ] kernel32: VirtualFree
+   [ ] kernel32: VirtualFreeEx
+   [X] kernel32: GlobalAlloc
+   [X] kernel32: GlobalReAlloc
+   [X] kernel32: GlobalFree
+   [?] kernel32: GlobalLock
+   [?] kernel32: GlobalUnlock
+   [X] kernel32: LocalAlloc
+   [X] kernel32: LocalReAlloc
+   [X] kernel32: LocalFree
+   [?] kernel32: LocalLock
+   [?] kernel32: LocalUnlock
 
    [X] Win32: CopyMemory (it's a define of memcpy)
 
-   [ ] Win32 Shell: StrCat
-   [ ] Win32 Shell: StrCatBuff
-   [ ] Win32 Shell: StringCbCat
-   [ ] Win32 Shell: StringCbCatEx
-   [ ] Win32 Shell: StringCbCatN
-   [ ] Win32 Shell: StringCbCatNEx
-   [ ] Win32 Shell: StringCchCat
-   [ ] Win32 Shell: StringCchCatEx
-   [ ] Win32 Shell: StringCchCatN
-   [ ] Win32 Shell: StringCchCatNEx
+   [ ] shlwapi: StrCat
+   [ ] shlwapi: StrCatBuff
+   [ ] shlwapi: StringCbCat
+   [ ] shlwapi: StringCbCatEx
+   [ ] shlwapi: StringCbCatN
+   [ ] shlwapi: StringCbCatNEx
+   [ ] shlwapi: StringCchCat
+   [ ] shlwapi: StringCchCatEx
+   [ ] shlwapi: StringCchCatN
+   [ ] shlwapi: StringCchCatNEx
 
    [X] CRT: malloc
    [X] CRT: free

@@ -292,6 +292,13 @@ _exm_hook_allocations_sanitize(void *data)
 typedef unsigned char (*Exm_Hook_Alloc_Free_Mismatch)(Exm_Hook_Fct fct);
 
 static unsigned char
+_exm_hook_rtlallocateheap_rtlfreeheap_mismatch(Exm_Hook_Fct fct)
+{
+
+    return (fct != EXM_HOOK_FCT_RTLALLOCATEHEAP);
+}
+
+static unsigned char
 _exm_hook_heapalloc_heapfree_mismatch(Exm_Hook_Fct fct)
 {
 
@@ -450,6 +457,46 @@ _exm_hook_realloc_manage(void *old_data, void *new_data, size_t new_size, Exm_Ho
     old_da->size = new_size;
 }
 
+static PVOID
+_exm_hook_RtlAllocateHeap(PVOID HeapHandle, ULONG Flags, SIZE_T size)
+{
+    typedef PVOID (*exm_rtl_allocate_heap_t)(PVOID HeapHandle,
+                                      ULONG Flags,
+                                      SIZE_T size);
+    exm_rtl_allocate_heap_t ah;
+    PVOID data;
+
+    EXM_LOG_WARN("RtlAllocateHeap !!!");
+
+    ah = (exm_rtl_allocate_heap_t)_exm_hook_instance[EXM_HOOK_FCT_RTLALLOCATEHEAP].fct_proc_old;
+    data = ah(HeapHandle, Flags, size);
+
+    _exm_hook_alloc_manage(data, size, EXM_HOOK_FCT_RTLALLOCATEHEAP);
+
+    return data;
+}
+
+static BOOLEAN
+_exm_hook_RtlFreeHeap(PVOID HeapHandle, ULONG Flags, PVOID HeapBase)
+{
+    typedef BOOL (*exm_rtl_free_heap_t)(PVOID HeapHandle,
+                                        ULONG Flags,
+                                        PVOID HeapBase);
+    exm_rtl_free_heap_t fh;
+    BOOLEAN res = FALSE;
+
+    EXM_LOG_WARN("RtlFreeHeap !!!");
+
+    if (_exm_hook_free_errors_manage(HeapHandle,
+                                     _exm_hook_rtlallocateheap_rtlfreeheap_mismatch))
+    {
+        fh = (exm_rtl_free_heap_t)_exm_hook_instance[EXM_HOOK_FCT_RTLFREEHEAP].fct_proc_old;
+        res = fh(HeapHandle, Flags, HeapBase);
+    }
+
+    return res;
+}
+
 static LPVOID WINAPI
 _exm_hook_HeapAlloc(HANDLE hHeap, DWORD dwFlags, SIZE_T dwBytes)
 {
@@ -576,7 +623,7 @@ static HLOCAL WINAPI
 _exm_hook_LocalAlloc(UINT uFlags, SIZE_T dwBytes)
 {
     typedef HLOCAL (WINAPI *exm_local_alloc_t)(UINT uFlags,
-                                                 SIZE_T dwBytes);
+                                               SIZE_T dwBytes);
     exm_local_alloc_t la;
     LPVOID data;
 
@@ -1007,6 +1054,21 @@ exm_hook_init(const Exm_List *crt_names, const Exm_List *dep_names)
     char *mod_name;
     HMODULE mod;
 
+    mod_name = "ntdll.dll";
+
+    mod = LoadLibrary(mod_name);
+    if (mod)
+    {
+        EXM_HOOK_FCT_SET(EXM_HOOK_FCT_RTLALLOCATEHEAP, mod, RtlAllocateHeap);
+        EXM_HOOK_FCT_SET(EXM_HOOK_FCT_RTLFREEHEAP, mod, RtlFreeHeap);
+
+        EXM_LOG_DBG("Hooking %s", mod_name);
+        _exm_hook_set(mod_name, dep_names,
+                      EXM_HOOK_FCT_NTDLL_BEGIN, EXM_HOOK_FCT_NTDLL_END);
+
+        FreeLibrary(mod);
+    }
+
     mod_name = "kernel32.dll";
 
     mod = LoadLibrary(mod_name);
@@ -1078,6 +1140,12 @@ exm_hook_shutdown(const Exm_List *crt_names, const Exm_List *dep_names)
     exm_list_free(exm_hook_allocations, _exm_hook_data_alloc_del);
 
     exm_stack_shutdown();
+
+    mod_name = "ntdll.dll";
+
+    EXM_LOG_DBG("Unhooking %s", mod_name);
+    _exm_unhook_set(mod_name, dep_names,
+                    EXM_HOOK_FCT_NTDLL_BEGIN, EXM_HOOK_FCT_NTDLL_END);
 
     mod_name = "kernel32.dll";
 
