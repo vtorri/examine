@@ -187,7 +187,7 @@ _exm_view_cmd_optional_header_32_display(Exm_Pe *pe)
     nt_header = (const IMAGE_NT_HEADERS32 *)exm_pe_nt_header_get(pe);
 
     printf("  field                       type    value\n");
-    printf("  Magic                       WORD    0x%04hx\n", nt_header->OptionalHeader.Magic);
+    printf("  Magic                       WORD    0x%04hx (PE32)\n", nt_header->OptionalHeader.Magic);
     printf("  MajorLinkerVersion          BYTE    %hu\n", nt_header->OptionalHeader.MajorLinkerVersion);
     printf("  MinorLinkerVersion          BYTE    %hu\n", nt_header->OptionalHeader.MinorLinkerVersion);
     printf("  SizeOfCode                  DWORD   " FMT_DWD "\n", nt_header->OptionalHeader.SizeOfCode);
@@ -229,7 +229,7 @@ _exm_view_cmd_optional_header_64_display(Exm_Pe *pe)
     nt_header = (const IMAGE_NT_HEADERS64 *)exm_pe_nt_header_get(pe);
 
     printf("  field                       type      value\n");
-    printf("  Magic                       WORD      0x%04hx\n", nt_header->OptionalHeader.Magic);
+    printf("  Magic                       WORD      0x%04hx (PE32+)\n", nt_header->OptionalHeader.Magic);
     printf("  MajorLinkerVersion          BYTE      %hu\n", nt_header->OptionalHeader.MajorLinkerVersion);
     printf("  MinorLinkerVersion          BYTE      %hu\n", nt_header->OptionalHeader.MinorLinkerVersion);
     printf("  SizeOfCode                  DWORD     0x" FMT_DWD8X "\n", nt_header->OptionalHeader.SizeOfCode);
@@ -387,9 +387,9 @@ _exm_view_cmd_directory_entry_export_display(Exm_Pe *pe)
     }
     else
     {
-        const IMAGE_NT_HEADERS64 *nt_header;
+        const IMAGE_NT_HEADERS32 *nt_header;
 
-        nt_header = (const IMAGE_NT_HEADERS64 *)exm_pe_nt_header_get(pe);
+        nt_header = (const IMAGE_NT_HEADERS32 *)exm_pe_nt_header_get(pe);
         data_dir = nt_header->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT];
     }
 
@@ -433,9 +433,9 @@ _exm_view_cmd_directory_entry_import_display(Exm_Pe *pe)
     }
     else
     {
-        const IMAGE_NT_HEADERS64 *nt_header;
+        const IMAGE_NT_HEADERS32 *nt_header;
 
-        nt_header = (const IMAGE_NT_HEADERS64 *)exm_pe_nt_header_get(pe);
+        nt_header = (const IMAGE_NT_HEADERS32 *)exm_pe_nt_header_get(pe);
         data_dir = nt_header->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT];
     }
 
@@ -477,9 +477,9 @@ _exm_view_cmd_directory_entry_debug_display(Exm_Pe *pe)
     }
     else
     {
-        const IMAGE_NT_HEADERS64 *nt_header;
+        const IMAGE_NT_HEADERS32 *nt_header;
 
-        nt_header = (const IMAGE_NT_HEADERS64 *)exm_pe_nt_header_get(pe);
+        nt_header = (const IMAGE_NT_HEADERS32 *)exm_pe_nt_header_get(pe);
         data_dir = nt_header->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_DEBUG];
     }
 
@@ -520,9 +520,9 @@ _exm_view_cmd_directory_entry_delayload_display(Exm_Pe *pe)
     }
     else
     {
-        const IMAGE_NT_HEADERS64 *nt_header;
+        const IMAGE_NT_HEADERS32 *nt_header;
 
-        nt_header = (const IMAGE_NT_HEADERS64 *)exm_pe_nt_header_get(pe);
+        nt_header = (const IMAGE_NT_HEADERS32 *)exm_pe_nt_header_get(pe);
         data_dir = nt_header->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_DELAY_IMPORT];
     }
 
