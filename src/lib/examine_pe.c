@@ -374,6 +374,38 @@ exm_pe_entry_point_get(const Exm_Pe *pe)
 }
 
 /**
+ * @Brief Return the address of the Image Data Directory for the given
+ * directory entry.
+ *
+ * @param[in] The PE file.
+ * @param[in] The directory entry.
+ * @return The Image Data Directory address.
+ *
+ * This function returns the address of the Image Data Directory of
+ * the PE file @p pe for the directory entry @p entry. The returned
+ * value depends if @pe is a PE32 or PE32+ file. No check is done on
+ * the parameters.
+ */
+EXM_API const IMAGE_DATA_DIRECTORY *
+exm_pe_data_directory_get(const Exm_Pe *pe, int entry)
+{
+    if (exm_pe_is_64bits(pe))
+    {
+        const IMAGE_NT_HEADERS64 *nt_header;
+
+        nt_header = (const IMAGE_NT_HEADERS64 *)exm_pe_nt_header_get(pe);
+        return &nt_header->OptionalHeader.DataDirectory[entry];
+    }
+    else
+    {
+        const IMAGE_NT_HEADERS32 *nt_header;
+
+        nt_header = (const IMAGE_NT_HEADERS32 *)exm_pe_nt_header_get(pe);
+        return &nt_header->OptionalHeader.DataDirectory[entry];
+    }
+}
+
+/**
  * @Brief Return the address of the export directory from the given PE file.
  *
  * @param[in] The PE file.
@@ -385,9 +417,11 @@ exm_pe_entry_point_get(const Exm_Pe *pe)
 EXM_API const IMAGE_EXPORT_DIRECTORY *
 exm_pe_export_directory_get(const Exm_Pe *pe, DWORD *count)
 {
+    const IMAGE_DATA_DIRECTORY *data_dir;
     DWORD rva;
 
-    rva = pe->nt_header->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].VirtualAddress;
+    data_dir = exm_pe_data_directory_get(pe, IMAGE_DIRECTORY_ENTRY_EXPORT);
+    rva = data_dir->VirtualAddress;
     if (rva == 0)
     {
         EXM_LOG_WARN("PE file %s has no export directory", pe->filename);
@@ -397,7 +431,7 @@ exm_pe_export_directory_get(const Exm_Pe *pe, DWORD *count)
     }
 
     if (count)
-        *count = pe->nt_header->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].Size;
+        *count = data_dir->Size;
 
     return (IMAGE_EXPORT_DIRECTORY *)_exm_pe_rva_to_ptr_get2(pe, rva);
 }
@@ -454,9 +488,11 @@ exm_pe_export_directory_function_address_get(const Exm_Pe *pe, const IMAGE_EXPOR
 EXM_API const IMAGE_IMPORT_DESCRIPTOR *
 exm_pe_import_descriptor_get(const Exm_Pe *pe, DWORD *count)
 {
+    const IMAGE_DATA_DIRECTORY *data_dir;
     DWORD rva;
 
-    rva = pe->nt_header->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].VirtualAddress;
+    data_dir = exm_pe_data_directory_get(pe, IMAGE_DIRECTORY_ENTRY_IMPORT);
+    rva = data_dir->VirtualAddress;
     if (rva == 0)
     {
         EXM_LOG_WARN("PE file %s has no import descriptor", pe->filename);
@@ -466,7 +502,7 @@ exm_pe_import_descriptor_get(const Exm_Pe *pe, DWORD *count)
     }
 
     if (count)
-        *count = pe->nt_header->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].Size;
+        *count = data_dir->Size;
 
     return (IMAGE_IMPORT_DESCRIPTOR *)_exm_pe_rva_to_ptr_get2(pe, rva);
 }
@@ -489,9 +525,11 @@ exm_pe_import_descriptor_file_name_get(const Exm_Pe *pe, const IMAGE_IMPORT_DESC
 EXM_API const IMAGE_DEBUG_DIRECTORY *
 exm_pe_debug_directory_get(const Exm_Pe *pe, DWORD *count)
 {
+    const IMAGE_DATA_DIRECTORY *data_dir;
     DWORD rva;
 
-    rva = pe->nt_header->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_DEBUG].VirtualAddress;
+    data_dir = exm_pe_data_directory_get(pe, IMAGE_DIRECTORY_ENTRY_DEBUG);
+    rva = data_dir->VirtualAddress;
     if (rva == 0)
     {
         EXM_LOG_WARN("PE file %s has no debug section", pe->filename);
@@ -501,7 +539,7 @@ exm_pe_debug_directory_get(const Exm_Pe *pe, DWORD *count)
     }
 
     if (count)
-        *count = pe->nt_header->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_DEBUG].Size;
+        *count = data_dir->Size;
 
     return (IMAGE_DEBUG_DIRECTORY *)_exm_pe_rva_to_ptr_get2(pe, rva);
 }
@@ -518,9 +556,11 @@ exm_pe_debug_directory_get(const Exm_Pe *pe, DWORD *count)
 EXM_API const IMAGE_DELAYLOAD_DESCRIPTOR *
 exm_pe_delayload_descriptor_get(const Exm_Pe *pe, DWORD *count)
 {
+    const IMAGE_DATA_DIRECTORY *data_dir;
     DWORD rva;
 
-    rva = pe->nt_header->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_DELAY_IMPORT].VirtualAddress;
+    data_dir = exm_pe_data_directory_get(pe, IMAGE_DIRECTORY_ENTRY_DELAY_IMPORT);
+    rva = data_dir->VirtualAddress;
     if (rva == 0)
     {
         EXM_LOG_WARN("PE file %s has no delayload section", pe->filename);
@@ -530,7 +570,7 @@ exm_pe_delayload_descriptor_get(const Exm_Pe *pe, DWORD *count)
     }
 
     if (count)
-        *count = pe->nt_header->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_DELAY_IMPORT].Size;
+        *count = data_dir->Size;
 
     return (IMAGE_DELAYLOAD_DESCRIPTOR *)_exm_pe_rva_to_ptr_get2(pe, rva);
 }

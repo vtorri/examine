@@ -376,27 +376,14 @@ static void
 _exm_view_cmd_directory_entry_export_display(Exm_Pe *pe)
 {
     const IMAGE_EXPORT_DIRECTORY *export_dir;
-    IMAGE_DATA_DIRECTORY data_dir;
+    const IMAGE_DATA_DIRECTORY *data_dir;
 
-    if (exm_pe_is_64bits(pe))
-    {
-        const IMAGE_NT_HEADERS64 *nt_header;
-
-        nt_header = (const IMAGE_NT_HEADERS64 *)exm_pe_nt_header_get(pe);
-        data_dir = nt_header->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT];
-    }
-    else
-    {
-        const IMAGE_NT_HEADERS32 *nt_header;
-
-        nt_header = (const IMAGE_NT_HEADERS32 *)exm_pe_nt_header_get(pe);
-        data_dir = nt_header->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT];
-    }
+    data_dir = exm_pe_data_directory_get(pe, IMAGE_DIRECTORY_ENTRY_EXPORT);
 
     printf("Directory entry Export - Image Data Directory\n");
     printf("  field           type    value\n");
-    printf("  VirtualAddress  DWORD   0x" FMT_DWDX "\n", data_dir.VirtualAddress);
-    printf("  Size            DWORD   0x" FMT_DWDX "\n", data_dir.Size);
+    printf("  VirtualAddress  DWORD   0x" FMT_DWDX "\n", data_dir->VirtualAddress);
+    printf("  Size            DWORD   0x" FMT_DWDX "\n", data_dir->Size);
 
     export_dir = exm_pe_export_directory_get(pe, NULL);
     if (!export_dir)
@@ -422,27 +409,14 @@ static void
 _exm_view_cmd_directory_entry_import_display(Exm_Pe *pe)
 {
     const IMAGE_IMPORT_DESCRIPTOR *import_desc;
-    IMAGE_DATA_DIRECTORY data_dir;
+    const IMAGE_DATA_DIRECTORY *data_dir;
 
-    if (exm_pe_is_64bits(pe))
-    {
-        const IMAGE_NT_HEADERS64 *nt_header;
-
-        nt_header = (const IMAGE_NT_HEADERS64 *)exm_pe_nt_header_get(pe);
-        data_dir = nt_header->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT];
-    }
-    else
-    {
-        const IMAGE_NT_HEADERS32 *nt_header;
-
-        nt_header = (const IMAGE_NT_HEADERS32 *)exm_pe_nt_header_get(pe);
-        data_dir = nt_header->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT];
-    }
+    data_dir = exm_pe_data_directory_get(pe, IMAGE_DIRECTORY_ENTRY_IMPORT);
 
     printf("Directory entry Import - Image Data Directory\n");
     printf("  field           type    value\n");
-    printf("  VirtualAddress  DWORD   0x" FMT_DWDX "\n", data_dir.VirtualAddress);
-    printf("  Size            DWORD   0x" FMT_DWDX "\n", data_dir.Size);
+    printf("  VirtualAddress  DWORD   0x" FMT_DWDX "\n", data_dir->VirtualAddress);
+    printf("  Size            DWORD   0x" FMT_DWDX "\n", data_dir->Size);
 
     import_desc = exm_pe_import_descriptor_get(pe, NULL);
     if (!import_desc)
@@ -466,28 +440,15 @@ static void
 _exm_view_cmd_directory_entry_debug_display(Exm_Pe *pe)
 {
     const IMAGE_DEBUG_DIRECTORY *debug_dir;
-    IMAGE_DATA_DIRECTORY data_dir;
+    const IMAGE_DATA_DIRECTORY *data_dir;
     const char *debug_type;
 
-    if (exm_pe_is_64bits(pe))
-    {
-        const IMAGE_NT_HEADERS64 *nt_header;
-
-        nt_header = (const IMAGE_NT_HEADERS64 *)exm_pe_nt_header_get(pe);
-        data_dir = nt_header->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_DEBUG];
-    }
-    else
-    {
-        const IMAGE_NT_HEADERS32 *nt_header;
-
-        nt_header = (const IMAGE_NT_HEADERS32 *)exm_pe_nt_header_get(pe);
-        data_dir = nt_header->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_DEBUG];
-    }
+    data_dir = exm_pe_data_directory_get(pe, IMAGE_DIRECTORY_ENTRY_DEBUG);
 
     printf("Directory entry Debug - Image Data Directory\n");
     printf("  field           type    value\n");
-    printf("  VirtualAddress  DWORD   0x" FMT_DWDX "\n", data_dir.VirtualAddress);
-    printf("  Size            DWORD   0x" FMT_DWDX "\n", data_dir.Size);
+    printf("  VirtualAddress  DWORD   0x" FMT_DWDX "\n", data_dir->VirtualAddress);
+    printf("  Size            DWORD   0x" FMT_DWDX "\n", data_dir->Size);
 
     debug_dir = exm_pe_debug_directory_get(pe, NULL);
     if (!debug_dir)
@@ -552,27 +513,14 @@ static void
 _exm_view_cmd_directory_entry_delayload_display(Exm_Pe *pe)
 {
     const IMAGE_DELAYLOAD_DESCRIPTOR *delayload_desc;
-    IMAGE_DATA_DIRECTORY data_dir;
+    const IMAGE_DATA_DIRECTORY *data_dir;
 
-    if (exm_pe_is_64bits(pe))
-    {
-        const IMAGE_NT_HEADERS64 *nt_header;
-
-        nt_header = (const IMAGE_NT_HEADERS64 *)exm_pe_nt_header_get(pe);
-        data_dir = nt_header->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_DELAY_IMPORT];
-    }
-    else
-    {
-        const IMAGE_NT_HEADERS32 *nt_header;
-
-        nt_header = (const IMAGE_NT_HEADERS32 *)exm_pe_nt_header_get(pe);
-        data_dir = nt_header->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_DELAY_IMPORT];
-    }
+    data_dir = exm_pe_data_directory_get(pe, IMAGE_DIRECTORY_ENTRY_DELAY_IMPORT);
 
     printf("Directory entry Delayload - Image Data Directory\n");
     printf("  field           type    value\n");
-    printf("  VirtualAddress  DWORD   0x" FMT_DWDX "\n", data_dir.VirtualAddress);
-    printf("  Size            DWORD   0x" FMT_DWDX "\n", data_dir.Size);
+    printf("  VirtualAddress  DWORD   0x" FMT_DWDX "\n", data_dir->VirtualAddress);
+    printf("  Size            DWORD   0x" FMT_DWDX "\n", data_dir->Size);
 
     delayload_desc = exm_pe_delayload_descriptor_get(pe, NULL);
     if (!delayload_desc)

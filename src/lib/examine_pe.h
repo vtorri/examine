@@ -46,6 +46,8 @@ EXM_API const IMAGE_NT_HEADERS *exm_pe_nt_header_get(const Exm_Pe *pe);
 
 EXM_API const void *exm_pe_entry_point_get(const Exm_Pe *pe);
 
+EXM_API const IMAGE_DATA_DIRECTORY *exm_pe_data_directory_get(const Exm_Pe *pe, int entry);
+
 /* export directory */
 
 EXM_API const IMAGE_EXPORT_DIRECTORY *exm_pe_export_directory_get(const Exm_Pe *pe, DWORD *count);
