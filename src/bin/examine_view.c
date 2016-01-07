@@ -442,6 +442,7 @@ _exm_view_cmd_directory_entry_debug_display(Exm_Pe *pe)
     const IMAGE_DEBUG_DIRECTORY *debug_dir;
     const IMAGE_DATA_DIRECTORY *data_dir;
     const char *debug_type;
+    DWORD i;
 
     data_dir = exm_pe_data_directory_get(pe, IMAGE_DIRECTORY_ENTRY_DEBUG);
 
@@ -454,59 +455,62 @@ _exm_view_cmd_directory_entry_debug_display(Exm_Pe *pe)
     if (!debug_dir)
         return;
 
-    switch (debug_dir->Type)
+    for (i = 0; i < (data_dir->Size / sizeof(IMAGE_DEBUG_DIRECTORY)); i++, debug_dir++)
     {
-        case IMAGE_DEBUG_TYPE_UNKNOWN:
-            debug_type = "Unknown";
-            break;
-        case IMAGE_DEBUG_TYPE_COFF:
-            debug_type = "COFF";
-            break;
-        case IMAGE_DEBUG_TYPE_CODEVIEW:
-            debug_type = "CodeView";
-            break;
-        case IMAGE_DEBUG_TYPE_FPO:
-            debug_type = "FPO";
-            break;
-        case IMAGE_DEBUG_TYPE_MISC:
-            debug_type = "Miscellaneous";
-            break;
-        case IMAGE_DEBUG_TYPE_EXCEPTION:
-            debug_type = "Exception";
-            break;
-        case IMAGE_DEBUG_TYPE_FIXUP:
-            debug_type = "Fix Up";
-            break;
-        case IMAGE_DEBUG_TYPE_OMAP_TO_SRC:
-            debug_type = "Omap to Src";
-            break;
-        case IMAGE_DEBUG_TYPE_OMAP_FROM_SRC:
-            debug_type = "Omap from src";
-            break;
-        case IMAGE_DEBUG_TYPE_BORLAND:
-            debug_type = "Borland";
-            break;
-        case IMAGE_DEBUG_TYPE_RESERVED10:
-            debug_type = "Resrerved";
-            break;
-        case IMAGE_DEBUG_TYPE_CLSID:
-            debug_type = "CLSID";
-            break;
-        default:
-            debug_type = "Unsupported (error)";
-            break;
+        switch (debug_dir->Type)
+        {
+            case IMAGE_DEBUG_TYPE_UNKNOWN:
+                debug_type = "Unknown";
+                break;
+            case IMAGE_DEBUG_TYPE_COFF:
+                debug_type = "COFF";
+                break;
+            case IMAGE_DEBUG_TYPE_CODEVIEW:
+                debug_type = "CodeView";
+                break;
+            case IMAGE_DEBUG_TYPE_FPO:
+                debug_type = "FPO";
+                break;
+            case IMAGE_DEBUG_TYPE_MISC:
+                debug_type = "Miscellaneous";
+                break;
+            case IMAGE_DEBUG_TYPE_EXCEPTION:
+                debug_type = "Exception";
+                break;
+            case IMAGE_DEBUG_TYPE_FIXUP:
+                debug_type = "Fix Up";
+                break;
+            case IMAGE_DEBUG_TYPE_OMAP_TO_SRC:
+                debug_type = "Omap to Src";
+                break;
+            case IMAGE_DEBUG_TYPE_OMAP_FROM_SRC:
+                debug_type = "Omap from src";
+                break;
+            case IMAGE_DEBUG_TYPE_BORLAND:
+                debug_type = "Borland";
+                break;
+            case IMAGE_DEBUG_TYPE_RESERVED10:
+                debug_type = "Resrerved";
+                break;
+            case IMAGE_DEBUG_TYPE_CLSID:
+                debug_type = "CLSID";
+                break;
+            default:
+                debug_type = "Unsupported (error)";
+                break;
+        }
+        printf("\n");
+        printf("Directory entry Debug - Image Debug Directory #%ld\n", i);
+        printf("  field                 type    value\n");
+        printf("  Characteristics       DWORD   0x" FMT_DWDX "\n", debug_dir->Characteristics);
+        printf("  TimeDateStamp         DWORD   0x" FMT_DWDX "\n", debug_dir->TimeDateStamp);
+        printf("  MajorVersion          WORD    %u\n", debug_dir->MajorVersion);
+        printf("  MinorVersion          WORD    %u\n", debug_dir->MinorVersion);
+        printf("  Type                  DWORD   0x" FMT_DWDX " (%s)\n", debug_dir->Type, debug_type);
+        printf("  SizeOfData            DWORD   0x" FMT_DWDX "\n", debug_dir->SizeOfData);
+        printf("  AddressOfRawData      DWORD   0x" FMT_DWDX "\n", debug_dir->AddressOfRawData);
+        printf("  PointerToRawData      DWORD   0x" FMT_DWDX "\n", debug_dir->PointerToRawData);
     }
-    printf("\n");
-    printf("Directory entry Debug - Image Debug Directory\n");
-    printf("  field                 type    value\n");
-    printf("  Characteristics       DWORD   0x" FMT_DWDX "\n", debug_dir->Characteristics);
-    printf("  TimeDateStamp         DWORD   0x" FMT_DWDX "\n", debug_dir->TimeDateStamp);
-    printf("  MajorVersion          WORD    %u\n", debug_dir->MajorVersion);
-    printf("  MinorVersion          WORD    %u\n", debug_dir->MinorVersion);
-    printf("  Type                  DWORD   0x" FMT_DWDX " (%s)\n", debug_dir->Type, debug_type);
-    printf("  SizeOfData            DWORD   0x" FMT_DWDX "\n", debug_dir->SizeOfData);
-    printf("  AddressOfRawData      DWORD   0x" FMT_DWDX "\n", debug_dir->AddressOfRawData);
-    printf("  PointerToRawData      DWORD   0x" FMT_DWDX "\n", debug_dir->PointerToRawData);
 }
 
 static void
