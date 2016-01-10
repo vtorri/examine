@@ -50,6 +50,9 @@
 # define FMT_LL16X "%016llx"
 #endif
 
+#define EXM_VIEW_DEBUG_SIGNATURE_NB10 0x4e423130 /* NB10 - PDB 2.0 (unsupported since VC6 */
+#define EXM_VIEW_DEBUG_SIGNATURE_RSDS 0x53445352 /* RSDS - PDB 7.0 */
+
 static char _exm_view_dllcharacteristics[4096];
 
 static const char *
@@ -490,7 +493,7 @@ _exm_view_cmd_directory_entry_debug_display(Exm_Pe *pe)
                 debug_type = "Borland";
                 break;
             case IMAGE_DEBUG_TYPE_RESERVED10:
-                debug_type = "Resrerved";
+                debug_type = "Reserved";
                 break;
             case IMAGE_DEBUG_TYPE_CLSID:
                 debug_type = "CLSID";
@@ -510,6 +513,78 @@ _exm_view_cmd_directory_entry_debug_display(Exm_Pe *pe)
         printf("  SizeOfData            DWORD   0x" FMT_DWDX "\n", debug_dir->SizeOfData);
         printf("  AddressOfRawData      DWORD   0x" FMT_DWDX "\n", debug_dir->AddressOfRawData);
         printf("  PointerToRawData      DWORD   0x" FMT_DWDX "\n", debug_dir->PointerToRawData);
+        if (debug_dir->Type == IMAGE_DEBUG_TYPE_CODEVIEW)
+        {
+            unsigned char *raw_data;
+            DWORD signature;
+
+            if (debug_dir->SizeOfData < sizeof(DWORD))
+            {
+                EXM_LOG_WARN("invalid size of CodeView debug information");
+                return;
+            }
+
+            raw_data = (unsigned char *)exm_pe_dos_header_get(pe) + debug_dir->PointerToRawData;
+            signature = *(DWORD *)raw_data;
+            printf("  Signature             DWORD   0x" FMT_DWDX " (%c%c%c%c)\n",
+                   signature,
+                   (char)(signature & 0x000000ff),
+                   (char)((signature >> 8) & 0x000000ff),
+                   (char)((signature >> 16) & 0x000000ff),
+                   (char)((signature >> 24) & 0x000000ff));
+
+            if (signature == EXM_VIEW_DEBUG_SIGNATURE_RSDS)
+            {
+                unsigned char *file_name;
+
+                /*
+                 * PDB 7.0 information header is:
+                 *
+                 * DWORD  CvSignature
+                 * GUID   Signature
+                 * DWORD  Age
+                 * BYTE * FileName
+                 */
+                file_name = raw_data + sizeof(DWORD) + sizeof(GUID) + sizeof(DWORD);
+                printf("  PDB 7.0 file name             %s\n", file_name);
+            }
+            else if (signature == EXM_VIEW_DEBUG_SIGNATURE_NB10)
+            {
+                unsigned char *file_name;
+
+                /*
+                 * PDB 2.0 information header is:
+                 *
+                 * DWORD  CvSignature
+                 * LONG   Offset (always 0 for NB10)
+                 * DWORD  Seconds (seconds since 01/01/1970)
+                 * DWORD  Age
+                 * BYTE * FileName
+                 *
+                 * Obsolete since VC > VC6
+                 */
+                file_name = raw_data + sizeof(DWORD) + sizeof(LONG) + sizeof(DWORD) + sizeof(DWORD);
+                printf("  PDB 20 file name             %s\n", file_name);
+            }
+            /* other */
+        }
+        else if (debug_dir->Type == IMAGE_DEBUG_TYPE_MISC)
+        {
+            char file_name[65536];
+            IMAGE_DEBUG_MISC *idm;
+            size_t len;
+
+            /*
+             * Obsolete since VC >= VC8
+             */
+
+            idm = (IMAGE_DEBUG_MISC *)((unsigned char *)exm_pe_dos_header_get(pe) + debug_dir->PointerToRawData);
+            len = strlen((const char *)idm->Data) * (idm->Unicode ? 2 : 1);
+            memcpy(file_name, idm->Data, len);
+            file_name[len] = 0;
+            if (idm->Unicode == 2) file_name[len+1] = 0;
+            printf("  DBG file name                 %s\n", file_name);
+        }
     }
 }
 
