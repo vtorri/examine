@@ -41,6 +41,8 @@
 #define IMAGE_FILE_DLL 0x2000
 
 typedef unsigned char      BYTE;      /* 8 bits unsigned integer */
+typedef BYTE               BOOLEAN;   /* 8 bits boolean */
+typedef BOOLEAN           *PBOOLEAN;  /* pointer to a BOOLEAN */
 typedef unsigned int       DWORD;     /* 32 bits unsigned integer */
 typedef int                LONG;      /* 32 bits signed integer */
 typedef unsigned long long ULONGLONG; /* 64 bits unsigned integer */
@@ -57,6 +59,14 @@ typedef unsigned long long ULONG_PTR;
 #else
 typedef unsigned long ULONG_PTR;
 #endif
+
+typedef struct _GUID
+{
+    DWORD Data1;
+    WORD  Data2;
+    WORD  Data3;
+    BYTE  Data4[8];
+} GUID;
 
 #define FIELD_OFFSET(type,field) ((LONG)(LONG_PTR)&(((type *)0)->field))
 
@@ -199,6 +209,33 @@ typedef struct
 
 #define IMAGE_FIRST_SECTION(ntheader) ((PIMAGE_SECTION_HEADER) ((ULONG_PTR)ntheader + FIELD_OFFSET(IMAGE_NT_HEADERS,OptionalHeader) + ((PIMAGE_NT_HEADERS)(ntheader))->FileHeader.SizeOfOptionalHeader))
 
+#define IMAGE_SUBSYSTEM_UNKNOWN 0
+#define IMAGE_SUBSYSTEM_NATIVE 1
+#define IMAGE_SUBSYSTEM_WINDOWS_GUI 2
+#define IMAGE_SUBSYSTEM_WINDOWS_CUI 3
+#define IMAGE_SUBSYSTEM_OS2_CUI 5
+#define IMAGE_SUBSYSTEM_POSIX_CUI 7
+#define IMAGE_SUBSYSTEM_NATIVE_WINDOWS 8
+#define IMAGE_SUBSYSTEM_WINDOWS_CE_GUI 9
+#define IMAGE_SUBSYSTEM_EFI_APPLICATION 10
+#define IMAGE_SUBSYSTEM_EFI_BOOT_SERVICE_DRIVER 11
+#define IMAGE_SUBSYSTEM_EFI_RUNTIME_DRIVER 12
+#define IMAGE_SUBSYSTEM_EFI_ROM 13
+#define IMAGE_SUBSYSTEM_XBOX 14
+#define IMAGE_SUBSYSTEM_WINDOWS_BOOT_APPLICATION 16
+
+#define IMAGE_DLLCHARACTERISTICS_HIGH_ENTROPY_VA 0x0020
+#define IMAGE_DLLCHARACTERISTICS_DYNAMIC_BASE 0x0040
+#define IMAGE_DLLCHARACTERISTICS_FORCE_INTEGRITY 0x0080
+#define IMAGE_DLLCHARACTERISTICS_NX_COMPAT 0x0100
+#define IMAGE_DLLCHARACTERISTICS_NO_ISOLATION 0x0200
+#define IMAGE_DLLCHARACTERISTICS_NO_SEH 0x0400
+#define IMAGE_DLLCHARACTERISTICS_NO_BIND 0x0800
+#define IMAGE_DLLCHARACTERISTICS_APPCONTAINER 0x1000
+#define IMAGE_DLLCHARACTERISTICS_WDM_DRIVER 0x2000
+#define IMAGE_DLLCHARACTERISTICS_GUARD_CF 0x4000
+#define IMAGE_DLLCHARACTERISTICS_TERMINAL_SERVER_AWARE 0x8000
+
 /***** Export format *****/
 
 typedef struct _IMAGE_EXPORT_DIRECTORY {
@@ -326,5 +363,29 @@ typedef struct _IMAGE_DEBUG_DIRECTORY
     DWORD AddressOfRawData;
     DWORD PointerToRawData;
 } IMAGE_DEBUG_DIRECTORY, *PIMAGE_DEBUG_DIRECTORY;
+
+#define IMAGE_DEBUG_TYPE_UNKNOWN 0
+#define IMAGE_DEBUG_TYPE_COFF 1
+#define IMAGE_DEBUG_TYPE_CODEVIEW 2
+#define IMAGE_DEBUG_TYPE_FPO 3
+#define IMAGE_DEBUG_TYPE_MISC 4
+#define IMAGE_DEBUG_TYPE_EXCEPTION 5
+#define IMAGE_DEBUG_TYPE_FIXUP 6
+#define IMAGE_DEBUG_TYPE_OMAP_TO_SRC 7
+#define IMAGE_DEBUG_TYPE_OMAP_FROM_SRC 8
+#define IMAGE_DEBUG_TYPE_BORLAND 9
+#define IMAGE_DEBUG_TYPE_RESERVED10 10
+#define IMAGE_DEBUG_TYPE_CLSID 11
+
+#define IMAGE_DEBUG_MISC_EXENAME 1
+
+typedef struct _IMAGE_DEBUG_MISC
+{
+    DWORD DataType;
+    DWORD Length;
+    BOOLEAN Unicode;
+    BYTE Reserved[3];
+    BYTE Data[1];
+} IMAGE_DEBUG_MISC, *PIMAGE_DEBUG_MISC;
 
 #endif /* EXM_PE_UNIX_H */

@@ -25,6 +25,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 
 #ifdef _WIN32
 # ifndef WIN32_LEAN_AND_MEAN
@@ -119,13 +120,20 @@ _exm_view_dllcharacteristics_get(WORD dllcar)
     char * ptr = _exm_view_dllcharacteristics;
     unsigned char is_first = 1;
 
+#ifdef IMAGE_DLLCHARACTERISTICS_HIGH_ENTROPY_VA
+    EXM_VIEW_DLLCAR_SET(IMAGE_DLLCHARACTERISTICS_HIGH_ENTROPY_VA, "high_entropy_va");
+#endif
     EXM_VIEW_DLLCAR_SET(IMAGE_DLLCHARACTERISTICS_DYNAMIC_BASE, "dynamic_base");
     EXM_VIEW_DLLCAR_SET(IMAGE_DLLCHARACTERISTICS_FORCE_INTEGRITY, "force_integrity");
     EXM_VIEW_DLLCAR_SET(IMAGE_DLLCHARACTERISTICS_NX_COMPAT, "nx_compat");
     EXM_VIEW_DLLCAR_SET(IMAGE_DLLCHARACTERISTICS_NO_ISOLATION, "no_isolation");
     EXM_VIEW_DLLCAR_SET(IMAGE_DLLCHARACTERISTICS_NO_SEH, "no_seh");
     EXM_VIEW_DLLCAR_SET(IMAGE_DLLCHARACTERISTICS_NO_BIND, "no_bind");
+    EXM_VIEW_DLLCAR_SET(IMAGE_DLLCHARACTERISTICS_APPCONTAINER, "appcontainer");
     EXM_VIEW_DLLCAR_SET(IMAGE_DLLCHARACTERISTICS_WDM_DRIVER, "wdm_driver");
+#ifdef IMAGE_DLLCHARACTERISTICS_GUARD_CF
+    EXM_VIEW_DLLCAR_SET(IMAGE_DLLCHARACTERISTICS_GUARD_CF, "guard_cf");
+#endif
     EXM_VIEW_DLLCAR_SET(IMAGE_DLLCHARACTERISTICS_TERMINAL_SERVER_AWARE, "terminal_server_aware");
 
     if (!is_first)
@@ -503,7 +511,7 @@ _exm_view_cmd_directory_entry_debug_display(Exm_Pe *pe)
                 break;
         }
         printf("\n");
-        printf("Directory entry Debug - Image Debug Directory #%ld\n", i);
+        printf("Directory entry Debug - Image Debug Directory #" FMT_DWD "\n", i);
         printf("  field                 type    value\n");
         printf("  Characteristics       DWORD   0x" FMT_DWDX "\n", debug_dir->Characteristics);
         printf("  TimeDateStamp         DWORD   0x" FMT_DWDX "\n", debug_dir->TimeDateStamp);
