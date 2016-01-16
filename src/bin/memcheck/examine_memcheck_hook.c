@@ -342,7 +342,17 @@ _exm_hook_gdi_objects_mismatch(Exm_Hook_Fct fct)
             (fct != EXM_HOOK_FCT_CREATEBITMAPINDIRECT) &&
             (fct != EXM_HOOK_FCT_CREATECOMPATIBLEBITMAP) &&
             (fct != EXM_HOOK_FCT_CREATEDIBITMAP) &&
-            (fct != EXM_HOOK_FCT_CREATEDIBSECTION));
+            (fct != EXM_HOOK_FCT_CREATEDIBSECTION) &&
+            (fct != EXM_HOOK_FCT_CREATEBRUSHINDIRECT) &&
+            (fct != EXM_HOOK_FCT_CREATEDIBPATTERNBRUSH) &&
+            (fct != EXM_HOOK_FCT_CREATEDIBPATTERNBRUSHPT) &&
+            (fct != EXM_HOOK_FCT_CREATEHATCHBRUSH) &&
+            (fct != EXM_HOOK_FCT_CREATEPATTERNBRUSH) &&
+            (fct != EXM_HOOK_FCT_CREATESOLIDBRUSH) &&
+            (fct != EXM_HOOK_FCT_CREATEFONT) &&
+            (fct != EXM_HOOK_FCT_CREATEFONTINDIRECT) &&
+            (fct != EXM_HOOK_FCT_CREATEPEN) &&
+            (fct != EXM_HOOK_FCT_CREATEPENINDIRECT));
 }
 
 static void
@@ -705,7 +715,7 @@ _exm_hook_LocalFree(HLOCAL hMem)
 static HBITMAP
 _exm_hook_CreateBitmap(int nWidth, int nHeight, UINT cPlanes, UINT cBitsPerPel, const VOID *lpvBits)
 {
-    typedef HBITMAP(*exm_create_bitmap_t)(int  nWidth, int  nHeight, UINT cPlanes, UINT cBitsPerPel, const VOID *lpvBits);
+    typedef HBITMAP (*exm_create_bitmap_t)(int  nWidth, int  nHeight, UINT cPlanes, UINT cBitsPerPel, const VOID *lpvBits);
     exm_create_bitmap_t cb;
     HBITMAP bm;
 
@@ -724,7 +734,7 @@ _exm_hook_CreateBitmap(int nWidth, int nHeight, UINT cPlanes, UINT cBitsPerPel, 
 static HBITMAP
 _exm_hook_CreateBitmapIndirect(const BITMAP *lpbm)
 {
-    typedef HBITMAP(*exm_create_bitmap_indirect_t)(const BITMAP *lpbm);
+    typedef HBITMAP (*exm_create_bitmap_indirect_t)(const BITMAP *lpbm);
     exm_create_bitmap_indirect_t cbi;
     HBITMAP bm;
 
@@ -743,7 +753,7 @@ _exm_hook_CreateBitmapIndirect(const BITMAP *lpbm)
 static HBITMAP
 _exm_hook_CreateCompatibleBitmap(HDC hdc, int nWidth, int nHeight)
 {
-    typedef HBITMAP(*exm_create_compatible_bitmap_t)(HDC hdc, int  nWidth, int  nHeight);
+    typedef HBITMAP (*exm_create_compatible_bitmap_t)(HDC hdc, int  nWidth, int  nHeight);
     exm_create_compatible_bitmap_t ccb;
     HBITMAP bm;
 
@@ -762,7 +772,7 @@ _exm_hook_CreateCompatibleBitmap(HDC hdc, int nWidth, int nHeight)
 static HBITMAP
 _exm_hook_CreateDIBitmap(HDC hdc, const BITMAPINFOHEADER *lpbmih, DWORD fdwInit, const VOID *lpbInit, const BITMAPINFO *lpbmi, UINT fuUsage)
 {
-    typedef HBITMAP(*exm_create_di_bitmap_t)(HDC hdc, const BITMAPINFOHEADER *lpbmih, DWORD fdwInit, const VOID *lpbInit, const BITMAPINFO *lpbmi, UINT fuUsage);
+    typedef HBITMAP (*exm_create_di_bitmap_t)(HDC hdc, const BITMAPINFOHEADER *lpbmih, DWORD fdwInit, const VOID *lpbInit, const BITMAPINFO *lpbmi, UINT fuUsage);
     exm_create_di_bitmap_t cdb;
     HBITMAP bm;
 
@@ -781,7 +791,7 @@ _exm_hook_CreateDIBitmap(HDC hdc, const BITMAPINFOHEADER *lpbmih, DWORD fdwInit,
 static HBITMAP
 _exm_hook_CreateDIBSection(HDC hdc, const BITMAPINFO *lpbmi, UINT iuUsage, VOID **ppvBits, HANDLE hSection, DWORD dwOffset)
 {
-    typedef HBITMAP(*exm_create_dib_secion_t)(HDC hdc, const BITMAPINFO *lpbmi, UINT iuUsage, VOID **ppvBits, HANDLE hSection, DWORD dwOffset);
+    typedef HBITMAP (*exm_create_dib_secion_t)(HDC hdc, const BITMAPINFO *lpbmi, UINT iuUsage, VOID **ppvBits, HANDLE hSection, DWORD dwOffset);
     exm_create_dib_secion_t cds;
     HBITMAP bm;
 
@@ -795,6 +805,224 @@ _exm_hook_CreateDIBSection(HDC hdc, const BITMAPINFO *lpbmi, UINT iuUsage, VOID 
         _exm_hook_alloc_manage(bm, 0, 1, EXM_HOOK_FCT_CREATEDIBSECTION);
 
     return bm;
+}
+
+static HBRUSH
+_exm_hook_CreateBrushIndirect(const LOGBRUSH *lplb)
+{
+    typedef HBRUSH (*exm_create_brush_indirect_t)(const LOGBRUSH *lplb);
+    exm_create_brush_indirect_t cbi;
+    HBRUSH br;
+
+    EXM_LOG_WARN("CreateDIBSection !!!");
+
+    cbi = (exm_create_brush_indirect_t)_exm_hook_instance[EXM_HOOK_FCT_CREATEBRUSHINDIRECT].fct_proc_old;
+    br = cbi(lplb);
+
+    /* if data is NULL, nothing is done */
+    if (br)
+        _exm_hook_alloc_manage(br, 0, 1, EXM_HOOK_FCT_CREATEBRUSHINDIRECT);
+
+    return br;
+}
+
+static HBRUSH
+_exm_hook_CreateDIBPatternBrush(HGLOBAL hglbDIBPacked, UINT fuColorSpec)
+{
+    typedef HBRUSH (*exm_create_dib_pattern_brush_t)(HGLOBAL hglbDIBPacked, UINT fuColorSpec);
+    exm_create_dib_pattern_brush_t cdpb;
+    HBRUSH br;
+
+    EXM_LOG_WARN("CreateDIBSection !!!");
+
+    cdpb = (exm_create_dib_pattern_brush_t)_exm_hook_instance[EXM_HOOK_FCT_CREATEDIBPATTERNBRUSH].fct_proc_old;
+    br = cdpb(hglbDIBPacked, fuColorSpec);
+
+    /* if data is NULL, nothing is done */
+    if (br)
+        _exm_hook_alloc_manage(br, 0, 1, EXM_HOOK_FCT_CREATEDIBPATTERNBRUSH);
+
+    return br;
+}
+
+static HBRUSH
+_exm_hook_CreateDIBPatternBrushPt(const VOID *lpPackedDIB, UINT iUsage)
+{
+    typedef HBRUSH (*exm_create_dib_pattern_brush_pt_t)(const VOID *lpPackedDIB, UINT iUsage);
+    exm_create_dib_pattern_brush_pt_t cdpbpt;
+    HBRUSH br;
+
+    EXM_LOG_WARN("CreateDIBSection !!!");
+
+    cdpbpt = (exm_create_dib_pattern_brush_pt_t)_exm_hook_instance[EXM_HOOK_FCT_CREATEDIBPATTERNBRUSHPT].fct_proc_old;
+    br = cdpbpt(lpPackedDIB, iUsage);
+
+    /* if data is NULL, nothing is done */
+    if (br)
+        _exm_hook_alloc_manage(br, 0, 1, EXM_HOOK_FCT_CREATEDIBPATTERNBRUSHPT);
+
+    return br;
+}
+
+static HBRUSH
+_exm_hook_CreateHatchBrush(int fnStyle, COLORREF clrref)
+{
+    typedef HBRUSH (*exm_create_hatch_brush_t)(int fnStyle, COLORREF clrref);
+    exm_create_hatch_brush_t chb;
+    HBRUSH br;
+
+    EXM_LOG_WARN("CreateDIBSection !!!");
+
+    chb = (exm_create_hatch_brush_t)_exm_hook_instance[EXM_HOOK_FCT_CREATEHATCHBRUSH].fct_proc_old;
+    br = chb(fnStyle, clrref);
+
+    /* if data is NULL, nothing is done */
+    if (br)
+        _exm_hook_alloc_manage(br, 0, 1, EXM_HOOK_FCT_CREATEHATCHBRUSH);
+
+    return br;
+}
+
+static HBRUSH
+_exm_hook_CreatePatternBrush(HBITMAP hbmp)
+{
+    typedef HBRUSH (*exm_create_pattern_brush_t)(HBITMAP hbmp);
+    exm_create_pattern_brush_t cpb;
+    HBRUSH br;
+
+    EXM_LOG_WARN("CreateDIBSection !!!");
+
+    cpb = (exm_create_pattern_brush_t)_exm_hook_instance[EXM_HOOK_FCT_CREATEPATTERNBRUSH].fct_proc_old;
+    br = cpb(hbmp);
+
+    /* if data is NULL, nothing is done */
+    if (br)
+        _exm_hook_alloc_manage(br, 0, 1, EXM_HOOK_FCT_CREATEPATTERNBRUSH);
+
+    return br;
+}
+
+static HBRUSH
+_exm_hook_CreateSolidBrush(COLORREF crColor)
+{
+    typedef HBRUSH (*exm_create_solid_brush_t)(COLORREF crColor);
+    exm_create_solid_brush_t csb;
+    HBRUSH br;
+
+    EXM_LOG_WARN("CreateDIBSection !!!");
+
+    csb = (exm_create_solid_brush_t)_exm_hook_instance[EXM_HOOK_FCT_CREATESOLIDBRUSH].fct_proc_old;
+    br = csb(crColor);
+
+    /* if data is NULL, nothing is done */
+    if (br)
+        _exm_hook_alloc_manage(br, 0, 1, EXM_HOOK_FCT_CREATESOLIDBRUSH);
+
+    return br;
+}
+
+static HFONT
+_exm_hook_CreateFont(int nHeight,
+                     int nWidth,
+                     int nEscapement,
+                     int nOrientation,
+                     int fnWeight,
+                     DWORD fdwItalic,
+                     DWORD fdwUnderline,
+                     DWORD fdwStrikeOut,
+                     DWORD fdwCharSet,
+                     DWORD fdwOutputPrecision,
+                     DWORD fdwClipPrecision,
+                     DWORD fdwQuality,
+                     DWORD fdwPitchAndFamily,
+                     LPCTSTR lpszFace)
+{
+    typedef HFONT (*exm_create_font_t)(int nHeight,
+                                       int nWidth,
+                                       int nEscapement,
+                                       int nOrientation,
+                                       int fnWeight,
+                                       DWORD fdwItalic,
+                                       DWORD fdwUnderline,
+                                       DWORD fdwStrikeOut,
+                                       DWORD fdwCharSet,
+                                       DWORD fdwOutputPrecision,
+                                       DWORD fdwClipPrecision,
+                                       DWORD fdwQuality,
+                                       DWORD fdwPitchAndFamily,
+                                       LPCTSTR lpszFace);
+    exm_create_font_t cf;
+    HFONT fnt;
+
+    EXM_LOG_WARN("CreateDIBSection !!!");
+
+    cf = (exm_create_font_t)_exm_hook_instance[EXM_HOOK_FCT_CREATEFONT].fct_proc_old;
+    fnt = cf(nHeight, nWidth, nEscapement, nOrientation, fnWeight, fdwItalic, fdwUnderline,
+             fdwStrikeOut, fdwCharSet, fdwOutputPrecision, fdwClipPrecision, fdwQuality,
+             fdwPitchAndFamily, lpszFace);
+
+    /* if data is NULL, nothing is done */
+    if (fnt)
+        _exm_hook_alloc_manage(fnt, 0, 1, EXM_HOOK_FCT_CREATEFONT);
+
+    return fnt;
+}
+
+static HFONT
+_exm_hook_CreateFontIndirect(const LOGFONT *lplf)
+{
+    typedef HFONT (*exm_create_font_indirect_t)(const LOGFONT *lplf);
+    exm_create_font_indirect_t cfi;
+    HFONT fnt;
+
+    EXM_LOG_WARN("CreateDIBSection !!!");
+
+    cfi = (exm_create_font_indirect_t)_exm_hook_instance[EXM_HOOK_FCT_CREATEFONTINDIRECT].fct_proc_old;
+    fnt = cfi(lplf);
+
+    /* if data is NULL, nothing is done */
+    if (fnt)
+        _exm_hook_alloc_manage(fnt, 0, 1, EXM_HOOK_FCT_CREATEFONTINDIRECT);
+
+    return fnt;
+}
+
+static HPEN
+_exm_hook_CreatePen(int fnPenStyle, int nWidth, COLORREF crColor)
+{
+    typedef HPEN (*exm_create_pen_t)(int fnPenStyle, int nWidth, COLORREF crColor);
+    exm_create_pen_t cp;
+    HPEN pen;
+
+    EXM_LOG_WARN("CreateDIBSection !!!");
+
+    cp = (exm_create_pen_t)_exm_hook_instance[EXM_HOOK_FCT_CREATEPEN].fct_proc_old;
+    pen = cp(fnPenStyle, nWidth,crColor);
+
+    /* if data is NULL, nothing is done */
+    if (pen)
+        _exm_hook_alloc_manage(pen, 0, 1, EXM_HOOK_FCT_CREATEPEN);
+
+    return pen;
+}
+
+static HPEN
+_exm_hook_CreatePenIndirect(const LOGPEN *lplgpn)
+{
+    typedef HPEN (*exm_create_pen_indirect_t)(const LOGPEN *lplgpn);
+    exm_create_pen_indirect_t cfi;
+    HPEN pen;
+
+    EXM_LOG_WARN("CreateDIBSection !!!");
+
+    cfi = (exm_create_pen_indirect_t)_exm_hook_instance[EXM_HOOK_FCT_CREATEPENINDIRECT].fct_proc_old;
+    pen = cfi(lplgpn);
+
+    /* if data is NULL, nothing is done */
+    if (pen)
+        _exm_hook_alloc_manage(pen, 0, 1, EXM_HOOK_FCT_CREATEPENINDIRECT);
+
+    return pen;
 }
 
 static BOOL
@@ -1240,6 +1468,16 @@ exm_hook_init(const Exm_List *crt_names, const Exm_List *dep_names)
         EXM_HOOK_FCT_SET(EXM_HOOK_FCT_CREATECOMPATIBLEBITMAP, mod, CreateCompatibleBitmap);
         EXM_HOOK_FCT_SET(EXM_HOOK_FCT_CREATEDIBITMAP, mod, CreateDIBitmap);
         EXM_HOOK_FCT_SET(EXM_HOOK_FCT_CREATEDIBSECTION, mod, CreateDIBSection);
+        EXM_HOOK_FCT_SET(EXM_HOOK_FCT_CREATEBRUSHINDIRECT, mod, CreateBrushIndirect);
+        EXM_HOOK_FCT_SET(EXM_HOOK_FCT_CREATEDIBPATTERNBRUSH, mod, CreateDIBPatternBrush);
+        EXM_HOOK_FCT_SET(EXM_HOOK_FCT_CREATEDIBPATTERNBRUSHPT, mod, CreateDIBPatternBrushPt);
+        EXM_HOOK_FCT_SET(EXM_HOOK_FCT_CREATEHATCHBRUSH, mod, CreateHatchBrush);
+        EXM_HOOK_FCT_SET(EXM_HOOK_FCT_CREATEPATTERNBRUSH, mod, CreatePatternBrush);
+        EXM_HOOK_FCT_SET(EXM_HOOK_FCT_CREATESOLIDBRUSH, mod, CreateSolidBrush);
+        EXM_HOOK_FCT_SET(EXM_HOOK_FCT_CREATEFONT, mod, CreateFont);
+        EXM_HOOK_FCT_SET(EXM_HOOK_FCT_CREATEFONTINDIRECT, mod, CreateFontIndirect);
+        EXM_HOOK_FCT_SET(EXM_HOOK_FCT_CREATEPEN, mod, CreatePen);
+        EXM_HOOK_FCT_SET(EXM_HOOK_FCT_CREATEPENINDIRECT, mod, CreatePenIndirect);
         EXM_HOOK_FCT_SET(EXM_HOOK_FCT_DELETEOBJECT, mod, DeleteObject);
 
         EXM_LOG_DBG("Hooking %s", mod_name);
