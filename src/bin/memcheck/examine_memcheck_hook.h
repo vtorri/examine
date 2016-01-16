@@ -39,7 +39,15 @@ typedef enum
     EXM_HOOK_FCT_LOCALREALLOC,
     EXM_HOOK_FCT_LOCALFREE,
     EXM_HOOK_FCT_KERNEL32_END,
-    EXM_HOOK_FCT_LIBC_BEGIN = EXM_HOOK_FCT_KERNEL32_END,
+    EXM_HOOK_FCT_GDI32_BEGIN = EXM_HOOK_FCT_KERNEL32_END,
+    EXM_HOOK_FCT_CREATEBITMAP = EXM_HOOK_FCT_GDI32_BEGIN,
+    EXM_HOOK_FCT_CREATEBITMAPINDIRECT,
+    EXM_HOOK_FCT_CREATECOMPATIBLEBITMAP,
+    EXM_HOOK_FCT_CREATEDIBITMAP,
+    EXM_HOOK_FCT_CREATEDIBSECTION,
+    EXM_HOOK_FCT_DELETEOBJECT,
+    EXM_HOOK_FCT_GDI32_END,
+    EXM_HOOK_FCT_LIBC_BEGIN = EXM_HOOK_FCT_GDI32_END,
     EXM_HOOK_FCT_MALLOC = EXM_HOOK_FCT_LIBC_BEGIN,
     EXM_HOOK_FCT__ALIGNED_MALLOC,
     EXM_HOOK_FCT__STRDUP,
@@ -64,10 +72,12 @@ typedef struct
     unsigned int nbr_frees;
     Exm_List *stack;
     Exm_List *stack_first_free;
+    unsigned int gdi32 : 1;
 } Exm_Hook_Data_Alloc;
 
 typedef struct
 {
+    unsigned int total_count_gdi_handles;
     unsigned int total_count_allocs;
     unsigned int total_count_frees;
     size_t total_bytes_allocated;

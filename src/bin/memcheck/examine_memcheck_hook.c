@@ -229,7 +229,7 @@ _exm_hook_error_data_del(void *ptr)
 }
 
 static Exm_Hook_Data_Alloc *
-_exm_hook_data_alloc_new(Exm_Hook_Fct fct, size_t size, void *data, Exm_List *stack)
+_exm_hook_data_alloc_new(Exm_Hook_Fct fct, size_t size, void *data, unsigned char is_gdi, Exm_List *stack)
 {
     Exm_Hook_Data_Alloc *da;
 
@@ -246,6 +246,7 @@ _exm_hook_data_alloc_new(Exm_Hook_Fct fct, size_t size, void *data, Exm_List *st
     da->nbr_frees = 0;
     da->stack = stack;
     da->stack_first_free = NULL;
+    da->gdi32 = !!is_gdi;
 
     return da;
 }
@@ -258,7 +259,8 @@ _exm_hook_data_alloc_del(void *ptr)
     if (!da)
         return;
 
-    exm_list_free(da->stack, free);
+    exm_list_free(da->stack_first_free, exm_stack_data_free);
+    exm_list_free(da->stack, exm_stack_data_free);
     free(da);
 }
 
@@ -332,21 +334,39 @@ _exm_hook_malloc_free_mismatch(Exm_Hook_Fct fct)
             (fct != EXM_HOOK_FCT_REALLOC));
 }
 
+static unsigned char
+_exm_hook_gdi_objects_mismatch(Exm_Hook_Fct fct)
+{
+
+    return ((fct != EXM_HOOK_FCT_CREATEBITMAP) &&
+            (fct != EXM_HOOK_FCT_CREATEBITMAPINDIRECT) &&
+            (fct != EXM_HOOK_FCT_CREATECOMPATIBLEBITMAP) &&
+            (fct != EXM_HOOK_FCT_CREATEDIBITMAP) &&
+            (fct != EXM_HOOK_FCT_CREATEDIBSECTION));
+}
+
 static void
-_exm_hook_alloc_manage(void *data, size_t size, Exm_Hook_Fct fct)
+_exm_hook_alloc_manage(void *data, size_t size, unsigned char gdi32, Exm_Hook_Fct fct)
 {
     Exm_Hook_Data_Alloc *da;
 
     _exm_hook_allocations_sanitize(data);
 
-    da = _exm_hook_data_alloc_new(fct, size, data, exm_stack_frames_get());
+    da = _exm_hook_data_alloc_new(fct, size, data, gdi32, exm_stack_frames_get());
     if (da)
     {
         exm_hook_allocations = exm_list_append(exm_hook_allocations, da);
     }
 
-    exm_hook_summary.total_count_allocs++;
-    exm_hook_summary.total_bytes_allocated += size;
+    if (gdi32)
+    {
+        exm_hook_summary.total_count_gdi_handles++;
+    }
+    else
+    {
+        exm_hook_summary.total_count_allocs++;
+        exm_hook_summary.total_bytes_allocated += size;
+    }
 }
 
 static unsigned char
@@ -457,6 +477,10 @@ _exm_hook_realloc_manage(void *old_data, void *new_data, size_t new_size, Exm_Ho
     old_da->size = new_size;
 }
 
+/*
+ * Hooking functions
+ */
+
 static PVOID
 _exm_hook_RtlAllocateHeap(PVOID HeapHandle, ULONG Flags, SIZE_T size)
 {
@@ -471,7 +495,7 @@ _exm_hook_RtlAllocateHeap(PVOID HeapHandle, ULONG Flags, SIZE_T size)
     ah = (exm_rtl_allocate_heap_t)_exm_hook_instance[EXM_HOOK_FCT_RTLALLOCATEHEAP].fct_proc_old;
     data = ah(HeapHandle, Flags, size);
 
-    _exm_hook_alloc_manage(data, size, EXM_HOOK_FCT_RTLALLOCATEHEAP);
+    _exm_hook_alloc_manage(data, size, 0, EXM_HOOK_FCT_RTLALLOCATEHEAP);
 
     return data;
 }
@@ -511,7 +535,7 @@ _exm_hook_HeapAlloc(HANDLE hHeap, DWORD dwFlags, SIZE_T dwBytes)
     ha = (exm_heap_alloc_t)_exm_hook_instance[EXM_HOOK_FCT_HEAPALLOC].fct_proc_old;
     data = ha(hHeap, dwFlags, dwBytes);
 
-    _exm_hook_alloc_manage(data, dwBytes, EXM_HOOK_FCT_HEAPALLOC);
+    _exm_hook_alloc_manage(data, dwBytes, 0, EXM_HOOK_FCT_HEAPALLOC);
 
     return data;
 }
@@ -573,7 +597,7 @@ _exm_hook_GlobalAlloc(UINT uFlags, SIZE_T dwBytes)
     ga = (exm_global_alloc_t)_exm_hook_instance[EXM_HOOK_FCT_GLOBALALLOC].fct_proc_old;
     data = ga(uFlags, dwBytes);
 
-    _exm_hook_alloc_manage(data, dwBytes, EXM_HOOK_FCT_GLOBALALLOC);
+    _exm_hook_alloc_manage(data, dwBytes, 0, EXM_HOOK_FCT_GLOBALALLOC);
 
     return data;
 }
@@ -632,7 +656,7 @@ _exm_hook_LocalAlloc(UINT uFlags, SIZE_T dwBytes)
     la = (exm_local_alloc_t)_exm_hook_instance[EXM_HOOK_FCT_LOCALALLOC].fct_proc_old;
     data = la(uFlags, dwBytes);
 
-    _exm_hook_alloc_manage(data, dwBytes, EXM_HOOK_FCT_LOCALALLOC);
+    _exm_hook_alloc_manage(data, dwBytes, 0, EXM_HOOK_FCT_LOCALALLOC);
 
     return data;
 }
@@ -678,6 +702,120 @@ _exm_hook_LocalFree(HLOCAL hMem)
     return res;
 }
 
+static HBITMAP
+_exm_hook_CreateBitmap(int nWidth, int nHeight, UINT cPlanes, UINT cBitsPerPel, const VOID *lpvBits)
+{
+    typedef HBITMAP(*exm_create_bitmap_t)(int  nWidth, int  nHeight, UINT cPlanes, UINT cBitsPerPel, const VOID *lpvBits);
+    exm_create_bitmap_t cb;
+    HBITMAP bm;
+
+    EXM_LOG_WARN("CreateBitmap !!!");
+
+    cb = (exm_create_bitmap_t)_exm_hook_instance[EXM_HOOK_FCT_CREATEBITMAP].fct_proc_old;
+    bm = cb(nWidth, nHeight, cPlanes, cBitsPerPel, lpvBits);
+
+    /* if data is NULL, nothing is done */
+    if (bm)
+        _exm_hook_alloc_manage(bm, 0, 1, EXM_HOOK_FCT_CREATEBITMAP);
+
+    return bm;
+}
+
+static HBITMAP
+_exm_hook_CreateBitmapIndirect(const BITMAP *lpbm)
+{
+    typedef HBITMAP(*exm_create_bitmap_indirect_t)(const BITMAP *lpbm);
+    exm_create_bitmap_indirect_t cbi;
+    HBITMAP bm;
+
+    EXM_LOG_WARN("CreateBitmapIndirect !!!");
+
+    cbi = (exm_create_bitmap_indirect_t)_exm_hook_instance[EXM_HOOK_FCT_CREATEBITMAPINDIRECT].fct_proc_old;
+    bm = cbi(lpbm);
+
+    /* if data is NULL, nothing is done */
+    if (bm)
+        _exm_hook_alloc_manage(bm, 0, 1, EXM_HOOK_FCT_CREATEBITMAPINDIRECT);
+
+    return bm;
+}
+
+static HBITMAP
+_exm_hook_CreateCompatibleBitmap(HDC hdc, int nWidth, int nHeight)
+{
+    typedef HBITMAP(*exm_create_compatible_bitmap_t)(HDC hdc, int  nWidth, int  nHeight);
+    exm_create_compatible_bitmap_t ccb;
+    HBITMAP bm;
+
+    EXM_LOG_WARN("CreateCompaticleBitmap !!!");
+
+    ccb = (exm_create_compatible_bitmap_t)_exm_hook_instance[EXM_HOOK_FCT_CREATECOMPATIBLEBITMAP].fct_proc_old;
+    bm = ccb(hdc, nWidth, nHeight);
+
+    /* if data is NULL, nothing is done */
+    if (bm)
+        _exm_hook_alloc_manage(bm, 0, 1, EXM_HOOK_FCT_CREATECOMPATIBLEBITMAP);
+
+    return bm;
+}
+
+static HBITMAP
+_exm_hook_CreateDIBitmap(HDC hdc, const BITMAPINFOHEADER *lpbmih, DWORD fdwInit, const VOID *lpbInit, const BITMAPINFO *lpbmi, UINT fuUsage)
+{
+    typedef HBITMAP(*exm_create_di_bitmap_t)(HDC hdc, const BITMAPINFOHEADER *lpbmih, DWORD fdwInit, const VOID *lpbInit, const BITMAPINFO *lpbmi, UINT fuUsage);
+    exm_create_di_bitmap_t cdb;
+    HBITMAP bm;
+
+    EXM_LOG_WARN("CreateDIBitmap !!!");
+
+    cdb = (exm_create_di_bitmap_t)_exm_hook_instance[EXM_HOOK_FCT_CREATEDIBITMAP].fct_proc_old;
+    bm = cdb(hdc, lpbmih, fdwInit, lpbInit, lpbmi, fuUsage);
+
+    /* if data is NULL, nothing is done */
+    if (bm)
+        _exm_hook_alloc_manage(bm, 0, 1, EXM_HOOK_FCT_CREATEDIBITMAP);
+
+    return bm;
+}
+
+static HBITMAP
+_exm_hook_CreateDIBSection(HDC hdc, const BITMAPINFO *lpbmi, UINT iuUsage, VOID **ppvBits, HANDLE hSection, DWORD dwOffset)
+{
+    typedef HBITMAP(*exm_create_dib_secion_t)(HDC hdc, const BITMAPINFO *lpbmi, UINT iuUsage, VOID **ppvBits, HANDLE hSection, DWORD dwOffset);
+    exm_create_dib_secion_t cds;
+    HBITMAP bm;
+
+    EXM_LOG_WARN("CreateDIBSection !!!");
+
+    cds = (exm_create_dib_secion_t)_exm_hook_instance[EXM_HOOK_FCT_CREATEDIBSECTION].fct_proc_old;
+    bm = cds(hdc, lpbmi, iuUsage, ppvBits, hSection, dwOffset);
+
+    /* if data is NULL, nothing is done */
+    if (bm)
+        _exm_hook_alloc_manage(bm, 0, 1, EXM_HOOK_FCT_CREATEDIBSECTION);
+
+    return bm;
+}
+
+static BOOL
+_exm_hook_DeleteObject(HGDIOBJ hObject)
+{
+    typedef BOOL (*exm_delete_object_t)(HGDIOBJ hObject);
+    exm_delete_object_t delobj;
+    BOOL res = FALSE;
+
+    EXM_LOG_WARN("DeleteObject !!!");
+
+    if (_exm_hook_free_errors_manage(hObject,
+                                     _exm_hook_gdi_objects_mismatch))
+    {
+        delobj = (exm_delete_object_t)_exm_hook_instance[EXM_HOOK_FCT_DELETEOBJECT].fct_proc_old;
+        res = delobj(hObject);
+    }
+
+    return res;
+}
+
 static void *
 _exm_hook_malloc(size_t size)
 {
@@ -690,7 +828,7 @@ _exm_hook_malloc(size_t size)
     ma = (exm_malloc_t)_exm_hook_instance[EXM_HOOK_FCT_MALLOC].fct_proc_old;
     data = ma(size);
 
-    _exm_hook_alloc_manage(data, size, EXM_HOOK_FCT_MALLOC);
+    _exm_hook_alloc_manage(data, size, 0, EXM_HOOK_FCT_MALLOC);
 
     return data;
 }
@@ -707,7 +845,7 @@ _exm_hook__aligned_malloc(size_t size, size_t alignment)
     ama = (exm__aligned_malloc_t)_exm_hook_instance[EXM_HOOK_FCT__ALIGNED_MALLOC].fct_proc_old;
     data = ama(size, alignment);
 
-    _exm_hook_alloc_manage(data, size, EXM_HOOK_FCT__ALIGNED_MALLOC);
+    _exm_hook_alloc_manage(data, size, 0, EXM_HOOK_FCT__ALIGNED_MALLOC);
 
     return data;
 }
@@ -724,7 +862,7 @@ _exm_hook__strdup(const char *strSource)
     sdup = (exm__strdup_t)_exm_hook_instance[EXM_HOOK_FCT__STRDUP].fct_proc_old;
     data = sdup(strSource);
 
-    _exm_hook_alloc_manage(data, _msize(data), EXM_HOOK_FCT__STRDUP);
+    _exm_hook_alloc_manage(data, _msize(data), 0, EXM_HOOK_FCT__STRDUP);
 
     return data;
 }
@@ -741,7 +879,7 @@ _exm_hook_calloc(size_t num, size_t size)
     ca = (exm_calloc_t)_exm_hook_instance[EXM_HOOK_FCT_CALLOC].fct_proc_old;
     data = ca(num, size);
 
-    _exm_hook_alloc_manage(data, num * size, EXM_HOOK_FCT_CALLOC);
+    _exm_hook_alloc_manage(data, num * size, 0, EXM_HOOK_FCT_CALLOC);
 
     return data;
 }
@@ -762,7 +900,7 @@ _exm_hook_realloc(void *memblock, size_t size)
         rea = (exm_realloc_t)_exm_hook_instance[EXM_HOOK_FCT_REALLOC].fct_proc_old;
         data = rea(memblock, size);
 
-        _exm_hook_alloc_manage(data, size, EXM_HOOK_FCT_REALLOC);
+        _exm_hook_alloc_manage(data, size, 0, EXM_HOOK_FCT_REALLOC);
     }
     else
     {
@@ -1045,6 +1183,7 @@ do \
 
 Exm_List *exm_hook_allocations;
 Exm_List *exm_hook_errors;
+Exm_List *exm_hook_gdi_handles;
 Exm_Hook_Summary exm_hook_summary;
 
 unsigned char
@@ -1087,6 +1226,25 @@ exm_hook_init(const Exm_List *crt_names, const Exm_List *dep_names)
         EXM_LOG_DBG("Hooking %s", mod_name);
         _exm_hook_set(mod_name, dep_names,
                       EXM_HOOK_FCT_KERNEL32_BEGIN, EXM_HOOK_FCT_KERNEL32_END);
+
+        FreeLibrary(mod);
+    }
+
+    mod_name = "gdi32.dll";
+
+    mod = LoadLibrary(mod_name);
+    if (mod)
+    {
+        EXM_HOOK_FCT_SET(EXM_HOOK_FCT_CREATEBITMAP, mod, CreateBitmap);
+        EXM_HOOK_FCT_SET(EXM_HOOK_FCT_CREATEBITMAPINDIRECT, mod, CreateBitmapIndirect);
+        EXM_HOOK_FCT_SET(EXM_HOOK_FCT_CREATECOMPATIBLEBITMAP, mod, CreateCompatibleBitmap);
+        EXM_HOOK_FCT_SET(EXM_HOOK_FCT_CREATEDIBITMAP, mod, CreateDIBitmap);
+        EXM_HOOK_FCT_SET(EXM_HOOK_FCT_CREATEDIBSECTION, mod, CreateDIBSection);
+        EXM_HOOK_FCT_SET(EXM_HOOK_FCT_DELETEOBJECT, mod, DeleteObject);
+
+        EXM_LOG_DBG("Hooking %s", mod_name);
+        _exm_hook_set(mod_name, dep_names,
+                      EXM_HOOK_FCT_GDI32_BEGIN, EXM_HOOK_FCT_GDI32_END);
 
         FreeLibrary(mod);
     }
@@ -1152,6 +1310,12 @@ exm_hook_shutdown(const Exm_List *crt_names, const Exm_List *dep_names)
     EXM_LOG_DBG("Unhooking %s", mod_name);
     _exm_unhook_set(mod_name, dep_names,
                     EXM_HOOK_FCT_KERNEL32_BEGIN, EXM_HOOK_FCT_KERNEL32_END);
+
+    mod_name = "gdi32.dll";
+
+    EXM_LOG_DBG("Unhooking %s", mod_name);
+    _exm_unhook_set(mod_name, dep_names,
+                    EXM_HOOK_FCT_GDI32_BEGIN, EXM_HOOK_FCT_GDI32_END);
 
     iter_crt = crt_names;
     while (iter_crt)
