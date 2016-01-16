@@ -357,7 +357,8 @@ _exm_hook_gdi_objects_mismatch(Exm_Hook_Fct fct)
             (fct != EXM_HOOK_FCT_CREATEELLIPTICRGNINDIRECT) &&
             (fct != EXM_HOOK_FCT_CREATEPOLYGONRGN) &&
             (fct != EXM_HOOK_FCT_CREATERECTRGN) &&
-            (fct != EXM_HOOK_FCT_CREATERECTRGNINDIRECT));
+            (fct != EXM_HOOK_FCT_CREATERECTRGNINDIRECT) &&
+            (fct != EXM_HOOK_FCT_CREATEPALETTE));
 }
 
 static void
@@ -1125,6 +1126,25 @@ _exm_hook_CreateRectRgnIndirect(const RECT *lprc)
     return rgn;
 }
 
+static HPALETTE
+_exm_hook_CreatePalette(const LOGPALETTE *lplgpl)
+{
+    typedef HPALETTE (*exm_create_palette_t)(const LOGPALETTE *lplgpl);
+    exm_create_palette_t cp;
+    HPALETTE pal;
+
+    EXM_LOG_WARN("CreateRectRgn !!!");
+
+    cp = (exm_create_palette_t)_exm_hook_instance[EXM_HOOK_FCT_CREATEPALETTE].fct_proc_old;
+    pal = cp(lplgpl);
+
+    /* if data is NULL, nothing is done */
+    if (pal)
+        _exm_hook_alloc_manage(pal, 0, 1, EXM_HOOK_FCT_CREATEPALETTE);
+
+    return pal;
+}
+
 static BOOL
 _exm_hook_DeleteObject(HGDIOBJ hObject)
 {
@@ -1583,6 +1603,7 @@ exm_hook_init(const Exm_List *crt_names, const Exm_List *dep_names)
         EXM_HOOK_FCT_SET(EXM_HOOK_FCT_CREATEPOLYGONRGN, mod, CreatePolygonRgn);
         EXM_HOOK_FCT_SET(EXM_HOOK_FCT_CREATERECTRGN, mod, CreateRectRgn);
         EXM_HOOK_FCT_SET(EXM_HOOK_FCT_CREATERECTRGNINDIRECT, mod, CreateRectRgnIndirect);
+        EXM_HOOK_FCT_SET(EXM_HOOK_FCT_CREATEPALETTE, mod, CreatePalette);
         EXM_HOOK_FCT_SET(EXM_HOOK_FCT_DELETEOBJECT, mod, DeleteObject);
 
         EXM_LOG_DBG("Hooking %s", mod_name);
