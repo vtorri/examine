@@ -352,7 +352,12 @@ _exm_hook_gdi_objects_mismatch(Exm_Hook_Fct fct)
             (fct != EXM_HOOK_FCT_CREATEFONT) &&
             (fct != EXM_HOOK_FCT_CREATEFONTINDIRECT) &&
             (fct != EXM_HOOK_FCT_CREATEPEN) &&
-            (fct != EXM_HOOK_FCT_CREATEPENINDIRECT));
+            (fct != EXM_HOOK_FCT_CREATEPENINDIRECT) &&
+            (fct != EXM_HOOK_FCT_CREATEELLIPTICRGN) &&
+            (fct != EXM_HOOK_FCT_CREATEELLIPTICRGNINDIRECT) &&
+            (fct != EXM_HOOK_FCT_CREATEPOLYGONRGN) &&
+            (fct != EXM_HOOK_FCT_CREATERECTRGN) &&
+            (fct != EXM_HOOK_FCT_CREATERECTRGNINDIRECT));
 }
 
 static void
@@ -814,7 +819,7 @@ _exm_hook_CreateBrushIndirect(const LOGBRUSH *lplb)
     exm_create_brush_indirect_t cbi;
     HBRUSH br;
 
-    EXM_LOG_WARN("CreateDIBSection !!!");
+    EXM_LOG_WARN("CreateBrushIndirect !!!");
 
     cbi = (exm_create_brush_indirect_t)_exm_hook_instance[EXM_HOOK_FCT_CREATEBRUSHINDIRECT].fct_proc_old;
     br = cbi(lplb);
@@ -833,7 +838,7 @@ _exm_hook_CreateDIBPatternBrush(HGLOBAL hglbDIBPacked, UINT fuColorSpec)
     exm_create_dib_pattern_brush_t cdpb;
     HBRUSH br;
 
-    EXM_LOG_WARN("CreateDIBSection !!!");
+    EXM_LOG_WARN("CreateDIBPatternBrush !!!");
 
     cdpb = (exm_create_dib_pattern_brush_t)_exm_hook_instance[EXM_HOOK_FCT_CREATEDIBPATTERNBRUSH].fct_proc_old;
     br = cdpb(hglbDIBPacked, fuColorSpec);
@@ -852,7 +857,7 @@ _exm_hook_CreateDIBPatternBrushPt(const VOID *lpPackedDIB, UINT iUsage)
     exm_create_dib_pattern_brush_pt_t cdpbpt;
     HBRUSH br;
 
-    EXM_LOG_WARN("CreateDIBSection !!!");
+    EXM_LOG_WARN("CreateDIBPatternBrushPt !!!");
 
     cdpbpt = (exm_create_dib_pattern_brush_pt_t)_exm_hook_instance[EXM_HOOK_FCT_CREATEDIBPATTERNBRUSHPT].fct_proc_old;
     br = cdpbpt(lpPackedDIB, iUsage);
@@ -871,7 +876,7 @@ _exm_hook_CreateHatchBrush(int fnStyle, COLORREF clrref)
     exm_create_hatch_brush_t chb;
     HBRUSH br;
 
-    EXM_LOG_WARN("CreateDIBSection !!!");
+    EXM_LOG_WARN("CreateHatchBrush !!!");
 
     chb = (exm_create_hatch_brush_t)_exm_hook_instance[EXM_HOOK_FCT_CREATEHATCHBRUSH].fct_proc_old;
     br = chb(fnStyle, clrref);
@@ -890,7 +895,7 @@ _exm_hook_CreatePatternBrush(HBITMAP hbmp)
     exm_create_pattern_brush_t cpb;
     HBRUSH br;
 
-    EXM_LOG_WARN("CreateDIBSection !!!");
+    EXM_LOG_WARN("CreatePatternBrush !!!");
 
     cpb = (exm_create_pattern_brush_t)_exm_hook_instance[EXM_HOOK_FCT_CREATEPATTERNBRUSH].fct_proc_old;
     br = cpb(hbmp);
@@ -909,7 +914,7 @@ _exm_hook_CreateSolidBrush(COLORREF crColor)
     exm_create_solid_brush_t csb;
     HBRUSH br;
 
-    EXM_LOG_WARN("CreateDIBSection !!!");
+    EXM_LOG_WARN("CreateSolidBrush !!!");
 
     csb = (exm_create_solid_brush_t)_exm_hook_instance[EXM_HOOK_FCT_CREATESOLIDBRUSH].fct_proc_old;
     br = csb(crColor);
@@ -954,7 +959,7 @@ _exm_hook_CreateFont(int nHeight,
     exm_create_font_t cf;
     HFONT fnt;
 
-    EXM_LOG_WARN("CreateDIBSection !!!");
+    EXM_LOG_WARN("CreateFont !!!");
 
     cf = (exm_create_font_t)_exm_hook_instance[EXM_HOOK_FCT_CREATEFONT].fct_proc_old;
     fnt = cf(nHeight, nWidth, nEscapement, nOrientation, fnWeight, fdwItalic, fdwUnderline,
@@ -975,7 +980,7 @@ _exm_hook_CreateFontIndirect(const LOGFONT *lplf)
     exm_create_font_indirect_t cfi;
     HFONT fnt;
 
-    EXM_LOG_WARN("CreateDIBSection !!!");
+    EXM_LOG_WARN("CreateFontIndirect !!!");
 
     cfi = (exm_create_font_indirect_t)_exm_hook_instance[EXM_HOOK_FCT_CREATEFONTINDIRECT].fct_proc_old;
     fnt = cfi(lplf);
@@ -994,7 +999,7 @@ _exm_hook_CreatePen(int fnPenStyle, int nWidth, COLORREF crColor)
     exm_create_pen_t cp;
     HPEN pen;
 
-    EXM_LOG_WARN("CreateDIBSection !!!");
+    EXM_LOG_WARN("CreatePen !!!");
 
     cp = (exm_create_pen_t)_exm_hook_instance[EXM_HOOK_FCT_CREATEPEN].fct_proc_old;
     pen = cp(fnPenStyle, nWidth,crColor);
@@ -1010,19 +1015,114 @@ static HPEN
 _exm_hook_CreatePenIndirect(const LOGPEN *lplgpn)
 {
     typedef HPEN (*exm_create_pen_indirect_t)(const LOGPEN *lplgpn);
-    exm_create_pen_indirect_t cfi;
+    exm_create_pen_indirect_t cpi;
     HPEN pen;
 
-    EXM_LOG_WARN("CreateDIBSection !!!");
+    EXM_LOG_WARN("CreatePenIndirect !!!");
 
-    cfi = (exm_create_pen_indirect_t)_exm_hook_instance[EXM_HOOK_FCT_CREATEPENINDIRECT].fct_proc_old;
-    pen = cfi(lplgpn);
+    cpi = (exm_create_pen_indirect_t)_exm_hook_instance[EXM_HOOK_FCT_CREATEPENINDIRECT].fct_proc_old;
+    pen = cpi(lplgpn);
 
     /* if data is NULL, nothing is done */
     if (pen)
         _exm_hook_alloc_manage(pen, 0, 1, EXM_HOOK_FCT_CREATEPENINDIRECT);
 
     return pen;
+}
+
+static HRGN
+_exm_hook_CreateEllipticRgn(int nLeftRect, int nTopRect, int nRightRect, int nBottomRect)
+{
+    typedef HRGN (*exm_create_elliptic_rgn_t)(int nLeftRect, int nTopRect, int nRightRect, int nBottomRect);
+    exm_create_elliptic_rgn_t cer;
+    HRGN rgn;
+
+    EXM_LOG_WARN("CreateEllipticRgn !!!");
+
+    cer = (exm_create_elliptic_rgn_t)_exm_hook_instance[EXM_HOOK_FCT_CREATEELLIPTICRGN].fct_proc_old;
+    rgn = cer(nLeftRect, nTopRect, nRightRect, nBottomRect);
+
+    /* if data is NULL, nothing is done */
+    if (rgn)
+        _exm_hook_alloc_manage(rgn, 0, 1, EXM_HOOK_FCT_CREATEELLIPTICRGN);
+
+    return rgn;
+}
+
+static HRGN
+_exm_hook_CreateEllipticRgnIndirect(const RECT *lprc)
+{
+    typedef HRGN (*exm_create_elliptic_rgn_indirect_t)(const RECT *lprc);
+    exm_create_elliptic_rgn_indirect_t ceri;
+    HRGN rgn;
+
+    EXM_LOG_WARN("CreateEllipticRgnIndirect !!!");
+
+    ceri = (exm_create_elliptic_rgn_indirect_t)_exm_hook_instance[EXM_HOOK_FCT_CREATEELLIPTICRGNINDIRECT].fct_proc_old;
+    rgn = ceri(lprc);
+
+    /* if data is NULL, nothing is done */
+    if (rgn)
+        _exm_hook_alloc_manage(rgn, 0, 1, EXM_HOOK_FCT_CREATEELLIPTICRGNINDIRECT);
+
+    return rgn;
+}
+
+static HRGN
+_exm_hook_CreatePolygonRgn(const POINT *lppt, int cPoints, int fnPolyFillMode)
+{
+    typedef HRGN (*exm_create_polygon_rgn_t)(const POINT *lppt, int cPoints, int fnPolyFillMode);
+    exm_create_polygon_rgn_t cpr;
+    HRGN rgn;
+
+    EXM_LOG_WARN("CreatePolygonRgn !!!");
+
+    cpr = (exm_create_polygon_rgn_t)_exm_hook_instance[EXM_HOOK_FCT_CREATEPOLYGONRGN].fct_proc_old;
+    rgn = cpr(lppt, cPoints, fnPolyFillMode);
+
+    /* if data is NULL, nothing is done */
+    if (rgn)
+        _exm_hook_alloc_manage(rgn, 0, 1, EXM_HOOK_FCT_CREATEPOLYGONRGN);
+
+    return rgn;
+}
+
+static HRGN
+_exm_hook_CreateRectRgn(int nLeftRect, int nTopRect, int nRightRect, int nBottomRect)
+{
+    typedef HRGN (*exm_create_rect_rgn_t)(int nLeftRect, int nTopRect, int nRightRect, int nBottomRect);
+    exm_create_rect_rgn_t crr;
+    HRGN rgn;
+
+    EXM_LOG_WARN("CreateRectRgn !!!");
+
+    crr = (exm_create_rect_rgn_t)_exm_hook_instance[EXM_HOOK_FCT_CREATERECTRGN].fct_proc_old;
+    rgn = crr(nLeftRect, nTopRect, nRightRect, nBottomRect);
+
+    /* if data is NULL, nothing is done */
+    if (rgn)
+        _exm_hook_alloc_manage(rgn, 0, 1, EXM_HOOK_FCT_CREATERECTRGN);
+
+    return rgn;
+}
+
+static HRGN
+_exm_hook_CreateRectRgnIndirect(const RECT *lprc)
+{
+    typedef HRGN (*exm_create_rect_rgn_indirect_t)(const RECT *lprc);
+    exm_create_rect_rgn_indirect_t crri;
+    HRGN rgn;
+
+    EXM_LOG_WARN("CreateRectRgnIndirect !!!");
+
+    crri = (exm_create_rect_rgn_indirect_t)_exm_hook_instance[EXM_HOOK_FCT_CREATERECTRGNINDIRECT].fct_proc_old;
+    rgn = crri(lprc);
+
+    /* if data is NULL, nothing is done */
+    if (rgn)
+        _exm_hook_alloc_manage(rgn, 0, 1, EXM_HOOK_FCT_CREATERECTRGNINDIRECT);
+
+    return rgn;
 }
 
 static BOOL
@@ -1478,6 +1578,11 @@ exm_hook_init(const Exm_List *crt_names, const Exm_List *dep_names)
         EXM_HOOK_FCT_SET(EXM_HOOK_FCT_CREATEFONTINDIRECT, mod, CreateFontIndirect);
         EXM_HOOK_FCT_SET(EXM_HOOK_FCT_CREATEPEN, mod, CreatePen);
         EXM_HOOK_FCT_SET(EXM_HOOK_FCT_CREATEPENINDIRECT, mod, CreatePenIndirect);
+        EXM_HOOK_FCT_SET(EXM_HOOK_FCT_CREATEELLIPTICRGN, mod, CreateEllipticRgn);
+        EXM_HOOK_FCT_SET(EXM_HOOK_FCT_CREATEELLIPTICRGNINDIRECT, mod, CreateEllipticRgnIndirect);
+        EXM_HOOK_FCT_SET(EXM_HOOK_FCT_CREATEPOLYGONRGN, mod, CreatePolygonRgn);
+        EXM_HOOK_FCT_SET(EXM_HOOK_FCT_CREATERECTRGN, mod, CreateRectRgn);
+        EXM_HOOK_FCT_SET(EXM_HOOK_FCT_CREATERECTRGNINDIRECT, mod, CreateRectRgnIndirect);
         EXM_HOOK_FCT_SET(EXM_HOOK_FCT_DELETEOBJECT, mod, DeleteObject);
 
         EXM_LOG_DBG("Hooking %s", mod_name);
