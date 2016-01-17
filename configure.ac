@@ -3,7 +3,7 @@
 
 m4_define([v_maj], [0])
 m4_define([v_min], [0])
-m4_define([v_mic], [2])
+m4_define([v_mic], [4])
 m4_define([v_rev], [0])
 
 m4_define([examine_version], [v_maj.v_min.v_mic])
