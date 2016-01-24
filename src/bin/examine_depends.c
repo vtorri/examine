@@ -70,8 +70,8 @@ _exm_depends_cmd_tree_fill(Exm_List *list, const char *filename)
             name = _strdup(exm_pe_import_descriptor_file_name_get(pe, iter_import));
             if (!name)
             {
-                EXM_LOG_ERR("Can not allocate memory for filename");
-                continue;
+                EXM_LOG_ERR("Can not allocate memory for import filename");
+                goto import_next;
             }
 
             for (i = 0; i < _exm_indent; i++)
@@ -91,6 +91,7 @@ _exm_depends_cmd_tree_fill(Exm_List *list, const char *filename)
                 free(name);
             }
 
+          import_next:
             iter_import++;
         }
     }
@@ -106,8 +107,8 @@ _exm_depends_cmd_tree_fill(Exm_List *list, const char *filename)
             name = _strdup(exm_pe_delayload_descriptor_file_name_get(pe, iter_delayload));
             if (!name)
             {
-                EXM_LOG_ERR("Can not allocate memory for filename");
-                continue;
+                EXM_LOG_ERR("Can not allocate memory for delay loaded filename");
+                goto delayload_next;
             }
 
             for (i = 0; i < _exm_indent; i++)
@@ -127,6 +128,7 @@ _exm_depends_cmd_tree_fill(Exm_List *list, const char *filename)
                 free(name);
             }
 
+          delayload_next:
             iter_delayload++;
         }
     }
