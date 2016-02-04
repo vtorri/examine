@@ -163,7 +163,7 @@ exm_pe_new(const char *filename)
         goto del_pe_map;
     }
 
-    if (dos_header->e_lfanew > exm_map_size_get(pe->map))
+    if ((unsigned long long)dos_header->e_lfanew > exm_map_size_get(pe->map))
     {
         EXM_LOG_ERR("not a valid PE file (probably 16-bit DOS module)");
         goto del_pe_map;
