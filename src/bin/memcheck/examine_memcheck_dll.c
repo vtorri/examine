@@ -220,10 +220,12 @@ _exm_mc_output(void)
     EXM_LOG_INFO("HEAP SUMMARY:");
     EXM_LOG_INFO("    in use at exit: %Iu bytes in %Iu blocks",
                  bytes_at_exit, blocks_at_exit);
-    EXM_LOG_INFO("  total heap usage: %d allocs, %d frees, %Iu bytes allocated",
+    EXM_LOG_INFO("  total heap usage: %u allocs, %u frees, %Iu bytes allocated",
                  exm_hook_summary.total_count_allocs,
                  exm_hook_summary.total_count_frees,
                  exm_hook_summary.total_bytes_allocated);
+    EXM_LOG_INFO("                    %u GDI handles created",
+                 exm_hook_summary.total_count_gdi_handles);
     EXM_LOG_INFO("");
 
     alloc_records = exm_list_count(leaks);

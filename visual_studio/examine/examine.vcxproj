@@ -155,6 +155,7 @@
     <ClCompile Include="..\..\src\bin\examine_main.c" />
     <ClCompile Include="..\..\src\bin\examine_trace.c" />
     <ClCompile Include="..\..\src\bin\examine_view.c" />
+    <ClCompile Include="..\..\src\bin\examine_sigcheck.c" />
     <ClCompile Include="..\..\src\bin\memcheck\examine_memcheck.c" />
   </ItemGroup>
   <ItemGroup>
