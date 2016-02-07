@@ -2,7 +2,7 @@
  * Examine - a set of tools for memory leak detection on Windows and
  * PE file reader
  *
- * Copyright (C) 2014-2015 Vincent Torri.
+ * Copyright (C) 2014-2016 Vincent Torri.
  * All rights reserved.
  *
  * This program is free software: you can redistribute it and/or
