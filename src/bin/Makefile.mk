@@ -10,6 +10,10 @@ src/bin/examine_trace.c \
 src/bin/examine_view.c \
 src/bin/examine_private.h
 
+if HAVE_SIGCHECK
+src_bin_examine_SOURCES += src/bin/examine_sigcheck.c
+endif
+
 # Memcheck tool
 
 if HAVE_WIN32
@@ -24,7 +28,8 @@ src_bin_examine_CPPFLAGS = \
 src_bin_examine_CFLAGS = @EXM_CFLAGS@
 
 src_bin_examine_LDADD = \
-src/lib/libexamine.la
+src/lib/libexamine.la \
+@EXM_BIN_LIBS@
 
 if HAVE_GUI
 

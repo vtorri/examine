@@ -37,7 +37,9 @@ endif
 
 src_lib_libexamine_la_CFLAGS = @EXM_CFLAGS@
 
-if ! HAVE_WIN32
+if HAVE_WIN32
+src_lib_libexamine_la_LIBADD = @EXM_LIBS@
+else
 src_lib_libexamine_la_LIBADD = -lrt
 endif
 

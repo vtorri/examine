@@ -2,7 +2,7 @@
  * Examine - a set of tools for memory leak detection on Windows and
  * PE file reader
  *
- * Copyright (C) 2012-2015 Vincent Torri.
+ * Copyright (C) 2012-2016 Vincent Torri.
  * All rights reserved.
  *
  * This program is free software: you can redistribute it and/or
@@ -42,7 +42,8 @@ typedef enum
     EXM_TOOL_MEMCHECK,
     EXM_TOOL_TRACE,
     EXM_TOOL_DEPENDS,
-    EXM_TOOL_VIEW
+    EXM_TOOL_VIEW,
+    EXM_TOOL_SIGCHECK
 } Exm_Tool;
 
 static void
@@ -59,6 +60,7 @@ _exm_usage(void)
     printf("      trace:    trace calling functions\n");
     printf("      depends:  dependencies of PE files\n");
     printf("      view:     view content of PE header file\n");
+    printf("      sigcheck: view signature of an application\n");
     printf("\n");
     printf("  basic user options for all Examine tools, with defaults in [ ]:\n");
     printf("    -h, --help                show this message\n");
@@ -79,7 +81,7 @@ _exm_usage(void)
     printf("  user options for View:\n");
     printf("    --gui                     run in graphical mode\n");
     printf("\n");
-    printf("  Examine is Copyright (C) 2012-2015, and GNU LGPL3'd, by Vincent Torri.\n");
+    printf("  Examine is Copyright (C) 2012-2016, and GNU LGPL3'd, by Vincent Torri.\n");
     printf("\n");
     printf("  Bug reports, feedback, remarks, ... to https://github.com/vtorri/examine.\n");
     printf("\n");
@@ -263,6 +265,11 @@ static int main2(int argc, char *argv[])
                         }
                     }
                 }
+                else if (strcmp(argv[i], "--tool=sigcheck") == 0)
+                {
+                    tool = 4;
+                    options = exm_list_append(options, _strdup(argv[i]));
+                }
                 else
                 {
                     _exm_usage();
@@ -312,7 +319,7 @@ static int main2(int argc, char *argv[])
     }
 
     EXM_LOG_INFO("Examine, a memory leak detector, function and I/O tracer, and PE file viewer");
-    EXM_LOG_INFO("Copyright (c) 2012-2015, and GNU LGPL3'd, by Vincent Torri");
+    EXM_LOG_INFO("Copyright (c) 2012-2016, and GNU LGPL3'd, by Vincent Torri");
     EXM_LOG_INFO("Using %s; rerun with -h for help and copyright notice", PACKAGE_STRING);
     EXM_LOG_INFO("");
     EXM_LOG_INFO("Command : %s", buf_command);
@@ -366,6 +373,13 @@ static int main2(int argc, char *argv[])
             break;
         case EXM_TOOL_VIEW:
             exm_view_run(module, view_gui, log_level);
+            break;
+        case EXM_TOOL_SIGCHECK:
+#ifdef HAVE_SIGCHECK
+            exm_sigcheck_run(module, view_gui, log_level);
+#else
+            EXM_LOG_ERR("sigcheck tool not available on UNIX");
+#endif
             break;
         default:
             EXM_LOG_ERR("unknown tool");
