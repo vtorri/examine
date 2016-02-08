@@ -330,7 +330,15 @@ _exm_view_cmd_sections_display(Exm_Pe *pe)
     {
         printf("Section header #%u\n", i);
         printf("  field                type    value\n");
-        printf("  Name[8]              BYTE    %c%c%c%c%c%c%c%c\n", iter->Name[0], iter->Name[1], iter->Name[2], iter->Name[3], iter->Name[4], iter->Name[5], iter->Name[6], iter->Name[7]);
+        printf("  Name[8]              BYTE    %c%c%c%c%c%c%c%c", iter->Name[0], iter->Name[1], iter->Name[2], iter->Name[3], iter->Name[4], iter->Name[5], iter->Name[6], iter->Name[7]);
+        if (iter->Name[0] == '/')
+        {
+            const char *string_table;
+
+            string_table = exm_pe_section_string_table_get(pe);
+            printf("(%s)", string_table + atoi((const char*)iter->Name + 1));
+        }
+        printf("\n");
         printf("  VirtualSize          DWORD   0x" FMT_DWDX "\n", iter->Misc.VirtualSize);
         printf("  VirtualAddress       DWORD   0x" FMT_DWDX "\n", iter->VirtualAddress);
         printf("  SizeOfRawData        DWORD   0x" FMT_DWDX "\n", iter->SizeOfRawData);

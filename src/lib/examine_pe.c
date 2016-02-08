@@ -589,3 +589,14 @@ exm_pe_delayload_descriptor_file_name_get(const Exm_Pe *pe, const IMAGE_DELAYLOA
     else
         return (char *)((unsigned char *)exm_map_base_get(pe->map) + dd->DllNameRVA);
 }
+
+EXM_API const char *
+exm_pe_section_string_table_get(const Exm_Pe *pe)
+{
+    if (!pe ||
+        !pe->nt_header->FileHeader.PointerToSymbolTable  ||
+        !pe->nt_header->FileHeader.NumberOfSymbols * sizeof(IMAGE_SYMBOL))
+        return NULL;
+
+    return (const char *)((unsigned char *)exm_map_base_get(pe->map) + pe->nt_header->FileHeader.PointerToSymbolTable + pe->nt_header->FileHeader.NumberOfSymbols * sizeof(IMAGE_SYMBOL));
+}

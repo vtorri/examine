@@ -74,4 +74,6 @@ EXM_API const IMAGE_DELAYLOAD_DESCRIPTOR *exm_pe_delayload_descriptor_get(const 
 
 EXM_API const char *exm_pe_delayload_descriptor_file_name_get(const Exm_Pe *pe, const IMAGE_DELAYLOAD_DESCRIPTOR *dd);
 
+EXM_API const char *exm_pe_section_string_table_get(const Exm_Pe *pe);
+
 #endif /* EXM_PE_H */
