@@ -176,6 +176,8 @@ _exm_sigcheck_signature_get(const Exm_Pe *pe)
     data.dwStateAction = WTD_STATEACTION_CLOSE;
     WinVerifyTrust(NULL, &action, &data);
 
+    free((LPWSTR)fi.pcwszFilePath);
+
     return;
 }
 
@@ -568,6 +570,12 @@ _exm_sigcheck_certificate_get(CMSG_SIGNER_INFO *signer_info)
             ? info.info_link
             : L"None");
 
+    if (info.info_link)
+        free(info.info_link);
+    if (info.publisher_link)
+        free(info.publisher_link);
+    if (info.program_name)
+        free(info.program_name);
     if (signer_info)
         free(signer_info);
 }
