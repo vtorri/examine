@@ -35,6 +35,7 @@ else
 src_lib_libexamine_la_SOURCES += src/lib/examine_pe_unix.h
 endif
 
+src_lib_libexamine_la_CPPFLAGS = @EXM_CPPFLAGS@
 src_lib_libexamine_la_CFLAGS = @EXM_CFLAGS@
 
 if HAVE_WIN32
