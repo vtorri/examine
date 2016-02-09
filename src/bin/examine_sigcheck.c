@@ -35,6 +35,7 @@
 # include <wincrypt.h>
 # include <wintrust.h>
 # include <softpub.h>
+# include <mscat.h>
 #endif
 
 #include <Examine.h>
@@ -92,42 +93,151 @@ _exm_char_to_wchar(const char *text)
 }
 
 static void
-_exm_sigcheck_signature_get(const Exm_Pe *pe)
+_exm_sigcheck_signature_disp(const Exm_Pe *pe)
 {
     WINTRUST_DATA data;
     WINTRUST_FILE_INFO fi;
+    WINTRUST_CATALOG_INFO ci;
+    CATALOG_INFO catalog_info;
+    PWCHAR ufilename;
+    PWCHAR member_tag;
+    HANDLE file;
+    HCATADMIN context;
+    HCATINFO cat_info;
+    BYTE *hash;
+    DWORD hash_size;
     LONG res;
     GUID action = WINTRUST_ACTION_GENERIC_VERIFY_V2;
 
-    memset(&data, 0, sizeof(data));
-
-    data.cbStruct = sizeof(data);
-    data.pPolicyCallbackData = NULL;
-    data.pSIPClientData = NULL;
-    data.dwUIChoice = WTD_UI_NONE;
-    data.fdwRevocationChecks = WTD_REVOKE_WHOLECHAIN;
-    data.dwUnionChoice = WTD_CHOICE_FILE;
-
-    memset(&fi, 0, sizeof(fi));
-    fi.cbStruct = sizeof(fi);
-    fi.pcwszFilePath = _exm_char_to_wchar(exm_pe_filename_get(pe));
-    if (!fi.pcwszFilePath)
+    ufilename = _exm_char_to_wchar(exm_pe_filename_get(pe));
+    if (!ufilename)
     {
         EXM_LOG_ERR("Can not allocate memory for the application file name");
         return;
     }
-    fi.hFile = NULL;
-    fi.pgKnownSubject = NULL;
 
-    data.pFile = &fi;
-    data.dwStateAction = WTD_STATEACTION_VERIFY;
-    data.hWVTStateData = NULL;
-    data.pwszURLReference = NULL;
-    data.dwProvFlags = WTD_REVOCATION_CHECK_CHAIN;
-    data.dwUIContext = WTD_UICONTEXT_EXECUTE;
+    file = CreateFileW(ufilename, GENERIC_READ,
+                       FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                       NULL, OPEN_EXISTING, 0, NULL);
+    if (file == INVALID_HANDLE_VALUE)
+    {
+        EXM_LOG_ERR("CryptCATAdminAcquireContext() failed (0x%lx)", GetLastError());
+        goto free_filename;
+    }
+
+    if (!CryptCATAdminAcquireContext(&context, NULL, 0))
+    {
+        EXM_LOG_ERR("CryptCATAdminAcquireContext() failed (0x%lx)", GetLastError());
+        goto close_file;
+    }
+
+    if (!CryptCATAdminCalcHashFromFileHandle(file, &hash_size, NULL, 0))
+    {
+        EXM_LOG_ERR("CryptCATAdminCalcHashFromFileHandle() failed (0x%lx)", GetLastError());
+        goto release_context;
+    }
+
+    if (hash_size == 0)
+    {
+        EXM_LOG_ERR("Hash size is insufficient");
+        goto release_context;
+    }
+
+    hash = (BYTE *)calloc(hash_size, 1);
+    if (!hash)
+    {
+        EXM_LOG_ERR("Can not allocate memory for the hash");
+        goto release_context;
+    }
+
+    if (!CryptCATAdminCalcHashFromFileHandle(file, &hash_size, hash, 0))
+    {
+        EXM_LOG_ERR("CryptCATAdminCalcHashFromFileHandle() failed (0x%lx)", GetLastError());
+        goto free_hash;
+    }
+
+    memset(&catalog_info, 0, sizeof(CATALOG_INFO));
+    catalog_info.cbStruct = sizeof(CATALOG_INFO);
+    cat_info = CryptCATAdminEnumCatalogFromHash(context, hash, hash_size, 0, NULL);
+    if (cat_info)
+    {
+        if (!CryptCATCatalogInfoFromContext(cat_info, &catalog_info, 0))
+        {
+            CryptCATAdminReleaseCatalogContext(context, cat_info, 0);
+            cat_info = NULL;
+        }
+    }
+
+    member_tag = (PWCHAR)calloc((hash_size * 2) + 1, sizeof(WCHAR));
+    if (!member_tag)
+    {
+        EXM_LOG_ERR("Can not allocate memory for the member tag");
+        goto release_cat_info;
+    }
+
+    for (DWORD i = 0; i < hash_size; i++)
+        swprintf(&member_tag[i * 2], 2 * sizeof(WCHAR), L"%02X", hash[i]);
+
+    memset(&data, 0, sizeof(data));
+    if (!cat_info)
+    {
+        data.cbStruct = sizeof(data);
+        data.pPolicyCallbackData = NULL;
+        data.pSIPClientData = NULL;
+        data.dwUIChoice = WTD_UI_NONE;
+        data.fdwRevocationChecks = WTD_REVOKE_WHOLECHAIN;
+        data.dwUnionChoice = WTD_CHOICE_FILE;
+
+        memset(&fi, 0, sizeof(fi));
+        fi.cbStruct = sizeof(fi);
+        fi.pcwszFilePath = ufilename;
+        fi.hFile = NULL;
+        fi.pgKnownSubject = NULL;
+
+        data.pFile = &fi;
+        data.dwStateAction = WTD_STATEACTION_VERIFY;
+        data.hWVTStateData = NULL;
+        data.pwszURLReference = NULL;
+        data.dwProvFlags = WTD_REVOCATION_CHECK_CHAIN;
+        data.dwUIContext = WTD_UICONTEXT_EXECUTE;
 #if _WIN32_WINNT >=0x0602
-    data.pSignatureSettings = NULL;
+        data.pSignatureSettings = NULL;
 #endif
+    }
+    else
+    {
+        data.cbStruct = sizeof(data);
+        data.pPolicyCallbackData = NULL;
+        data.pSIPClientData = NULL;
+        data.dwUIChoice = WTD_UI_NONE;
+        data.fdwRevocationChecks = WTD_REVOKE_WHOLECHAIN;
+        data.dwUnionChoice = WTD_CHOICE_CATALOG;
+
+        memset(&ci, 0, sizeof(ci));
+        ci.cbStruct = sizeof(ci);
+        ci.dwCatalogVersion = 0;
+        ci.pcwszCatalogFilePath = catalog_info.wszCatalogFile;
+        ci.pcwszMemberTag = member_tag;
+        ci.pcwszMemberFilePath = ufilename;
+        ci.hMemberFile = NULL;
+        ci.pbCalculatedFileHash = NULL;
+        ci.cbCalculatedFileHash = 0;
+        ci.pcCatalogContext = NULL;
+#if _WIN32_WINNT >=0x0602
+        ci.hCatAdmin = NULL;
+#endif
+
+        data.pCatalog = &ci;
+        data.dwStateAction = WTD_STATEACTION_VERIFY;
+        data.hWVTStateData = NULL;
+        data.pwszURLReference = NULL;
+        data.dwProvFlags = WTD_REVOCATION_CHECK_CHAIN;
+        data.dwUIContext = WTD_UICONTEXT_EXECUTE;
+#if _WIN32_WINNT >=0x0602
+        data.pSignatureSettings = NULL;
+#endif
+    }
+
     res = WinVerifyTrust(NULL, &action, &data);
 
     printf("        Signature:          ");
@@ -176,9 +286,19 @@ _exm_sigcheck_signature_get(const Exm_Pe *pe)
     data.dwStateAction = WTD_STATEACTION_CLOSE;
     WinVerifyTrust(NULL, &action, &data);
 
-    free((LPWSTR)fi.pcwszFilePath);
+    free(member_tag);
 
-    return;
+  release_cat_info:
+    if (cat_info)
+        CryptCATAdminReleaseCatalogContext(context, cat_info, 0);
+  free_hash:
+    free(hash);
+  release_context:
+    CryptCATAdminReleaseContext(context, 0);
+  close_file:
+    CloseHandle(file);
+  free_filename:
+    free(ufilename);
 }
 
 static BOOL
@@ -211,7 +331,7 @@ _exm_sigcheck_program_and_publisher_info_get(const CMSG_SIGNER_INFO *signer_info
                                NULL,
                                &data))
         {
-            EXM_LOG_ERR("CryptDecodeObject() failed (%lx)", GetLastError());
+            EXM_LOG_ERR("CryptDecodeObject() failed (0x%lx)", GetLastError());
             return FALSE;
         }
 
@@ -231,7 +351,7 @@ _exm_sigcheck_program_and_publisher_info_get(const CMSG_SIGNER_INFO *signer_info
                                opus_info,
                                &data))
         {
-            EXM_LOG_ERR("CryptDecodeObject() failed (%lx)", GetLastError());
+            EXM_LOG_ERR("CryptDecodeObject() failed (0x%lx)", GetLastError());
             free(opus_info);
             return FALSE;
         }
@@ -324,7 +444,7 @@ _exm_sigcheck_timestamp_get(const CMSG_SIGNER_INFO *counter_signer_info,
                                (void *)&ft,
                                &data))
         {
-            EXM_LOG_ERR("CryptDecodeObject failed with %lx\n",
+            EXM_LOG_ERR("CryptDecodeObject failed with 0x%lx\n",
                         GetLastError());
             return FALSE;
         }
@@ -381,7 +501,18 @@ _exm_sigcheck_signer_info_get(const char *filename,
                           &msg,
                           NULL))
     {
-        EXM_LOG_WARN("CryptQueryObject() failed (%lx)", GetLastError());
+        LPTSTR m;
+        DWORD err;
+
+        err = GetLastError();
+        FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+                      NULL,
+                      err,
+                      0, /* Default language */
+                      (LPTSTR)&m,
+                      0,
+                      NULL);
+            EXM_LOG_WARN("CryptQueryObject() failed (0x%lx) : %s", err, m);
         return;
     }
 
@@ -391,7 +522,7 @@ _exm_sigcheck_signer_info_get(const char *filename,
                           NULL,
                           &size))
     {
-        EXM_LOG_ERR("CryptMsgGetParam() failed (%lx)", GetLastError());
+        EXM_LOG_ERR("CryptMsgGetParam() failed (0x%lx)", GetLastError());
         return;
     }
 
@@ -408,7 +539,7 @@ _exm_sigcheck_signer_info_get(const char *filename,
                           (PVOID)*signer_info,
                           &size))
     {
-        EXM_LOG_ERR("CryptMsgGetParam() failed (%lx)", GetLastError());
+        EXM_LOG_ERR("CryptMsgGetParam() failed (0x%lx)", GetLastError());
         goto free_signer_info;
     }
 
@@ -422,7 +553,7 @@ _exm_sigcheck_signer_info_get(const char *filename,
                                                       NULL);
     if (!*signer_cert_context)
     {
-        EXM_LOG_ERR("CertFindCertificateInStore() for signer failed (%lx)", GetLastError());
+        EXM_LOG_ERR("CertFindCertificateInStore() for signer failed (0x%lx)", GetLastError());
         goto free_signer_info;
     }
 
@@ -447,7 +578,7 @@ _exm_sigcheck_signer_info_get(const char *filename,
                                NULL,
                                &size))
         {
-            EXM_LOG_ERR("CryptDecodeObject failed with %lx\n",
+            EXM_LOG_ERR("CryptDecodeObject failed with 0x%lx\n",
                         GetLastError());
             goto free_signer_info;
         }
@@ -468,7 +599,7 @@ _exm_sigcheck_signer_info_get(const char *filename,
                                (void *)*counter_signer_info,
                                &size))
         {
-            EXM_LOG_ERR("CryptDecodeObject failed with %lx\n",
+            EXM_LOG_ERR("CryptDecodeObject failed with 0x%lx\n",
                         GetLastError());
             goto free_counter_signer_info;
         }
@@ -488,7 +619,7 @@ _exm_sigcheck_signer_info_get(const char *filename,
                                                            NULL);
         if (!*counter_cert_context)
         {
-            EXM_LOG_ERR("CertFindCertificateInStore() failed with %lx",
+            EXM_LOG_ERR("CertFindCertificateInStore() failed with 0x%lx",
                         GetLastError());
             goto free_counter_signer_info;
         }
@@ -662,7 +793,7 @@ _exm_sigcheck_cmd_run(const Exm_Pe *pe)
     const CERT_CONTEXT *counter_cert_context;
 
     printf("\n%s\n", exm_pe_filename_get(pe));
-    _exm_sigcheck_signature_get(pe);
+    _exm_sigcheck_signature_disp(pe);
     _exm_sigcheck_signer_info_get(exm_pe_filename_get(pe),
                                   &signer_info,
                                   &counter_signer_info,
