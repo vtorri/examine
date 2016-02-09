@@ -474,7 +474,7 @@ _exm_sigcheck_signer_info_get(const char *filename,
         break;
     }
 
-    if (counter_signer_info)
+    if (*counter_signer_info)
     {
         ci.Issuer = (*counter_signer_info)->Issuer;
         ci.SerialNumber = (*counter_signer_info)->SerialNumber;
