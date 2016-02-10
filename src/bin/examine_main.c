@@ -375,7 +375,7 @@ static int main2(int argc, char *argv[])
             exm_view_run(module, view_gui, log_level);
             break;
         case EXM_TOOL_SIGCHECK:
-#ifdef HAVE_SIGCHECK
+#ifdef _WIN32
             exm_sigcheck_run(module, view_gui, log_level);
 #else
             EXM_LOG_ERR("sigcheck tool not available on UNIX");

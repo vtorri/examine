@@ -155,71 +155,13 @@ bfd_init();
    fi
 fi
 
-# WinVerifyTrust()
+have_sigcheck="no"
 if test "x${have_win32}" = "xyes" ; then
-   AC_MSG_CHECKING([for WinVerifyTrust() in libwintrust])
-   LIBS_save="${LIBS}"
-   LIBS="${LIBS} -lwintrust"
-   AC_LINK_IFELSE(
-      [AC_LANG_PROGRAM(
-          [[
-#ifdef _WIN32
-# ifndef WIN32_LEAN_AND_MEAN
-#  define WIN32_LEAN_AND_MEAN
-# endif
-# include <windows.h>
-# undef WIN32_LEAN_AND_MEAN
-# include <wintrust.h>
-#endif
-          ]],
-          [[
-LONG res = WinVerifyTrust(NULL, NULL, NULL);
-          ]])],
-      [
-       EXM_BIN_LIBS="-lwintrust"
-       _efl_have_sigcheck="yes"
-      ],
-      [_efl_have_sigcheck="no"])
-   LIBS="${LIBS_save}"
-
-   AC_MSG_RESULT([${_efl_have_sigcheck}])
+   have_sigcheck="yes"
 fi
-
-# CryptDecodeObject()
-if test "x${have_win32}" = "xyes" && test "x${_efl_have_sigcheck}" = "xyes"; then
-   AC_MSG_CHECKING([for CryptDecodeObject() in libcrypt32])
-   LIBS_save="${LIBS}"
-   LIBS="${LIBS} -lcrypt32"
-   AC_LINK_IFELSE(
-      [AC_LANG_PROGRAM(
-          [[
-#ifdef _WIN32
-# ifndef WIN32_LEAN_AND_MEAN
-#  define WIN32_LEAN_AND_MEAN
-# endif
-# include <windows.h>
-# undef WIN32_LEAN_AND_MEAN
-# include <wincrypt.h>
-#endif
-          ]],
-          [[
-BOOL res = CryptQueryObject(0, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL);
-          ]])],
-      [
-       EXM_BIN_LIBS="${EXM_BIN_LIBS} -lcrypt32"
-       AC_DEFINE([HAVE_SIGCHECK], [1], [Define to 1 if you have the Sigcheck tool.])
-      ],
-      [_efl_have_sigcheck="no"])
-   LIBS="${LIBS_save}"
-
-   AC_MSG_RESULT([${_efl_have_sigcheck}])
-fi
-
-AM_CONDITIONAL([HAVE_SIGCHECK], [test "x${_efl_have_sigcheck}" = "xyes"])
 
 AC_SUBST([EXM_CPPFLAGS])
 AC_SUBST([EXM_LIBS])
-AC_SUBST([EXM_BIN_LIBS])
 
 
 ### Checks for system services
@@ -255,7 +197,7 @@ echo "  Depends..............: yes"
 echo "    GUI................: ${have_gui}"
 echo "  View.................: yes"
 echo "    GUI................: ${have_gui}"
-echo "  Sigcheck.............: ${_efl_have_sigcheck}"
+echo "  Sigcheck.............: ${have_sigcheck}"
 echo
 echo "Compilation............: make"
 echo "  CPPFLAGS.............: $CPPFLAGS"
@@ -264,7 +206,6 @@ echo "  CFLAGS...............: $CFLAGS"
 echo "  EXM_CFLAGS...........: $EXM_CFLAGS"
 echo "  LDFLAGS..............: $LDFLAGS"
 echo "  EXM_LIBS.............: $EXM_LIBS"
-echo "  EXM_BIN_LIBS.........: $EXM_BIN_LIBS"
 echo
 echo "Installation...........: make install"
 echo "  prefix...............: $prefix"
