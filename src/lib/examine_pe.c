@@ -520,6 +520,37 @@ exm_pe_import_descriptor_file_name_get(const Exm_Pe *pe, const IMAGE_IMPORT_DESC
 }
 
 /**
+ * @Brief Return the address of the resource directory from the given PE file.
+ *
+ * @param[in] The PE file.
+ * @return The resource directory address.
+ *
+ * This function returns the address of the resource directory of the
+ * PE file @p pe. If there is no resource directory, @c NULL is returned.
+ */
+EXM_API const IMAGE_RESOURCE_DIRECTORY *
+exm_pe_resource_directory_get(const Exm_Pe *pe, DWORD *count)
+{
+    const IMAGE_DATA_DIRECTORY *data_dir;
+    DWORD rva;
+
+    data_dir = exm_pe_data_directory_get(pe, IMAGE_DIRECTORY_ENTRY_RESOURCE);
+    rva = data_dir->VirtualAddress;
+    if (rva == 0)
+    {
+        EXM_LOG_WARN("PE file %s has no resource section", pe->filename);
+        if (count)
+            *count = 0;
+        return NULL;
+    }
+
+    if (count)
+        *count = data_dir->Size;
+
+    return (IMAGE_RESOURCE_DIRECTORY *)_exm_pe_rva_to_ptr_get2(pe, rva);
+}
+
+/**
  * @Brief Return the address of the debug directory from the given PE file.
  *
  * @param[in] The PE file.

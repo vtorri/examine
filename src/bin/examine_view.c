@@ -26,6 +26,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <wchar.h>
 
 #ifdef _WIN32
 # ifndef WIN32_LEAN_AND_MEAN
@@ -456,6 +457,197 @@ _exm_view_cmd_directory_entry_import_display(Exm_Pe *pe)
 }
 
 static void
+_exm_view_cmd_directory_entry_resource_dump(const Exm_Pe *pe,
+                                            const unsigned char *base,
+                                            const IMAGE_RESOURCE_DIRECTORY *resource_dir,
+                                            const IMAGE_RESOURCE_DIRECTORY_ENTRY *parent,
+                                            int spaces);
+
+static void
+_exm_view_cmd_directory_entry_resource_name_get(const unsigned char *base,
+                                                const IMAGE_RESOURCE_DIRECTORY_ENTRY *entry,
+                                                wchar_t *buf)
+{
+    if (entry->NameIsString)
+    {
+        IMAGE_RESOURCE_DIR_STRING_U *str;
+
+        str = (IMAGE_RESOURCE_DIR_STRING_U *)(base + entry->NameOffset);
+        wmemcpy(buf, str->NameString, str->Length);
+        buf[str->Length] = 0;
+    }
+    else
+    {
+        switch (entry->Id)
+        {
+            case 1: /* RT_CURSOR */
+                wcscpy(buf, L"cursor");
+                break;
+            case 2: /* RT_BITMAP */
+                wcscpy(buf, L"bitmap");
+                break;
+            case 3: /* RT_ICON */
+                wcscpy(buf, L"icon");
+                break;
+            case 4: /* RT_MENU */
+                wcscpy(buf, L"menu");
+                break;
+            case 5: /* RT_DIALOG */
+                wcscpy(buf, L"dialog");
+                break;
+            case 6: /* RT_STRING, string table */
+                wcscpy(buf, L"string table");
+                break;
+            case 7: /* RT_FONTDIR */
+                wcscpy(buf, L"font directory");
+                break;
+            case 8: /* RT_FONT */
+                wcscpy(buf, L"font");
+                break;
+            case 9: /* RT_ACCELERATOR */
+                wcscpy(buf, L"accelerator");
+                break;
+            case 10: /* RT_RCDATA */
+                wcscpy(buf, L"rc data");
+                break;
+            case 11: /* RT_MESSAGETABLE */
+                wcscpy(buf, L"message table");
+                break;
+            case 12: /* RT_GROUP_CURSOR */
+                wcscpy(buf, L"group cursor");
+                break;
+            case 14: /* RT_GROUP_ICON */
+                wcscpy(buf, L"group icon");
+                break;
+            case 16: /* RT_VERSION */
+                wcscpy(buf, L"version");
+                break;
+            case 17: /* RT_DLGINCLUDE */
+                wcscpy(buf, L"dgl include");
+                break;
+            case 19: /* RT_PLUGPLAY */
+                wcscpy(buf, L"PnP");
+                break;
+            case 20: /* RT_VXD */
+                wcscpy(buf, L"VXD");
+                break;
+            case 21: /* RT_ANICURSOR */
+                wcscpy(buf, L"animated cursor");
+                break;
+            case 22: /* RT_ANIICON */
+                wcscpy(buf, L"animated icon");
+                break;
+            case 23: /* RT_HTML */
+                wcscpy(buf, L"HTML");
+                break;
+            case 24: /* RT_MANIFEST */
+                wcscpy(buf, L"Manifest");
+                break;
+            default:
+                swprintf(buf, 256, L"Unknown (%u)", entry->Id);
+                break;
+        }
+    }
+}
+
+static void
+_exm_view_cmd_directory_entry_resource_entry_dump(const Exm_Pe *pe,
+                                                  const unsigned char *base,
+                                                  const IMAGE_RESOURCE_DIRECTORY_ENTRY *entry,
+                                                  int level)
+{
+    char str_spaces[128];
+    const IMAGE_RESOURCE_DATA_ENTRY *data;
+    int i;
+
+    if (entry->DataIsDirectory)
+    {
+        _exm_view_cmd_directory_entry_resource_dump(pe, base,
+                                                    (const IMAGE_RESOURCE_DIRECTORY *)(base + entry->OffsetToDirectory), entry, level);
+        return;
+    }
+
+    for (i = 0; i < (2 * level); i++)
+        str_spaces[i]=' ';
+    str_spaces[i] = '\0';
+
+    data = (const IMAGE_RESOURCE_DATA_ENTRY *)(base + entry->OffsetToData);
+    printf("%s  OffsetToData        DWORD   0x" FMT_DWDX "\n", str_spaces, data->OffsetToData);
+    printf("%s  Size                DWORD   %lu\n", str_spaces, data->Size);
+    printf("%s  CodePage            DWORD   0x" FMT_DWDX "\n", str_spaces, data->CodePage);
+}
+
+static void
+_exm_view_cmd_directory_entry_resource_dump(const Exm_Pe *pe,
+                                            const unsigned char *base,
+                                            const IMAGE_RESOURCE_DIRECTORY *resource_dir,
+                                            const IMAGE_RESOURCE_DIRECTORY_ENTRY *parent,
+                                            int level)
+{
+    const IMAGE_RESOURCE_DIRECTORY_ENTRY *entry;
+    DWORD i;
+    wchar_t buf[256];
+    char str_spaces[128];
+
+    for (i = 0; i < (DWORD)(2 * level); i++)
+        str_spaces[i] = ' ';
+    str_spaces[i] = 0;
+
+    printf("\n");
+    printf("%sDirectory entry Resource - Image Resource Directory (level: %d)\n",
+           str_spaces, level);
+    printf("%s  field                 type    value\n", str_spaces);
+    printf("%s  Characteristics       DWORD   0x" FMT_DWDX "\n", str_spaces, resource_dir->Characteristics);
+    printf("%s  TimeDateStamp         DWORD   0x" FMT_DWDX "\n", str_spaces, resource_dir->TimeDateStamp);
+    printf("%s  MajorVersion          WORD    %u\n", str_spaces, resource_dir->MajorVersion);
+    printf("%s  MinorVersion          WORD    %u\n", str_spaces, resource_dir->MinorVersion);
+    printf("%s  NumberOfNamedEntries  WORD    %u\n", str_spaces, resource_dir->NumberOfNamedEntries);
+    printf("%s  NumberOfIdEntries     WORD    %u\n", str_spaces, resource_dir->NumberOfIdEntries);
+
+    if (parent)
+    {
+//    printf("Directory entry Resource - Image Resource Directory Entry \n");
+//        printf("%s  field                 type    value\n", str_spaces);
+        printf("%s  Id                    WORD    %u (0x%x)", str_spaces, parent->Id, parent->Id);
+        _exm_view_cmd_directory_entry_resource_name_get(base, parent, buf);
+        wprintf(L"       Name: %s\n", buf);
+
+
+        printf("%s  OffsetToData          DWORD   0x" FMT_DWDX " (is dir: %s)\n",
+               str_spaces, parent->OffsetToData, parent->DataIsDirectory ? "yes" : "no");
+    }
+
+    entry = (IMAGE_RESOURCE_DIRECTORY_ENTRY *)(resource_dir + 1);
+    for (i = 0; i < (resource_dir->NumberOfNamedEntries + resource_dir->NumberOfIdEntries); i++, entry++)
+    {
+        _exm_view_cmd_directory_entry_resource_entry_dump(pe, base, entry,
+                                                          level + 1);
+    }
+}
+
+static void
+_exm_view_cmd_directory_entry_resource_display(Exm_Pe *pe)
+{
+    const IMAGE_RESOURCE_DIRECTORY *resource_dir;
+    const IMAGE_DATA_DIRECTORY *data_dir;
+    const unsigned char *base;
+
+    data_dir = exm_pe_data_directory_get(pe, IMAGE_DIRECTORY_ENTRY_RESOURCE);
+
+    printf("Directory entry Resource - Image Data Directory\n");
+    printf("  field           type    value\n");
+    printf("  VirtualAddress  DWORD   0x" FMT_DWDX "\n", data_dir->VirtualAddress);
+    printf("  Size            DWORD   0x" FMT_DWDX "\n", data_dir->Size);
+
+    resource_dir = exm_pe_resource_directory_get(pe, NULL);
+    if (!resource_dir)
+        return;
+
+    base = (const unsigned char *)resource_dir;
+    _exm_view_cmd_directory_entry_resource_dump(pe, base, resource_dir, NULL, 0);
+}
+
+static void
 _exm_view_cmd_directory_entry_debug_display(Exm_Pe *pe)
 {
     const IMAGE_DEBUG_DIRECTORY *debug_dir;
@@ -646,6 +838,8 @@ _exm_view_cmd_run(Exm_Pe *pe)
     _exm_view_cmd_directory_entry_export_display(pe);
     printf("\n");
     _exm_view_cmd_directory_entry_import_display(pe);
+    printf("\n");
+    _exm_view_cmd_directory_entry_resource_display(pe);
     printf("\n");
     _exm_view_cmd_directory_entry_debug_display(pe);
     printf("\n");

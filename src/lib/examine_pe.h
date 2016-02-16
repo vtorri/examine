@@ -64,6 +64,10 @@ EXM_API const IMAGE_IMPORT_DESCRIPTOR *exm_pe_import_descriptor_get(const Exm_Pe
 
 EXM_API const char *exm_pe_import_descriptor_file_name_get(const Exm_Pe *pe, const IMAGE_IMPORT_DESCRIPTOR *id);
 
+/* resource directory */
+
+EXM_API const IMAGE_RESOURCE_DIRECTORY *exm_pe_resource_directory_get(const Exm_Pe *pe, DWORD *count);
+
 /* debug directory */
 
 EXM_API const IMAGE_DEBUG_DIRECTORY *exm_pe_debug_directory_get(const Exm_Pe *pe, DWORD *count);
