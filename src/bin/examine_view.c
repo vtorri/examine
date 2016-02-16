@@ -584,10 +584,10 @@ _exm_view_cmd_directory_entry_resource_dump(const Exm_Pe *pe,
                                             const IMAGE_RESOURCE_DIRECTORY_ENTRY *parent,
                                             int level)
 {
-    const IMAGE_RESOURCE_DIRECTORY_ENTRY *entry;
-    DWORD i;
     wchar_t buf[256];
     char str_spaces[128];
+    const IMAGE_RESOURCE_DIRECTORY_ENTRY *entry;
+    DWORD i;
 
     for (i = 0; i < (DWORD)(2 * level); i++)
         str_spaces[i] = ' ';
@@ -606,8 +606,6 @@ _exm_view_cmd_directory_entry_resource_dump(const Exm_Pe *pe,
 
     if (parent)
     {
-//    printf("Directory entry Resource - Image Resource Directory Entry \n");
-//        printf("%s  field                 type    value\n", str_spaces);
         printf("%s  Id                    WORD    %u (0x%x)", str_spaces, parent->Id, parent->Id);
         _exm_view_cmd_directory_entry_resource_name_get(base, parent, buf);
         wprintf(L"       Name: %s\n", buf);
