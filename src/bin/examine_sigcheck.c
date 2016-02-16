@@ -49,7 +49,7 @@ typedef struct
     LPWSTR info_link;
 } Prog_Publisher_Info;
 
-typedef LONG WINAPI (*exm_WinVerifyTrust_t)(HWND   hWnd,
+typedef LONG (WINAPI *exm_WinVerifyTrust_t)(HWND   hWnd,
                                             GUID  *pgActionID,
                                             LPVOID pWVTData);
 typedef BOOL (*exm_CryptCATAdminAcquireContext_t)(HCATADMIN  *phCatAdmin,
@@ -73,14 +73,14 @@ typedef BOOL (*exm_CryptCATAdminReleaseCatalogContext_t)(HCATADMIN hCatAdmin,
 typedef BOOL (*exm_CryptCATAdminReleaseContext_t)(HCATADMIN hCatAdmin,
                                                   DWORD     dwFlags);
 
-typedef BOOL WINAPI (*exm_CryptDecodeObject_t)(DWORD       dwCertEncodingType,
+typedef BOOL (WINAPI *exm_CryptDecodeObject_t)(DWORD       dwCertEncodingType,
                                                LPCSTR      lpszStructType,
                                                const BYTE *pbEncoded,
                                                DWORD       cbEncoded,
                                                DWORD       dwFlags,
                                                void       *pvStructInfo,
                                                DWORD      *pcbStructInfo);
-typedef BOOL WINAPI (*exm_CryptQueryObject_t)(DWORD        dwObjectType,
+typedef BOOL (WINAPI *exm_CryptQueryObject_t)(DWORD        dwObjectType,
                                               const void  *pvObject,
                                               DWORD        dwExpectedContentTypeFlags,
                                               DWORD        dwExpectedFormatTypeFlags,
@@ -91,24 +91,24 @@ typedef BOOL WINAPI (*exm_CryptQueryObject_t)(DWORD        dwObjectType,
                                               HCERTSTORE  *phCertStore,
                                               HCRYPTMSG   *phMsg,
                                               const void **ppvContext);
-typedef BOOL WINAPI (*exm_CryptMsgGetParam_t)(HCRYPTMSG hCryptMsg,
+typedef BOOL (WINAPI *exm_CryptMsgGetParam_t)(HCRYPTMSG hCryptMsg,
                                               DWORD     dwParamType,
                                               DWORD     dwIndex,
                                               void     *pvData,
                                               DWORD    *pcbData);
-typedef PCCERT_CONTEXT WINAPI (*exm_CertFindCertificateInStore_t)(HCERTSTORE     hCertStore,
+typedef PCCERT_CONTEXT (WINAPI *exm_CertFindCertificateInStore_t)(HCERTSTORE     hCertStore,
                                                                   DWORD          dwCertEncodingType,
                                                                   DWORD          dwFindFlags,
                                                                   DWORD          dwFindType,
                                                                   const void    *pvFindPara,
                                                                   PCCERT_CONTEXT pPrevCertContext);
-typedef DWORD WINAPI (*exm_CertGetNameStringA_t)(PCCERT_CONTEXT pCertContext,
+typedef DWORD (WINAPI *exm_CertGetNameStringA_t)(PCCERT_CONTEXT pCertContext,
                                                  DWORD          dwType,
                                                  DWORD          dwFlags,
                                                  void          *pvTypePara,
                                                  LPSTR          pszNameString,
                                                  DWORD          cchNameString);
-typedef DWORD WINAPI (*exm_CertGetNameStringW_t)(PCCERT_CONTEXT pCertContext,
+typedef DWORD (WINAPI *exm_CertGetNameStringW_t)(PCCERT_CONTEXT pCertContext,
                                                  DWORD          dwType,
                                                  DWORD          dwFlags,
                                                  void          *pvTypePara,
