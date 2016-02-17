@@ -64,20 +64,24 @@ _exm_depends_cmd_tree_fill(Exm_List *list, const char *filename)
     {
         while (iter_import->Name != 0)
         {
+            const char *desc_name;
             char *name;
-            unsigned int i;
 
-            name = _strdup(exm_pe_import_descriptor_file_name_get(pe, iter_import));
+            desc_name = exm_pe_import_descriptor_file_name_get(pe, iter_import);
+            if (!desc_name)
+            {
+                EXM_LOG_ERR("Can not retrieve the import filename");
+                goto import_next;
+            }
+
+            name = _strdup(desc_name);
             if (!name)
             {
                 EXM_LOG_ERR("Can not allocate memory for import filename");
                 goto import_next;
             }
 
-            for (i = 0; i < _exm_indent; i++)
-                printf(" ");
-
-            printf("%s", name);
+            printf("%*c%s", _exm_indent, ' ', name);
 
             if (!exm_list_data_is_found(list, name, _exm_depends_cmd_cmp_cb))
             {
@@ -101,20 +105,24 @@ _exm_depends_cmd_tree_fill(Exm_List *list, const char *filename)
     {
         while (iter_delayload->DllNameRVA != 0)
         {
+            const char *desc_name;
             char *name;
-            unsigned int i;
 
-            name = _strdup(exm_pe_delayload_descriptor_file_name_get(pe, iter_delayload));
+            desc_name =exm_pe_delayload_descriptor_file_name_get(pe, iter_delayload);
+            if (!desc_name)
+            {
+                EXM_LOG_ERR("Can not retrieve the delay loaded filename");
+                goto delayload_next;
+            }
+
+            name = _strdup(desc_name);
             if (!name)
             {
                 EXM_LOG_ERR("Can not allocate memory for delay loaded filename");
                 goto delayload_next;
             }
 
-            for (i = 0; i < _exm_indent; i++)
-                printf(" ");
-
-            printf("%s", name);
+            printf("%*c%s", _exm_indent, ' ', name);
 
             if (!exm_list_data_is_found(list, name, _exm_depends_cmd_cmp_cb))
             {
