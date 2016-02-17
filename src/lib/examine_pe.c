@@ -550,6 +550,50 @@ exm_pe_resource_directory_get(const Exm_Pe *pe, DWORD *count)
     return (IMAGE_RESOURCE_DIRECTORY *)_exm_pe_rva_to_ptr_get2(pe, rva);
 }
 
+EXM_API const void *
+exm_pe_resource_data_get(const Exm_Pe *pe, DWORD id, DWORD *size)
+{
+    const IMAGE_RESOURCE_DIRECTORY *resource_dir;
+    const IMAGE_RESOURCE_DIRECTORY_ENTRY *entry;
+    const unsigned char *base;
+    DWORD i;
+
+    resource_dir = exm_pe_resource_directory_get(pe, NULL);
+    base = (const unsigned char *)resource_dir;
+    entry = (IMAGE_RESOURCE_DIRECTORY_ENTRY *)(resource_dir + 1);
+    for (i = 0; i < resource_dir->NumberOfNamedEntries; i++, entry++) { }
+    for (i = 0; i < resource_dir->NumberOfIdEntries; i++, entry++)
+    {
+        if ((entry->Id == id) && (entry->DataIsDirectory))
+        {
+            const IMAGE_RESOURCE_DATA_ENTRY *data;
+            void *res;
+
+            resource_dir = (const IMAGE_RESOURCE_DIRECTORY *)(base + entry->OffsetToDirectory);
+            if (!resource_dir)
+                return NULL;
+            entry = (const IMAGE_RESOURCE_DIRECTORY_ENTRY *)(resource_dir + 1);
+            if (!entry)
+                return NULL;
+            resource_dir = (const IMAGE_RESOURCE_DIRECTORY *)(base + entry->OffsetToDirectory);
+            if (!resource_dir)
+                return NULL;
+            entry = (const IMAGE_RESOURCE_DIRECTORY_ENTRY *)(resource_dir + 1);
+            if (!entry)
+                return NULL;
+            data = (const IMAGE_RESOURCE_DATA_ENTRY *)(base + entry->OffsetToData);
+            if (!data)
+                return NULL;
+
+            res = _exm_pe_rva_to_ptr_get2(pe, data->OffsetToData);
+            *size = data->Size;
+            return res;
+        }
+    }
+
+    return NULL;
+}
+
 /**
  * @Brief Return the address of the debug directory from the given PE file.
  *

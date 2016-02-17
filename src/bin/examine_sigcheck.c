@@ -804,8 +804,8 @@ _exm_sigcheck_certificate_disp(const CERT_CONTEXT *cert_context)
 
     if (!cert_context)
     {
-        printf("          Issuer name:      none\n");
-        printf("          subject name:     none\n");
+        printf("          Issuer name:      None\n");
+        printf("          subject name:     None\n");
     }
     else
     {
@@ -817,12 +817,12 @@ _exm_sigcheck_certificate_disp(const CERT_CONTEXT *cert_context)
                                      NULL,
                                      0);
         if (!data)
-            printf("none\n");
+            printf("None\n");
         else
         {
             name = malloc(data * sizeof(TCHAR));
             if (!name)
-                printf("none\n");
+                printf("None\n");
             else
             {
                 if (!(exm_CertGetNameString(cert_context,
@@ -831,7 +831,7 @@ _exm_sigcheck_certificate_disp(const CERT_CONTEXT *cert_context)
                                             NULL,
                                             name,
                                             data)))
-                    printf("none\n");
+                    printf("None\n");
                 else
                     printf("%s\n", name);
                 free(name);
@@ -846,12 +846,12 @@ _exm_sigcheck_certificate_disp(const CERT_CONTEXT *cert_context)
                                      NULL,
                                      0);
         if (!data)
-            printf("none\n");
+            printf("None\n");
         else
         {
             name = malloc(data * sizeof(TCHAR));
             if (!name)
-                printf("none\n");
+                printf("None\n");
             else
             {
                 if (!(exm_CertGetNameString(cert_context,
@@ -860,12 +860,57 @@ _exm_sigcheck_certificate_disp(const CERT_CONTEXT *cert_context)
                                             NULL,
                                             name,
                                             data)))
-                    printf("none\n");
+                    printf("None\n");
                 else
                     printf("%s\n", name);
                 free(name);
             }
         }
+    }
+}
+
+static void
+_exm_sigcheck_cmd_version_info_tag_disp(const wchar_t *version_info,
+                                        DWORD size,
+                                        const wchar_t *tag)
+{
+    const wchar_t *str;
+    size_t l;
+    size_t i;
+    char found = 0;
+
+    l = wcslen(tag);
+    i = 0;
+    str = version_info;
+    while (i < (size - l))
+    {
+        const wchar_t *substr;
+        size_t j;
+
+        substr = str;
+        found = 1;
+        for (j = 0; j < l; j++, substr++)
+        {
+            if (*substr != tag[j])
+            {
+                found = 0;
+                break;
+            }
+        }
+        if (found)
+        {
+            str += l;
+            break;
+        }
+        str++;
+        i++;
+    }
+
+    if (found)
+    {
+        /* possible multiple nul characters */
+        while (*str == L'\0') str++;
+        wprintf(L"%s", str);
     }
 }
 
@@ -894,6 +939,61 @@ _exm_sigcheck_cmd_run(const Exm_Pe *pe)
         printf("        Machine type:       64-bit\n");
     else if (exm_pe_is_64bits(pe) == 0)
         printf("        Machine type:       32-bit\n");
+    {
+        const wchar_t *data;
+        DWORD size;
+
+        data = (wchar_t *)exm_pe_resource_data_get(pe, 16, &size);
+        printf("        Company name:       ");
+        if (data)
+            _exm_sigcheck_cmd_version_info_tag_disp(data, size,
+                                                    L"CompanyName");
+        else
+            printf("None");
+        printf("\n");
+        printf("        File Description:   ");
+        if (data)
+            _exm_sigcheck_cmd_version_info_tag_disp(data, size,
+                                                    L"FileDescription");
+        else
+            printf("None");
+        printf("\n");
+        printf("        File Version:       ");
+        if (data)
+            _exm_sigcheck_cmd_version_info_tag_disp(data, size,
+                                                    L"FileVersion");
+        else
+            printf("None");
+        printf("\n");
+        printf("        Internal name:      ");
+        if (data)
+            _exm_sigcheck_cmd_version_info_tag_disp(data, size,
+                                                    L"InternalName");
+        else
+            printf("None");
+        printf("\n");
+        printf("        Copyright:          ");
+        if (data)
+            _exm_sigcheck_cmd_version_info_tag_disp(data, size,
+                                                    L"LegalCopyright");
+        else
+            printf("None");
+        printf("\n");
+        printf("        Original file name: ");
+        if (data)
+            _exm_sigcheck_cmd_version_info_tag_disp(data, size,
+                                                    L"OriginalFilename");
+        else
+            printf("None");
+        printf("\n");
+        printf("        Product name:       ");
+        if (data)
+            _exm_sigcheck_cmd_version_info_tag_disp(data, size,
+                                                    L"ProductName");
+        else
+            printf("None");
+        printf("\n");
+    }
 }
 
 static void
