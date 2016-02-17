@@ -615,7 +615,7 @@ _exm_view_cmd_directory_entry_resource_dump(const Exm_Pe *pe,
                str_spaces, parent->OffsetToData, parent->DataIsDirectory ? "yes" : "no");
     }
 
-    entry = (IMAGE_RESOURCE_DIRECTORY_ENTRY *)(resource_dir + 1);
+    entry = (const IMAGE_RESOURCE_DIRECTORY_ENTRY *)(resource_dir + 1);
     for (i = 0; i < (resource_dir->NumberOfNamedEntries + resource_dir->NumberOfIdEntries); i++, entry++)
     {
         _exm_view_cmd_directory_entry_resource_entry_dump(pe, base, entry,
