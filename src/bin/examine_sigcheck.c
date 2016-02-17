@@ -52,26 +52,26 @@ typedef struct
 typedef LONG (WINAPI *exm_WinVerifyTrust_t)(HWND   hWnd,
                                             GUID  *pgActionID,
                                             LPVOID pWVTData);
-typedef BOOL (*exm_CryptCATAdminAcquireContext_t)(HCATADMIN  *phCatAdmin,
-                                                  const GUID *pgSubsystem,
-                                                  DWORD       dwFlags);
-typedef BOOL (*exm_CryptCATAdminCalcHashFromFileHandle_t)(HANDLE hFile,
-                                                          DWORD *pcbHash,
-                                                          BYTE  *pbHash,
-                                                          DWORD  dwFlags);
-typedef HCATINFO (*exm_CryptCATAdminEnumCatalogFromHash_t)(HCATADMIN hCatAdmin,
-                                                           BYTE     *pbHash,
-                                                           DWORD     cbHash,
-                                                           DWORD     dwFlags,
-                                                           HCATINFO *phPrevCatInfo);
-typedef BOOL (*exm_CryptCATCatalogInfoFromContext_t)(HCATINFO      hCatInfo,
-                                                     CATALOG_INFO *psCatInfo,
-                                                     DWORD         dwFlags);
-typedef BOOL (*exm_CryptCATAdminReleaseCatalogContext_t)(HCATADMIN hCatAdmin,
-                                                         HCATINFO  hCatInfo,
+typedef BOOL (WINAPI *exm_CryptCATAdminAcquireContext_t)(HCATADMIN  *phCatAdmin,
+                                                         const GUID *pgSubsystem,
+                                                         DWORD       dwFlags);
+typedef BOOL (WINAPI *exm_CryptCATAdminCalcHashFromFileHandle_t)(HANDLE hFile,
+                                                                 DWORD *pcbHash,
+                                                                 BYTE  *pbHash,
+                                                                 DWORD  dwFlags);
+typedef HCATINFO (WINAPI *exm_CryptCATAdminEnumCatalogFromHash_t)(HCATADMIN hCatAdmin,
+                                                                  BYTE     *pbHash,
+                                                                  DWORD     cbHash,
+                                                                  DWORD     dwFlags,
+                                                                  HCATINFO *phPrevCatInfo);
+typedef BOOL (WINAPI *exm_CryptCATCatalogInfoFromContext_t)(HCATINFO      hCatInfo,
+                                                            CATALOG_INFO *psCatInfo,
+                                                            DWORD         dwFlags);
+typedef BOOL (WINAPI *exm_CryptCATAdminReleaseCatalogContext_t)(HCATADMIN hCatAdmin,
+                                                                HCATINFO  hCatInfo,
+                                                                DWORD     dwFlags);
+typedef BOOL (WINAPI *exm_CryptCATAdminReleaseContext_t)(HCATADMIN hCatAdmin,
                                                          DWORD     dwFlags);
-typedef BOOL (*exm_CryptCATAdminReleaseContext_t)(HCATADMIN hCatAdmin,
-                                                  DWORD     dwFlags);
 
 typedef BOOL (WINAPI *exm_CryptDecodeObject_t)(DWORD       dwCertEncodingType,
                                                LPCSTR      lpszStructType,
