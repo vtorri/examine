@@ -99,16 +99,14 @@ do { \
     { \
         if (is_first) \
         { \
-            *ptr = ' '; \
-            ptr++; \
             is_first = 0; \
-            *ptr = '('; \
-            ptr++; \
+            *ptr++ = ' '; \
+            *ptr++ = '('; \
         } \
         else \
         { \
-            *ptr = ' '; \
-            ptr++; \
+            *ptr++ = ','; \
+            *ptr++ = ' '; \
         } \
         memcpy(ptr, str, strlen(str)); \
         ptr += strlen(str); \
