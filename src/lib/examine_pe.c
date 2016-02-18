@@ -559,6 +559,9 @@ exm_pe_resource_data_get(const Exm_Pe *pe, DWORD id, DWORD *size)
     DWORD i;
 
     resource_dir = exm_pe_resource_directory_get(pe, NULL);
+    if (!resource_dir)
+        return NULL;
+
     base = (const unsigned char *)resource_dir;
     entry = (IMAGE_RESOURCE_DIRECTORY_ENTRY *)(resource_dir + 1);
     for (i = 0; i < resource_dir->NumberOfNamedEntries; i++, entry++) { }
