@@ -126,7 +126,7 @@ _exm_depends_cmd_tree_fill(Exm_List *list, const char *filename)
 
             if (!exm_list_data_is_found(list, name, _exm_depends_cmd_cmp_cb))
             {
-                printf("(dl)\n");
+                printf(" (dl)\n");
                 list = exm_list_append(list, name);
                 list = _exm_depends_cmd_tree_fill(list, name);
             }
