@@ -177,9 +177,23 @@ _exm_depends_cmd_list_fill(Exm_List *list, const Exm_Pe *pe)
     {
         while (iter_import->Name != 0)
         {
+            const char *desc_name;
             char *name;
 
-            name = _strdup(exm_pe_import_descriptor_file_name_get(pe, iter_import));
+            desc_name = exm_pe_import_descriptor_file_name_get(pe, iter_import);
+            if (!desc_name)
+            {
+                EXM_LOG_ERR("Can not retrieve the import filename");
+                goto import_next;
+            }
+
+            name = _strdup(desc_name);
+            if (!name)
+            {
+                EXM_LOG_ERR("Can not allocate memory for import filename");
+                goto import_next;
+            }
+
             if (!exm_list_data_is_found(list, name, _exm_depends_cmd_cmp_cb))
             {
                 Exm_Pe *p;
@@ -199,6 +213,7 @@ _exm_depends_cmd_list_fill(Exm_List *list, const Exm_Pe *pe)
                     list = tmp;
             }
 
+          import_next:
             iter_import++;
         }
     }
@@ -208,9 +223,23 @@ _exm_depends_cmd_list_fill(Exm_List *list, const Exm_Pe *pe)
     {
         while (iter_delayload->DllNameRVA != 0)
         {
+            const char *desc_name;
             char *name;
 
-            name = _strdup(exm_pe_delayload_descriptor_file_name_get(pe, iter_delayload));
+            desc_name =exm_pe_delayload_descriptor_file_name_get(pe, iter_delayload);
+            if (!desc_name)
+            {
+                EXM_LOG_ERR("Can not retrieve the delay loaded filename");
+                goto delayload_next;
+            }
+
+            name = _strdup(desc_name);
+            if (!name)
+            {
+                EXM_LOG_ERR("Can not allocate memory for delay loaded filename");
+                goto delayload_next;
+            }
+
             if (!exm_list_data_is_found(list, name, _exm_depends_cmd_cmp_cb))
             {
                 Exm_Pe *p;
@@ -230,6 +259,7 @@ _exm_depends_cmd_list_fill(Exm_List *list, const Exm_Pe *pe)
                     list = tmp;
             }
 
+          delayload_next:
             iter_delayload++;
         }
     }
