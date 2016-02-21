@@ -178,7 +178,6 @@ _exm_depends_cmd_list_fill(Exm_List *list, const Exm_Pe *pe)
         while (iter_import->Name != 0)
         {
             const char *desc_name;
-            char *name;
 
             desc_name = exm_pe_import_descriptor_file_name_get(pe, iter_import);
             if (!desc_name)
@@ -187,30 +186,30 @@ _exm_depends_cmd_list_fill(Exm_List *list, const Exm_Pe *pe)
                 goto import_next;
             }
 
-            name = _strdup(desc_name);
-            if (!name)
-            {
-                EXM_LOG_ERR("Can not allocate memory for import filename");
-                goto import_next;
-            }
-
-            if (!exm_list_data_is_found(list, name, _exm_depends_cmd_cmp_cb))
+            if (!exm_list_data_is_found(list, desc_name, _exm_depends_cmd_cmp_cb))
             {
                 Exm_Pe *p;
                 Exm_List *tmp;
+                char *name;
                 const char *fullname;
 
-                list = exm_list_append(list, name);
-                p = exm_pe_new(name);
-                fullname = exm_pe_filename_get(p);
-                printf("   %s", name);
-                if (fullname)
-                    printf(" => %s", fullname);
-                printf("\n");
-                tmp = _exm_depends_cmd_list_fill(list, p);
-                exm_pe_free(p);
-                if (tmp)
-                    list = tmp;
+                name = _strdup(desc_name);
+                if (name)
+                {
+                    list = exm_list_append(list, name);
+                    p = exm_pe_new(name);
+                    fullname = exm_pe_filename_get(p);
+                    printf("   %s", name);
+                    if (fullname)
+                        printf(" => %s", fullname);
+                    printf("\n");
+                    tmp = _exm_depends_cmd_list_fill(list, p);
+                    exm_pe_free(p);
+                    if (tmp)
+                        list = tmp;
+                }
+                else
+                    EXM_LOG_ERR("Can not allocate memory for import filename");
             }
 
           import_next:
@@ -224,7 +223,6 @@ _exm_depends_cmd_list_fill(Exm_List *list, const Exm_Pe *pe)
         while (iter_delayload->DllNameRVA != 0)
         {
             const char *desc_name;
-            char *name;
 
             desc_name =exm_pe_delayload_descriptor_file_name_get(pe, iter_delayload);
             if (!desc_name)
@@ -233,30 +231,30 @@ _exm_depends_cmd_list_fill(Exm_List *list, const Exm_Pe *pe)
                 goto delayload_next;
             }
 
-            name = _strdup(desc_name);
-            if (!name)
-            {
-                EXM_LOG_ERR("Can not allocate memory for delay loaded filename");
-                goto delayload_next;
-            }
-
-            if (!exm_list_data_is_found(list, name, _exm_depends_cmd_cmp_cb))
+            if (!exm_list_data_is_found(list, desc_name, _exm_depends_cmd_cmp_cb))
             {
                 Exm_Pe *p;
                 Exm_List *tmp;
+                char *name;
                 const char *fullname;
 
-                list = exm_list_append(list, name);
-                p = exm_pe_new(name);
-                fullname = exm_pe_filename_get(p);
-                printf("   %s", name);
-                if (fullname)
-                    printf(" => %s", fullname);
-                printf("\n");
-                tmp = _exm_depends_cmd_list_fill(list, p);
-                exm_pe_free(p);
-                if (tmp)
-                    list = tmp;
+                name = _strdup(desc_name);
+                if (name)
+                {
+                    list = exm_list_append(list, name);
+                    p = exm_pe_new(name);
+                    fullname = exm_pe_filename_get(p);
+                    printf("   %s", name);
+                    if (fullname)
+                        printf(" => %s", fullname);
+                    printf("\n");
+                    tmp = _exm_depends_cmd_list_fill(list, p);
+                    exm_pe_free(p);
+                    if (tmp)
+                        list = tmp;
+                }
+                else
+                    EXM_LOG_ERR("Can not allocate memory for delay loaded filename");
             }
 
           delayload_next:
