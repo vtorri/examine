@@ -49,3 +49,11 @@ visual_studio/libexamine_memcheck/Debug/
 visual_studio/libexamine_memcheck/Release/
 visual_studio/libexamine_test/Debug/
 visual_studio/libexamine_test/Release/
+visual_studio/examine.VC.opendb
+visual_studio/examine/examine.vcxproj.user
+visual_studio/examine/x64/
+visual_studio/examine_test/x64/
+visual_studio/libexamine/x64/
+visual_studio/libexamine_memcheck/x64/
+visual_studio/libexamine_test/x64/
+visual_studio/x64/
