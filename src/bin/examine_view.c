@@ -335,7 +335,7 @@ _exm_view_cmd_sections_display(Exm_Pe *pe)
             const char *string_table;
 
             string_table = exm_pe_section_string_table_get(pe);
-            printf("(%s)", string_table + atoi((const char*)iter->Name + 1));
+            printf(" (%s)", string_table + atoi((const char*)iter->Name + 1));
         }
         printf("\n");
         printf("  VirtualSize          DWORD   0x" FMT_DWDX "\n", iter->Misc.VirtualSize);
