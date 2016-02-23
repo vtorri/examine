@@ -68,6 +68,8 @@ struct _Exm_Pe
     IMAGE_NT_HEADERS *nt_header; /**< The NT header address */
 };
 
+static char _exm_pe_section_name[9];
+
 /**
  * @brief Return the absolute address from a relative virtual address.
  *
@@ -677,4 +679,17 @@ exm_pe_section_string_table_get(const Exm_Pe *pe)
         return NULL;
 
     return (const char *)((unsigned char *)exm_map_base_get(pe->map) + pe->nt_header->FileHeader.PointerToSymbolTable + pe->nt_header->FileHeader.NumberOfSymbols * sizeof(IMAGE_SYMBOL));
+}
+
+EXM_API const char *
+exm_pe_section_name_get(const Exm_Pe *pe, const IMAGE_SECTION_HEADER *sh)
+{
+    if (sh->Name[0] == '/')
+        return exm_pe_section_string_table_get(pe) + atoi((const char*)sh->Name + 1);
+    else
+    {
+        memcpy(_exm_pe_section_name, sh->Name, 8);
+        _exm_pe_section_name[8] = '\0';
+        return _exm_pe_section_name;
+    }
 }
