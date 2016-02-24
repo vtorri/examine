@@ -266,7 +266,7 @@ exm_file_set(const char *filename)
 #ifdef _WIN32
     char *iter;
 
-    /* change \ separator with // */
+    /* change / separator with \ */
     iter = (char *)filename;
     while (*iter)
     {
@@ -285,6 +285,8 @@ exm_file_set(const char *filename)
     {
         if (_fullpath(buf, filename, sizeof(buf)))
         {
+            Exm_List *tmp;
+
             exm_file_base_dir_name_get(buf, &dir_name, &base_name);
             if (!dir_name || !base_name)
             {
@@ -292,15 +294,22 @@ exm_file_set(const char *filename)
                 goto free_names;
             }
 
-            _exm_file_path = exm_list_prepend_if_new(_exm_file_path,
-                                                     dir_name,
-                                                     cmp_cb);
+            tmp = exm_list_prepend_if_new(_exm_file_path,
+                                          dir_name,
+                                          cmp_cb);
+            /* dir_name is already in the list and is not added, so free it */
+            if (tmp == _exm_file_path)
+                free(dir_name);
+            else
+                _exm_file_path = tmp;
         }
     }
     else
     {
         if (_fullpath(buf, filename, sizeof(buf)))
         {
+            Exm_List *tmp;
+
             exm_file_base_dir_name_get(buf, &dir_name, &base_name);
             if (!dir_name || !base_name)
             {
@@ -308,9 +317,14 @@ exm_file_set(const char *filename)
                 goto free_names;
             }
 
-            _exm_file_path = exm_list_prepend_if_new(_exm_file_path,
-                                                     dir_name,
-                                                     cmp_cb);
+            tmp = exm_list_prepend_if_new(_exm_file_path,
+                                          dir_name,
+                                          cmp_cb);
+            /* dir_name is already in the list and is not added, so free it */
+            if (tmp == _exm_file_path)
+                free(dir_name);
+            else
+                _exm_file_path = tmp;
         }
         else
         {
