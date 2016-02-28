@@ -318,6 +318,8 @@ static int main2(int argc, char *argv[])
             break;
     }
 
+    exm_log_level_set(log_level);
+
     EXM_LOG_INFO("Examine, a memory leak detector, function and I/O tracer, and PE file viewer");
     EXM_LOG_INFO("Copyright (c) 2012-2016, and GNU LGPL3'd, by Vincent Torri");
     EXM_LOG_INFO("Using %s; rerun with -h for help and copyright notice", PACKAGE_STRING);
@@ -338,8 +340,6 @@ static int main2(int argc, char *argv[])
     }
 
     exm_list_free(options, free);
-
-    exm_log_level_set(log_level);
 
     if (!exm_init())
     {

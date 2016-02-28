@@ -39,6 +39,7 @@
 #include <Examine.h>
 
 #include "examine_private.h"
+#include "examine_dwarf.h"
 
 #ifdef _WIN32
 # define FMT_DWD "%lu"
@@ -655,7 +656,45 @@ _exm_view_cmd_directory_entry_debug_display(Exm_Pe *pe)
 
     debug_dir = exm_pe_debug_directory_get(pe, NULL);
     if (!debug_dir)
+    {
+        const IMAGE_NT_HEADERS *nt_header;
+        IMAGE_SECTION_HEADER *iter;
+
+        nt_header = exm_pe_nt_header_get(pe);
+        iter = IMAGE_FIRST_SECTION(nt_header);
+        for (i = 0; i < nt_header->FileHeader.NumberOfSections; i++, iter++)
+        {
+            const unsigned char *data;
+
+            unsigned int length;
+            unsigned int offset;
+            unsigned short version;
+            unsigned char size;
+
+            if (strcmp(exm_pe_section_name_get(pe, iter), ".debug_info") != 0)
+                continue;
+
+            data = (const unsigned char *)exm_pe_dos_header_get(pe) + iter->PointerToRawData;
+            length = exm_dwarf_read_uint32(data);
+            data += 4;
+            version = exm_dwarf_read_uint16(data);
+            data += 2;
+            offset = exm_dwarf_read_uint32(data);
+            data += 4;
+            size = exm_dwarf_read_uint8(data);
+            data++;
+
+            printf("\n");
+            printf("Directory entry Debug - DWARF CUH\n");
+            printf("  data                  type    value\n");
+            printf("  Length                DWORD   0x%x\n", length);
+            printf("  Version               WORD    %u\n", version);
+            printf("  Offset                DWORD   0x%x\n", offset);
+            printf("  Size                  UCHAR   %u\n", size);
+        }
+
         return;
+    }
 
     for (i = 0; i < (data_dir->Size / sizeof(IMAGE_DEBUG_DIRECTORY)); i++, debug_dir++)
     {
