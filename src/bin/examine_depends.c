@@ -38,6 +38,27 @@
 #include <Examine.h>
 #include "examine_private.h"
 
+#define EXM_DEPENDS_LIST_DLLCHAR_SET(val, str) \
+do { \
+    if (dllchar & val) \
+    { \
+        if (is_first) \
+        { \
+            is_first = 0; \
+            *ptr++ = ' '; \
+            *ptr++ = '('; \
+        } \
+        else \
+        { \
+            *ptr++ = ','; \
+            *ptr++ = ' '; \
+        } \
+        memcpy(ptr, str, strlen(str)); \
+        ptr += strlen(str); \
+    } \
+} while (0)
+
+static char _exm_depends_list_dllcharacteristics[4096];
 static unsigned int _exm_indent = 0;
 
 static int
@@ -158,6 +179,38 @@ _exm_depends_cmd_tree_run(Exm_Pe *pe)
     exm_list_free(list, free);
 }
 
+static const char *
+_exm_depends_cmd_list_dllcharacteristics_get(const Exm_Pe *pe)
+{
+    char *ptr = _exm_depends_list_dllcharacteristics;
+    WORD dllchar;
+    unsigned char is_first = 1;
+
+    if (exm_pe_is_64bits(pe))
+        dllchar = ((const IMAGE_NT_HEADERS64 *)exm_pe_nt_header_get(pe))->OptionalHeader.DllCharacteristics;
+    else
+        dllchar = ((const IMAGE_NT_HEADERS32 *)exm_pe_nt_header_get(pe))->OptionalHeader.DllCharacteristics;
+
+    if (!dllchar)
+        return "";
+
+#ifdef IMAGE_DLLCHARACTERISTICS_HIGH_ENTROPY_VA
+    EXM_DEPENDS_LIST_DLLCHAR_SET(IMAGE_DLLCHARACTERISTICS_HIGH_ENTROPY_VA, "high_entropy_va");
+#endif
+    EXM_DEPENDS_LIST_DLLCHAR_SET(IMAGE_DLLCHARACTERISTICS_DYNAMIC_BASE, "dynamic_base");
+    EXM_DEPENDS_LIST_DLLCHAR_SET(IMAGE_DLLCHARACTERISTICS_NX_COMPAT, "nx_compat");
+
+    if (!is_first)
+    {
+        *ptr = ')';
+        ptr++;
+    }
+
+    *ptr = '\0';
+
+    return _exm_depends_list_dllcharacteristics;
+}
+
 static Exm_List *
 _exm_depends_cmd_list_fill(Exm_List *list, const Exm_Pe *pe)
 {
@@ -183,21 +236,22 @@ _exm_depends_cmd_list_fill(Exm_List *list, const Exm_Pe *pe)
 
             if (!exm_list_data_is_found(list, desc_name, _exm_depends_cmd_cmp_cb))
             {
-                Exm_Pe *p;
-                Exm_List *tmp;
                 char *name;
-                const char *fullname;
 
                 name = _strdup(desc_name);
                 if (name)
                 {
+                    Exm_Pe *p;
+                    Exm_List *tmp;
+                    const char *fullname;
+
                     list = exm_list_append(list, name);
                     p = exm_pe_new(name);
                     fullname = exm_pe_filename_get(p);
                     printf("   %s", name);
                     if (fullname)
                         printf(" => %s", fullname);
-                    printf("\n");
+                    printf("%s\n", _exm_depends_cmd_list_dllcharacteristics_get(p));
                     tmp = _exm_depends_cmd_list_fill(list, p);
                     exm_pe_free(p);
                     if (tmp)
@@ -228,21 +282,22 @@ _exm_depends_cmd_list_fill(Exm_List *list, const Exm_Pe *pe)
 
             if (!exm_list_data_is_found(list, desc_name, _exm_depends_cmd_cmp_cb))
             {
-                Exm_Pe *p;
-                Exm_List *tmp;
                 char *name;
-                const char *fullname;
 
                 name = _strdup(desc_name);
                 if (name)
                 {
+                    Exm_Pe *p;
+                    Exm_List *tmp;
+                    const char *fullname;
+
                     list = exm_list_append(list, name);
                     p = exm_pe_new(name);
                     fullname = exm_pe_filename_get(p);
                     printf("   %s", name);
                     if (fullname)
                         printf(" => %s", fullname);
-                    printf("\n");
+                    printf("%s\n", _exm_depends_cmd_list_dllcharacteristics_get(p));
                     tmp = _exm_depends_cmd_list_fill(list, p);
                     exm_pe_free(p);
                     if (tmp)
@@ -268,7 +323,10 @@ _exm_depends_cmd_list_run(const Exm_Pe *pe)
 
     exm_file_base_dir_name_get(exm_pe_filename_get(pe), NULL, &bn);
 
-    printf("   %s => %s\n", bn, exm_pe_filename_get(pe));
+    printf("   %s => %s%s\n",
+           bn,
+           exm_pe_filename_get(pe),
+           _exm_depends_cmd_list_dllcharacteristics_get(pe));
     free(bn);
     list = exm_list_append(list, _strdup(exm_pe_filename_get(pe)));
     list = _exm_depends_cmd_list_fill(list, pe);

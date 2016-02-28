@@ -56,6 +56,26 @@
 #define EXM_VIEW_DEBUG_SIGNATURE_NB10 0x4e423130 /* NB10 - PDB 2.0 (unsupported since VC6 */
 #define EXM_VIEW_DEBUG_SIGNATURE_RSDS 0x53445352 /* RSDS - PDB 7.0 */
 
+#define EXM_VIEW_DLLCHAR_SET(val, str) \
+do { \
+    if (dllchar & val) \
+    { \
+        if (is_first) \
+        { \
+            is_first = 0; \
+            *ptr++ = ' '; \
+            *ptr++ = '('; \
+        } \
+        else \
+        { \
+            *ptr++ = ','; \
+            *ptr++ = ' '; \
+        } \
+        memcpy(ptr, str, strlen(str)); \
+        ptr += strlen(str); \
+    } \
+} while (0)
+
 static char _exm_view_dllcharacteristics[4096];
 
 static const char *
@@ -94,47 +114,30 @@ _exm_view_subsystem_get(WORD subsystem)
     }
 }
 
-#define EXM_VIEW_DLLCAR_SET(val, str) \
-do { \
-    if (dllcar & val) \
-    { \
-        if (is_first) \
-        { \
-            is_first = 0; \
-            *ptr++ = ' '; \
-            *ptr++ = '('; \
-        } \
-        else \
-        { \
-            *ptr++ = ','; \
-            *ptr++ = ' '; \
-        } \
-        memcpy(ptr, str, strlen(str)); \
-        ptr += strlen(str); \
-    } \
-} while (0)
-
 static const char *
-_exm_view_dllcharacteristics_get(WORD dllcar)
+_exm_view_dllcharacteristics_get(WORD dllchar)
 {
-    char * ptr = _exm_view_dllcharacteristics;
+    char *ptr = _exm_view_dllcharacteristics;
     unsigned char is_first = 1;
 
+    if (!dllchar)
+        return "";
+
 #ifdef IMAGE_DLLCHARACTERISTICS_HIGH_ENTROPY_VA
-    EXM_VIEW_DLLCAR_SET(IMAGE_DLLCHARACTERISTICS_HIGH_ENTROPY_VA, "high_entropy_va");
+    EXM_VIEW_DLLCHAR_SET(IMAGE_DLLCHARACTERISTICS_HIGH_ENTROPY_VA, "high_entropy_va");
 #endif
-    EXM_VIEW_DLLCAR_SET(IMAGE_DLLCHARACTERISTICS_DYNAMIC_BASE, "dynamic_base");
-    EXM_VIEW_DLLCAR_SET(IMAGE_DLLCHARACTERISTICS_FORCE_INTEGRITY, "force_integrity");
-    EXM_VIEW_DLLCAR_SET(IMAGE_DLLCHARACTERISTICS_NX_COMPAT, "nx_compat");
-    EXM_VIEW_DLLCAR_SET(IMAGE_DLLCHARACTERISTICS_NO_ISOLATION, "no_isolation");
-    EXM_VIEW_DLLCAR_SET(IMAGE_DLLCHARACTERISTICS_NO_SEH, "no_seh");
-    EXM_VIEW_DLLCAR_SET(IMAGE_DLLCHARACTERISTICS_NO_BIND, "no_bind");
-    EXM_VIEW_DLLCAR_SET(IMAGE_DLLCHARACTERISTICS_APPCONTAINER, "appcontainer");
-    EXM_VIEW_DLLCAR_SET(IMAGE_DLLCHARACTERISTICS_WDM_DRIVER, "wdm_driver");
+    EXM_VIEW_DLLCHAR_SET(IMAGE_DLLCHARACTERISTICS_DYNAMIC_BASE, "dynamic_base");
+    EXM_VIEW_DLLCHAR_SET(IMAGE_DLLCHARACTERISTICS_FORCE_INTEGRITY, "force_integrity");
+    EXM_VIEW_DLLCHAR_SET(IMAGE_DLLCHARACTERISTICS_NX_COMPAT, "nx_compat");
+    EXM_VIEW_DLLCHAR_SET(IMAGE_DLLCHARACTERISTICS_NO_ISOLATION, "no_isolation");
+    EXM_VIEW_DLLCHAR_SET(IMAGE_DLLCHARACTERISTICS_NO_SEH, "no_seh");
+    EXM_VIEW_DLLCHAR_SET(IMAGE_DLLCHARACTERISTICS_NO_BIND, "no_bind");
+    EXM_VIEW_DLLCHAR_SET(IMAGE_DLLCHARACTERISTICS_APPCONTAINER, "appcontainer");
+    EXM_VIEW_DLLCHAR_SET(IMAGE_DLLCHARACTERISTICS_WDM_DRIVER, "wdm_driver");
 #ifdef IMAGE_DLLCHARACTERISTICS_GUARD_CF
-    EXM_VIEW_DLLCAR_SET(IMAGE_DLLCHARACTERISTICS_GUARD_CF, "guard_cf");
+    EXM_VIEW_DLLCHAR_SET(IMAGE_DLLCHARACTERISTICS_GUARD_CF, "guard_cf");
 #endif
-    EXM_VIEW_DLLCAR_SET(IMAGE_DLLCHARACTERISTICS_TERMINAL_SERVER_AWARE, "terminal_server_aware");
+    EXM_VIEW_DLLCHAR_SET(IMAGE_DLLCHARACTERISTICS_TERMINAL_SERVER_AWARE, "terminal_server_aware");
 
     if (!is_first)
     {
