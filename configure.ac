@@ -99,6 +99,8 @@ AC_CHECK_SIZEOF([void *])
 
 ### Checks for compiler characteristics
 
+AC_C_BIGENDIAN
+
 EXM_ATTRIBUTE_UNUSED
 
 EXM_CFLAGS="-std=c99 -pedantic -Wall -Wextra -Wshadow -Wdeclaration-after-statement -Wmissing-prototypes -Wstrict-prototypes -Wredundant-decls -Wpointer-arith -Wno-missing-field-initializers"
