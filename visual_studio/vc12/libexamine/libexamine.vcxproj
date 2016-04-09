@@ -144,33 +144,33 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\src\lib\examine_file.c" />
-    <ClCompile Include="..\..\src\lib\examine_injection.c" />
-    <ClCompile Include="..\..\src\lib\examine_list.c" />
-    <ClCompile Include="..\..\src\lib\examine_log.c" />
-    <ClCompile Include="..\..\src\lib\examine_main.c" />
-    <ClCompile Include="..\..\src\lib\examine_map.c" />
-    <ClCompile Include="..\..\src\lib\examine_pe.c" />
-    <ClCompile Include="..\..\src\lib\examine_process.c" />
-    <ClCompile Include="..\..\src\lib\examine_stack_pdb.c" />
-    <ClCompile Include="..\..\src\lib\examine_str.c" />
+    <ClCompile Include="..\..\..\src\lib\examine_file.c" />
+    <ClCompile Include="..\..\..\src\lib\examine_injection.c" />
+    <ClCompile Include="..\..\..\src\lib\examine_list.c" />
+    <ClCompile Include="..\..\..\src\lib\examine_log.c" />
+    <ClCompile Include="..\..\..\src\lib\examine_main.c" />
+    <ClCompile Include="..\..\..\src\lib\examine_map.c" />
+    <ClCompile Include="..\..\..\src\lib\examine_pe.c" />
+    <ClCompile Include="..\..\..\src\lib\examine_process.c" />
+    <ClCompile Include="..\..\..\src\lib\examine_stack_pdb.c" />
+    <ClCompile Include="..\..\..\src\lib\examine_str.c" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\src\lib\Examine.h" />
-    <ClInclude Include="..\..\src\lib\examine_file.h" />
-    <ClInclude Include="..\..\src\lib\examine_injection.h" />
-    <ClInclude Include="..\..\src\lib\examine_list.h" />
-    <ClInclude Include="..\..\src\lib\examine_log.h" />
-    <ClInclude Include="..\..\src\lib\examine_main.h" />
-    <ClInclude Include="..\..\src\lib\examine_map.h" />
-    <ClInclude Include="..\..\src\lib\examine_pe.h" />
-    <ClInclude Include="..\..\src\lib\examine_private_file.h" />
-    <ClInclude Include="..\..\src\lib\examine_private_map.h" />
-    <ClInclude Include="..\..\src\lib\examine_private_process.h" />
-    <ClInclude Include="..\..\src\lib\examine_private_str.h" />
-    <ClInclude Include="..\..\src\lib\examine_process.h" />
-    <ClInclude Include="..\..\src\lib\examine_stack.h" />
-    <ClInclude Include="..\..\src\lib\examine_str.h" />
+    <ClInclude Include="..\..\..\src\lib\Examine.h" />
+    <ClInclude Include="..\..\..\src\lib\examine_file.h" />
+    <ClInclude Include="..\..\..\src\lib\examine_injection.h" />
+    <ClInclude Include="..\..\..\src\lib\examine_list.h" />
+    <ClInclude Include="..\..\..\src\lib\examine_log.h" />
+    <ClInclude Include="..\..\..\src\lib\examine_main.h" />
+    <ClInclude Include="..\..\..\src\lib\examine_map.h" />
+    <ClInclude Include="..\..\..\src\lib\examine_pe.h" />
+    <ClInclude Include="..\..\..\src\lib\examine_private_file.h" />
+    <ClInclude Include="..\..\..\src\lib\examine_private_map.h" />
+    <ClInclude Include="..\..\..\src\lib\examine_private_process.h" />
+    <ClInclude Include="..\..\..\src\lib\examine_private_str.h" />
+    <ClInclude Include="..\..\..\src\lib\examine_process.h" />
+    <ClInclude Include="..\..\..\src\lib\examine_stack.h" />
+    <ClInclude Include="..\..\..\src\lib\examine_str.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

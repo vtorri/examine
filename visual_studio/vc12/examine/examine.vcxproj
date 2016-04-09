@@ -151,15 +151,15 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\src\bin\examine_depends.c" />
-    <ClCompile Include="..\..\src\bin\examine_main.c" />
-    <ClCompile Include="..\..\src\bin\examine_trace.c" />
-    <ClCompile Include="..\..\src\bin\examine_view.c" />
-    <ClCompile Include="..\..\src\bin\examine_sigcheck.c" />
-    <ClCompile Include="..\..\src\bin\memcheck\examine_memcheck.c" />
+    <ClCompile Include="..\..\..\src\bin\examine_depends.c" />
+    <ClCompile Include="..\..\..\src\bin\examine_main.c" />
+    <ClCompile Include="..\..\..\src\bin\examine_trace.c" />
+    <ClCompile Include="..\..\..\src\bin\examine_view.c" />
+    <ClCompile Include="..\..\..\src\bin\examine_sigcheck.c" />
+    <ClCompile Include="..\..\..\src\bin\memcheck\examine_memcheck.c" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\src\bin\examine_private.h" />
+    <ClInclude Include="..\..\..\src\bin\examine_private.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

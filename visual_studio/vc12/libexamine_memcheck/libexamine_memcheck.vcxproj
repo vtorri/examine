@@ -151,11 +151,11 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\src\bin\memcheck\examine_memcheck_dll.c" />
-    <ClCompile Include="..\..\src\bin\memcheck\examine_memcheck_hook.c" />
+    <ClCompile Include="..\..\..\src\bin\memcheck\examine_memcheck_dll.c" />
+    <ClCompile Include="..\..\..\src\bin\memcheck\examine_memcheck_hook.c" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\src\bin\memcheck\examine_memcheck_hook.h" />
+    <ClInclude Include="..\..\..\src\bin\memcheck\examine_memcheck_hook.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
