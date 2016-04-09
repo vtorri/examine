@@ -40,14 +40,14 @@ THANKS \
 TODO \
 m4/exm_attribute.m4 \
 visual_studio/config.h \
-visual_studio/examine/examine.vcxproj \
-visual_studio/examine/examine.vcxproj.filters \
-visual_studio/examine.sln \
-visual_studio/examine_test/examine_test.vcxproj \
-visual_studio/examine_test/examine_test.vcxproj.filters \
-visual_studio/libexamine/libexamine.vcxproj \
-visual_studio/libexamine/libexamine.vcxproj.filters \
-visual_studio/libexamine_memcheck/libexamine_memcheck.vcxproj \
-visual_studio/libexamine_memcheck/libexamine_memcheck.vcxproj.filters \
-visual_studio/libexamine_test/libexamine_test.vcxproj \
-visual_studio/libexamine_test/libexamine_test.vcxproj.filters
+visual_studio/vc12/examine/examine.vcxproj \
+visual_studio/vc12/examine/examine.vcxproj.filters \
+visual_studio/vc12/examine.sln \
+visual_studio/vc12/examine_test/examine_test.vcxproj \
+visual_studio/vc12/examine_test/examine_test.vcxproj.filters \
+visual_studio/vc12/libexamine/libexamine.vcxproj \
+visual_studio/vc12/libexamine/libexamine.vcxproj.filters \
+visual_studio/vc12/libexamine_memcheck/libexamine_memcheck.vcxproj \
+visual_studio/vc12/libexamine_memcheck/libexamine_memcheck.vcxproj.filters \
+visual_studio/vc12/libexamine_test/libexamine_test.vcxproj \
+visual_studio/vc12/libexamine_test/libexamine_test.vcxproj.filters
