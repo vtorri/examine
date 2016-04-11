@@ -93,24 +93,15 @@ static unsigned char
 _exm_file_exists(const char *path, const char *filename)
 {
     char *tmp;
-#ifdef _WIN32
-    struct _stati64 buf;
-#else
     struct stat buf;
-#endif
     unsigned char res = 1;
 
     tmp = _exm_file_concat(path, filename);
     if (!tmp)
         return 0;
 
-#ifdef _WIN32
-    if (_stati64(tmp, &buf) != 0)
-        res = 0;
-#else
     if (stat(tmp, &buf) != 0)
         res = 0;
-#endif
     free(tmp);
 
     return res;
@@ -226,7 +217,9 @@ exm_file_set(const char *filename)
     Exm_List *tmp;
     char *dir_name = NULL;
     char *base_name = NULL;
+    char *dir_name_new = NULL;
     Exm_List_Cmp_Cb cmp_cb;
+    size_t l;
 
     if (!filename)
         return NULL;
@@ -245,14 +238,26 @@ exm_file_set(const char *filename)
         EXM_LOG_ERR("Can not find base dir or base name for %s", filename);
         goto free_names;
     }
+
+    l = strlen(dir_name);
+    dir_name_new = (char *)malloc((l + 2) * sizeof(char));
+    if (!dir_name_new)
+    {
+        EXM_LOG_ERR("Can not allocate memory for path");
+        goto free_names;
+    }
+
+    memcpy(dir_name_new, dir_name, l);
+    dir_name_new[l] = '\\';
+    dir_name_new[l + 1] = '\0';
+    free(dir_name);
     tmp = exm_list_prepend_if_new(_exm_file_path,
-                                  dir_name,
+                                  dir_name_new,
                                   cmp_cb);
     /* dir_name is already in the list and is not added, so free it */
     if (tmp == _exm_file_path)
     {
-        free(dir_name);
-        dir_name = NULL;
+        free(dir_name_new);
     }
     else
         _exm_file_path = tmp;
