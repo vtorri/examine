@@ -50,4 +50,15 @@ visual_studio/vc12/libexamine/libexamine.vcxproj.filters \
 visual_studio/vc12/libexamine_memcheck/libexamine_memcheck.vcxproj \
 visual_studio/vc12/libexamine_memcheck/libexamine_memcheck.vcxproj.filters \
 visual_studio/vc12/libexamine_test/libexamine_test.vcxproj \
-visual_studio/vc12/libexamine_test/libexamine_test.vcxproj.filters
+visual_studio/vc12/libexamine_test/libexamine_test.vcxproj.filters \
+visual_studio/vc14/examine/examine.vcxproj \
+visual_studio/vc14/examine/examine.vcxproj.filters \
+visual_studio/vc14/examine.sln \
+visual_studio/vc14/examine_test/examine_test.vcxproj \
+visual_studio/vc14/examine_test/examine_test.vcxproj.filters \
+visual_studio/vc14/libexamine/libexamine.vcxproj \
+visual_studio/vc14/libexamine/libexamine.vcxproj.filters \
+visual_studio/vc14/libexamine_memcheck/libexamine_memcheck.vcxproj \
+visual_studio/vc14/libexamine_memcheck/libexamine_memcheck.vcxproj.filters \
+visual_studio/vc14/libexamine_test/libexamine_test.vcxproj \
+visual_studio/vc14/libexamine_test/libexamine_test.vcxproj.filters
