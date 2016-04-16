@@ -342,7 +342,7 @@ EXM_API void
 exm_file_base_dir_name_get(const char *filename, char **dir_name, char **base_name)
 {
 #ifdef _WIN32
-    char *full_name;
+    char *full_name = NULL;
     char *file_part;
     size_t length;
     DWORD res;
@@ -412,4 +412,9 @@ exm_file_base_dir_name_get(const char *filename, char **dir_name, char **base_na
             *dir_name = dname;
         }
     }
+
+#ifdef _WIN32
+    if (full_name)
+        free(full_name);
+#endif
 }
