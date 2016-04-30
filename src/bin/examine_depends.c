@@ -246,16 +246,21 @@ _exm_depends_cmd_list_fill(Exm_List *list, const Exm_Pe *pe)
                     const char *fullname;
 
                     list = exm_list_append(list, name);
-                    p = exm_pe_new(name);
-                    fullname = exm_pe_filename_get(p);
                     printf("   %s", name);
-                    if (fullname)
-                        printf(" => %s", fullname);
-                    printf("%s\n", _exm_depends_cmd_list_dllcharacteristics_get(p));
-                    tmp = _exm_depends_cmd_list_fill(list, p);
-                    exm_pe_free(p);
-                    if (tmp)
-                        list = tmp;
+                    p = exm_pe_new(name);
+                    if (p)
+                    {
+                        fullname = exm_pe_filename_get(p);
+                        if (fullname)
+                            printf(" => %s", fullname);
+                        printf("%s\n", _exm_depends_cmd_list_dllcharacteristics_get(p));
+                        tmp = _exm_depends_cmd_list_fill(list, p);
+                        exm_pe_free(p);
+                        if (tmp)
+                            list = tmp;
+                    }
+                    else
+                        printf(" (not found)\n");
                 }
                 else
                     EXM_LOG_ERR("Can not allocate memory for import filename");
@@ -292,16 +297,21 @@ _exm_depends_cmd_list_fill(Exm_List *list, const Exm_Pe *pe)
                     const char *fullname;
 
                     list = exm_list_append(list, name);
-                    p = exm_pe_new(name);
-                    fullname = exm_pe_filename_get(p);
                     printf("   %s", name);
-                    if (fullname)
-                        printf(" => %s", fullname);
-                    printf("%s\n", _exm_depends_cmd_list_dllcharacteristics_get(p));
-                    tmp = _exm_depends_cmd_list_fill(list, p);
-                    exm_pe_free(p);
-                    if (tmp)
-                        list = tmp;
+                    p = exm_pe_new(name);
+                    if (p)
+                    {
+                        fullname = exm_pe_filename_get(p);
+                        if (fullname)
+                            printf(" => %s", fullname);
+                        printf("%s\n", _exm_depends_cmd_list_dllcharacteristics_get(p));
+                        tmp = _exm_depends_cmd_list_fill(list, p);
+                        exm_pe_free(p);
+                        if (tmp)
+                            list = tmp;
+                    }
+                    else
+                        printf(" (not found)\n");
                 }
                 else
                     EXM_LOG_ERR("Can not allocate memory for delay loaded filename");
